@@ -1,0 +1,9 @@
+[package]
+name = "couchfin-api"
+description = "Typed Jellyfin HTTP client: auth, items, images, playback reporting"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true

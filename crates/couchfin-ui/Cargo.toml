@@ -1,0 +1,12 @@
+[package]
+name = "couchfin-ui"
+description = "Slint screens and components with focus handling"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+couchfin-core.workspace = true

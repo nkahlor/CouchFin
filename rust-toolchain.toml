@@ -1,0 +1,5 @@
+# Keep equal to RUST_VERSION in .devcontainer/Containerfile: the toolchain in
+# the dev image is read-only, so rustup cannot fetch a different one there.
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy", "llvm-tools"]

@@ -1,0 +1,23 @@
+[package]
+name = "app"
+description = "Couchfin binary: wires the crates together and runs the main loop"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "couchfin"
+path = "src/main.rs"
+
+[dependencies]
+couchfin-api.workspace = true
+couchfin-core.workspace = true
+couchfin-input.workspace = true
+couchfin-player.workspace = true
+couchfin-ui.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

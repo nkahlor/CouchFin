@@ -1,0 +1,33 @@
+name: CI
+
+# fmt, clippy and tests on every PR and on main. The CI/CD task moves these
+# jobs into the dev container image and adds the remaining checks.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # rustup reads rust-toolchain.toml and installs the pinned toolchain.
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: fmt
+        run: cargo fmt --all --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace
