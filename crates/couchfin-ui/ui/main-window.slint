@@ -1,0 +1,39 @@
+import { Theme } from "theme.slint";
+import {
+    Screen,
+    ConnectView,
+    AddressView,
+    LoginView,
+    HomeView,
+} from "state.slint";
+import { ConnectingPage, ConnectFailedPage } from "screens/connect.slint";
+import { AddressPage } from "screens/address.slint";
+import { HomePage } from "screens/home.slint";
+import { LoginPage } from "screens/login.slint";
+
+export {
+    Screen,
+    ConnectView,
+    AddressView,
+    LoginView,
+    HomeView,
+}
+
+// The one window Couchfin shows. Only the current screen exists: switching
+// destroys the previous one (and anything typed into it, such as a
+// password), and the new one focuses its first control.
+export component MainWindow inherits Window {
+    in property <Screen> screen: Screen.connecting;
+    // What Back means on the current screen: quit, or (false) change
+    // server. src/bind.rs sets it from core's state and reads it on Back.
+    in property <bool> back-quits: true;
+
+    title: "Couchfin";
+    background: Theme.background;
+
+    if root.screen == Screen.connecting: ConnectingPage { }
+    if root.screen == Screen.connect-failed: ConnectFailedPage { }
+    if root.screen == Screen.address: AddressPage { }
+    if root.screen == Screen.login: LoginPage { }
+    if root.screen == Screen.home: HomePage { }
+}

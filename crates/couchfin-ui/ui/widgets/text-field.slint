@@ -1,0 +1,92 @@
+import { Theme } from "../theme.slint";
+import { Keys, KeyIntent } from "keys.slint";
+
+// A labelled single-line text field. Steam's on-screen keyboard types into
+// whichever field has focus, so nothing here is specific to a keyboard.
+export component TextField inherits Rectangle {
+    // Shown above the field, and the field's accessible label.
+    in property <string> label;
+    in-out property <string> text <=> input.text;
+    // Masks what is typed, and keeps it out of the accessibility tree: a
+    // screen reader (or anything else reading it) gets an empty value.
+    in property <bool> password;
+    in property <bool> read-only;
+
+    // Enter in the field.
+    callback accepted();
+    callback move-next();
+    callback move-previous();
+    // Escape. Backspace deletes here, so it never means back in a field.
+    callback back();
+
+    forward-focus: input;
+
+    // Focuses the field with the cursor after any prefilled text, so typing
+    // adds to it rather than going in front.
+    public function take-focus() {
+        input.focus();
+        input.select-all();
+        input.clear-selection();
+    }
+    accessible-role: text-input;
+    accessible-label: root.label;
+    accessible-value: root.password ? "" : root.text;
+    accessible-read-only: root.read-only;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Theme.muted;
+            font-size: Theme.label-size;
+            // The field itself carries the label.
+            accessible-role: none;
+        }
+
+        Rectangle {
+            min-height: 96px;
+            background: Theme.surface;
+            border-radius: Theme.radius;
+            border-width: input.has-focus ? Theme.focus-ring : 2px;
+            border-color: input.has-focus ? Theme.focus : Theme.muted;
+
+            input := TextInput {
+                x: 28px;
+                width: parent.width - 56px;
+                height: parent.height;
+                vertical-alignment: center;
+                single-line: true;
+                font-size: Theme.body-size;
+                color: Theme.text;
+                selection-background-color: Theme.focus;
+                selection-foreground-color: Theme.on-focus;
+                input-type: root.password ? InputType.password : InputType.text;
+                read-only: root.read-only;
+                // The field's root is the accessible element. With role none,
+                // Slint drops every accessible-* property, so a password
+                // can't leak through this element.
+                accessible-role: none;
+
+                key-pressed(event) => {
+                    if Keys.intent(event) == KeyIntent.next {
+                        root.move-next();
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.previous {
+                        root.move-previous();
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.back {
+                        root.back();
+                        return accept;
+                    }
+                    return reject;
+                }
+                accepted => {
+                    root.accepted();
+                }
+            }
+        }
+    }
+}

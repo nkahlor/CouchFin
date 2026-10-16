@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 couchfin-core.workspace = true
+tracing.workspace = true
 # Only the winit backend and the femtovg OpenGL renderer: mpv will draw into
 # the same GL window in Phase 4.
 slint = { workspace = true, features = [

@@ -1,0 +1,78 @@
+import { Theme } from "../theme.slint";
+import { HomeView } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Keys, KeyIntent } from "../widgets/keys.slint";
+
+// Phase 1's home: which server, which version, who is signed in, and Sign
+// out. The page itself takes focus on arrival, so an Enter still held from
+// signing in can't press Sign out; Down or Tab moves to it.
+export component HomePage inherits FocusScope {
+    init => {
+        self.focus();
+    }
+
+    key-pressed(event) => {
+        if Keys.intent(event) == KeyIntent.next {
+            sign-out.focus();
+            return accept;
+        }
+        if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+            HomeView.back();
+            return accept;
+        }
+        return reject;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.spacing;
+
+        Text {
+            text: HomeView.server-name;
+            color: Theme.text;
+            font-size: Theme.title-size;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "Jellyfin " + HomeView.server-version;
+            color: Theme.muted;
+            font-size: Theme.body-size;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "Signed in as " + HomeView.username;
+            color: Theme.text;
+            font-size: Theme.body-size;
+            horizontal-alignment: center;
+        }
+
+        HorizontalLayout {
+            alignment: center;
+
+            sign-out := Button {
+                width: 480px;
+                text: "Sign out";
+                clicked => {
+                    HomeView.sign-out();
+                }
+                move-previous => {
+                    root.focus();
+                }
+                back => {
+                    HomeView.back();
+                }
+            }
+        }
+
+        if HomeView.notice != "": Text {
+            text: HomeView.notice;
+            color: Theme.muted;
+            font-size: Theme.label-size;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+}

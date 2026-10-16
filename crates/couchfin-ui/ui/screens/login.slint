@@ -1,0 +1,127 @@
+import { Theme } from "../theme.slint";
+import { LoginView } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Status } from "../widgets/status.slint";
+import { TextField } from "../widgets/text-field.slint";
+
+// Focus order: username, password, Sign in, Change server. Escape anywhere
+// asks to go back to the address screen.
+export component LoginPage inherits Rectangle {
+    // Core never holds the password, so after a failed sign-in the binding
+    // bumps LoginView.password-resets and the field is emptied here.
+    property <int> password-resets: LoginView.password-resets;
+
+    init => {
+        username.take-focus();
+    }
+
+    changed password-resets => {
+        password.text = "";
+        password.take-focus();
+    }
+
+    function submit() {
+        // One request at a time: core is already signing in.
+        if !LoginView.busy {
+            LoginView.submit(LoginView.username, password.text);
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                width: min(Theme.form-width, root.width - 96px);
+                spacing: Theme.spacing;
+
+                Text {
+                    text: "Sign in to " + LoginView.server-name;
+                    color: Theme.text;
+                    font-size: Theme.title-size;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+
+                // check_server follows redirects to any host, so the final
+                // address is shown before the password is typed.
+                Text {
+                    text: "Connected to " + LoginView.server-address;
+                    color: Theme.text;
+                    font-size: Theme.body-size;
+                    wrap: word-wrap;
+                }
+
+                username := TextField {
+                    label: "Username";
+                    text <=> LoginView.username;
+                    read-only: LoginView.busy;
+                    accepted => {
+                        password.take-focus();
+                    }
+                    move-next => {
+                        password.take-focus();
+                    }
+                    back => {
+                        LoginView.back();
+                    }
+                }
+
+                password := TextField {
+                    label: "Password";
+                    password: true;
+                    read-only: LoginView.busy;
+                    accepted => {
+                        root.submit();
+                    }
+                    move-next => {
+                        sign-in.focus();
+                    }
+                    move-previous => {
+                        username.take-focus();
+                    }
+                    back => {
+                        LoginView.back();
+                    }
+                }
+
+                sign-in := Button {
+                    text: "Sign in";
+                    clicked => {
+                        root.submit();
+                    }
+                    move-next => {
+                        change-server.focus();
+                    }
+                    move-previous => {
+                        password.take-focus();
+                    }
+                    back => {
+                        LoginView.back();
+                    }
+                }
+
+                change-server := Button {
+                    text: "Change server";
+                    clicked => {
+                        LoginView.back();
+                    }
+                    move-previous => {
+                        sign-in.focus();
+                    }
+                    back => {
+                        LoginView.back();
+                    }
+                }
+
+                Status {
+                    busy: LoginView.busy;
+                    busy-text: "Signing in…";
+                    error: LoginView.error;
+                }
+            }
+        }
+    }
+}

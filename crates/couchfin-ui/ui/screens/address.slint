@@ -1,0 +1,80 @@
+import { Theme } from "../theme.slint";
+import { AddressView } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Status } from "../widgets/status.slint";
+import { TextField } from "../widgets/text-field.slint";
+
+// Focus order: address field, Connect. Escape anywhere asks to go back.
+export component AddressPage inherits Rectangle {
+    init => {
+        field.take-focus();
+    }
+
+    function submit() {
+        // One request at a time: core is already checking the address.
+        if !AddressView.busy {
+            AddressView.submit(AddressView.address);
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                width: min(Theme.form-width, root.width - 96px);
+                spacing: Theme.spacing;
+
+                Text {
+                    text: "Connect to Jellyfin";
+                    color: Theme.text;
+                    font-size: Theme.title-size;
+                    font-weight: 700;
+                }
+
+                Text {
+                    text: "Type your server's address, such as jellyfin.lan:8096";
+                    color: Theme.muted;
+                    font-size: Theme.body-size;
+                    wrap: word-wrap;
+                }
+
+                field := TextField {
+                    label: "Server address";
+                    text <=> AddressView.address;
+                    read-only: AddressView.busy;
+                    accepted => {
+                        root.submit();
+                    }
+                    move-next => {
+                        connect.focus();
+                    }
+                    back => {
+                        AddressView.back();
+                    }
+                }
+
+                connect := Button {
+                    text: "Connect";
+                    clicked => {
+                        root.submit();
+                    }
+                    move-previous => {
+                        field.take-focus();
+                    }
+                    back => {
+                        AddressView.back();
+                    }
+                }
+
+                Status {
+                    busy: AddressView.busy;
+                    busy-text: "Checking the server…";
+                    error: AddressView.error;
+                }
+            }
+        }
+    }
+}

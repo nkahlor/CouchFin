@@ -1,0 +1,67 @@
+import { Theme } from "../theme.slint";
+import { Keys, KeyIntent } from "keys.slint";
+
+// A focusable button. Focus fills it with the highlight colour, which is
+// easier to spot across a room than a thin outline.
+export component Button inherits FocusScope {
+    in property <string> text;
+
+    // Enter, Space, a click, or a screen reader's default action.
+    callback clicked();
+    callback move-next();
+    callback move-previous();
+    // Escape or Backspace.
+    callback back();
+
+    min-height: 96px;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    key-pressed(event) => {
+        if Keys.intent(event) == KeyIntent.activate {
+            root.clicked();
+            return accept;
+        }
+        if Keys.intent(event) == KeyIntent.next {
+            root.move-next();
+            return accept;
+        }
+        if Keys.intent(event) == KeyIntent.previous {
+            root.move-previous();
+            return accept;
+        }
+        if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+            root.back();
+            return accept;
+        }
+        return reject;
+    }
+
+    Rectangle {
+        background: root.has-focus ? Theme.focus : Theme.surface;
+        border-radius: Theme.radius;
+        border-width: root.has-focus ? Theme.focus-ring : 2px;
+        border-color: root.has-focus ? Theme.text : Theme.muted;
+
+        Text {
+            text: root.text;
+            color: root.has-focus ? Theme.on-focus : Theme.text;
+            font-size: Theme.body-size;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            // The button itself carries the label.
+            accessible-role: none;
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            root.focus();
+            root.clicked();
+        }
+    }
+}

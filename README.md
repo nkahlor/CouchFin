@@ -34,8 +34,16 @@ and how to update it.
    cargo run
    ```
 
-   For now this opens a fullscreen window that says "Hello". Escape (or
-   Backspace) quits.
+   This opens Couchfin fullscreen. The first time, type your server's
+   address (for example `jellyfin.lan:8096`), then sign in. Home shows the
+   server's name and version and who is signed in. Next time it skips
+   straight to Home while the sign-in still works.
+
+   Everything works from the keyboard until controller support arrives:
+   Tab or the arrow keys move between controls, Enter presses, and Escape
+   goes back. Escape on the address screen or on Home quits. Logs go to
+   stderr; set `RUST_LOG=debug` for more. They never include passwords or
+   tokens.
 
 To try changes to the Containerfile before they're merged, build the image
 locally:
@@ -66,8 +74,8 @@ The Rust toolchain is pinned in [rust-toolchain.toml](rust-toolchain.toml).
 ### Checking a real Jellyfin server
 
 `couchfin-api` has a small example that checks a server, logs in and calls
-`/Users/Me`, so you can try the client against your own server before the
-login screen exists. If the address redirects (for example a proxy sending
+`/Users/Me`, so you can try the client against your own server without the
+UI. If the address redirects (for example a proxy sending
 `http://` to `https://`), it prints the address the server really answers on
 and uses that from then on. It asks for the password without echoing it and
 never prints it or the token:
@@ -96,8 +104,8 @@ token still works:
   `~/.config/couchfin/tokens.toml` instead. Only you can read that file
   (mode 0600).
 
-To log out by hand, delete the keyring entry for the service "Couchfin" and
-`tokens.toml`. See
+Sign out on Home forgets the token. To log out by hand, delete the keyring
+entry for the service "Couchfin" and `tokens.toml`. See
 [decision 007](docs/decisions/007-session-persistence.md).
 
 ## Checks
