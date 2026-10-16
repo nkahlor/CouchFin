@@ -96,13 +96,12 @@ export component HomePage inherits Rectangle {
                 Theme.poster-min-height,
                 Theme.poster-max-height);
             property <length> card-width: self.poster-height * Theme.poster-aspect;
-            property <length> content-width: self.count * self.card-width + (self.count - 1) * Theme.card-gap + 2 * Theme.card-focus-room;
-            // Keeps the current card in the middle where it can, and the row's
-            // ends against the edges, so the current card is always fully in
-            // view.
-            property <length> scroll: max(0px, min(
-                Theme.card-focus-room + self.current * (self.card-width + Theme.card-gap) - (self.width - self.card-width) / 2,
-                self.content-width - self.width));
+            // Edge space lets even the first and last cards stay centered.
+            property <length> side-padding: max(
+                Theme.card-focus-room + Theme.card-gap,
+                (self.width - self.card-width) / 2);
+            property <length> content-width: self.count * self.card-width + (self.count - 1) * Theme.card-gap + 2 * self.side-padding;
+            property <length> scroll: self.side-padding + self.current * (self.card-width + Theme.card-gap) + (self.card-width - self.width) / 2;
 
             // Set here rather than from the cards, whose size follows the
             // row's: the row takes what the screen leaves, within these.
@@ -152,6 +151,11 @@ export component HomePage inherits Rectangle {
                     spacing: Theme.card-gap;
                     alignment: start;
 
+                    Rectangle {
+                        width: row.side-padding - Theme.card-focus-room - Theme.card-gap;
+                        height: 0px;
+                    }
+
                     for title[index] in root.titles: Card {
                         title: title;
                         poster-height: row.poster-height;
@@ -164,6 +168,11 @@ export component HomePage inherits Rectangle {
                             row.focus();
                             root.activate(index);
                         }
+                    }
+
+                    Rectangle {
+                        width: row.side-padding - Theme.card-focus-room - Theme.card-gap;
+                        height: 0px;
                     }
                 }
             }

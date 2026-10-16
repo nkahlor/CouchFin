@@ -188,6 +188,29 @@ fn the_row_scrolls_to_keep_the_focused_card_fully_on_screen() {
 }
 
 #[test]
+fn the_focused_card_stays_centered_as_titles_scroll() {
+    for (width, height) in [(1920.0, 1080.0), (1280.0, 720.0)] {
+        let home = home_at(width, height);
+        let row = ElementQuery::from_root(&home.window)
+            .match_accessible_role(AccessibleRole::List)
+            .find_first()
+            .expect("Home has a row");
+        let center = row.absolute_position().x + row.size().width / 2.0;
+
+        for n in 1..=10 {
+            mock_elapsed_time(SCROLL);
+            let card = the(&home.window, &format!("Title {n}"));
+            let card_center = card.absolute_position().x + card.size().width / 2.0;
+            assert!(
+                (card_center - center).abs() <= 1.0,
+                "{width}x{height}: Title {n} is not centered"
+            );
+            press(&home.window, Key::RightArrow);
+        }
+    }
+}
+
+#[test]
 fn nothing_is_cut_off_on_a_720p_screen() {
     let home = home_at(1280.0, 720.0);
     home.window.global::<HomeView>().set_notice(NOTICE.into());

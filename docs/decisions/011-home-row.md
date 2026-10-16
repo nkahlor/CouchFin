@@ -59,11 +59,13 @@ so the entry point had to be fixed first.
   Tab) goes to Sign out, and Up (or Shift+Tab) comes back. Up on the row
   and Left or Right on Sign out do nothing. Back still quits, by decision
   008, so the B button can't throw a sign-in away.
-- **Scrolling.** The row keeps the current card in the middle where it can
-  and pins its ends to the edges, computed from `current` with no stored
-  offset, so the card is always fully in view, even after a resize. The
-  content is a non-interactive `Flickable` rather than a clipping
-  `Rectangle`, so screen readers still list cards out of view.
+- **Scrolling.** The row keeps the current card centered, including at the
+  first and last cards, with edge padding computed from the row and card
+  widths and a scroll offset derived from `current`. This leaves blank space
+  at the ends and keeps the selected position fixed as titles move beneath
+  it, even after a resize. The content is a non-interactive `Flickable`
+  rather than a clipping `Rectangle`, so screen readers still list cards
+  out of view.
 - **Selecting.** There is no detail page until Phase 3, so Enter on a card
   calls `HomeView.card-activated(index)`, which the binding logs, and the
   page shows "Selected: {title}" in the header so it is visible on the TV.
