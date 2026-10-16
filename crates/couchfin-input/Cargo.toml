@@ -1,0 +1,9 @@
+[package]
+name = "couchfin-input"
+description = "SDL controller and keyboard events mapped to app actions"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true

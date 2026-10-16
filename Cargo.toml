@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = ["app", "crates/*"]
+default-members = ["app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+repository = "https://github.com/nkahlor/CouchFin"
+
+[workspace.dependencies]
+couchfin-api = { path = "crates/couchfin-api" }
+couchfin-core = { path = "crates/couchfin-core" }
+couchfin-input = { path = "crates/couchfin-input" }
+couchfin-player = { path = "crates/couchfin-player" }
+couchfin-ui = { path = "crates/couchfin-ui" }
+
+serde_json = "1"

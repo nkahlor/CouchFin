@@ -1,0 +1,12 @@
+[package]
+name = "couchfin-core"
+description = "App state, navigation stack, settings and image cache"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+couchfin-api.workspace = true
