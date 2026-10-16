@@ -1,0 +1,38 @@
+// One place that decides what a key means, so every control agrees. Phase 2's
+// couchfin-input will send the same intents from the D-pad and the A and B
+// buttons: Up/Down for previous/next, A for activate, B for back.
+
+export enum KeyIntent {
+    none,
+    // Tab, Down: the next control.
+    next,
+    // Shift+Tab, Up: the previous control.
+    previous,
+    // Enter, Space: press the focused button.
+    activate,
+    // Escape: leave the screen.
+    back,
+    // Backspace: deletes in a text field, means back everywhere else.
+    backspace,
+}
+
+export global Keys {
+    public pure function intent(event: KeyEvent) -> KeyIntent {
+        if event.text == Key.Escape {
+            return KeyIntent.back;
+        }
+        if event.text == Key.Backspace {
+            return KeyIntent.backspace;
+        }
+        if event.text == Key.Backtab || event.text == Key.UpArrow || (event.text == Key.Tab && event.modifiers.shift) {
+            return KeyIntent.previous;
+        }
+        if event.text == Key.Tab || event.text == Key.DownArrow {
+            return KeyIntent.next;
+        }
+        if event.text == Key.Return || event.text == " " {
+            return KeyIntent.activate;
+        }
+        return KeyIntent.none;
+    }
+}

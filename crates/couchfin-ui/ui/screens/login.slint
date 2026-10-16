@@ -1,0 +1,118 @@
+import { Theme } from "../theme.slint";
+import { LoginScreen } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Status } from "../widgets/status.slint";
+import { TextField } from "../widgets/text-field.slint";
+
+// Focus order: username, password, Sign in, Change server. Escape anywhere
+// asks to go back to the address screen.
+export component LoginPage inherits Rectangle {
+    init => {
+        username.focus();
+    }
+
+    function submit() {
+        // One request at a time: core is already signing in.
+        if !LoginScreen.busy {
+            LoginScreen.submit(LoginScreen.username, password.text);
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                width: min(Theme.form-width, root.width - 96px);
+                spacing: Theme.spacing;
+
+                Text {
+                    text: "Sign in to " + LoginScreen.server-name;
+                    color: Theme.text;
+                    font-size: Theme.title-size;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+
+                // check_server follows redirects to any host, so the final
+                // address is shown before the password is typed.
+                Text {
+                    text: "Connected to " + LoginScreen.server-address;
+                    color: Theme.text;
+                    font-size: Theme.body-size;
+                    wrap: word-wrap;
+                }
+
+                username := TextField {
+                    label: "Username";
+                    text <=> LoginScreen.username;
+                    read-only: LoginScreen.busy;
+                    accepted => {
+                        password.focus();
+                    }
+                    move-next => {
+                        password.focus();
+                    }
+                    back => {
+                        LoginScreen.back();
+                    }
+                }
+
+                password := TextField {
+                    label: "Password";
+                    password: true;
+                    read-only: LoginScreen.busy;
+                    accepted => {
+                        root.submit();
+                    }
+                    move-next => {
+                        sign-in.focus();
+                    }
+                    move-previous => {
+                        username.focus();
+                    }
+                    back => {
+                        LoginScreen.back();
+                    }
+                }
+
+                sign-in := Button {
+                    text: "Sign in";
+                    clicked => {
+                        root.submit();
+                    }
+                    move-next => {
+                        change-server.focus();
+                    }
+                    move-previous => {
+                        password.focus();
+                    }
+                    back => {
+                        LoginScreen.back();
+                    }
+                }
+
+                change-server := Button {
+                    text: "Change server";
+                    clicked => {
+                        LoginScreen.back();
+                    }
+                    move-previous => {
+                        sign-in.focus();
+                    }
+                    back => {
+                        LoginScreen.back();
+                    }
+                }
+
+                Status {
+                    busy: LoginScreen.busy;
+                    busy-text: "Signing in…";
+                    error: LoginScreen.error;
+                }
+            }
+        }
+    }
+}

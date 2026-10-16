@@ -1,0 +1,10 @@
+// Everything couchfin-ui exposes to Rust. build.rs compiles only this file,
+// so each exported component, global and enum here becomes a Rust type.
+export { HelloWindow } from "hello.slint";
+export {
+    MainWindow,
+    Screen,
+    AddressScreen,
+    LoginScreen,
+    HomeScreen,
+} from "main-window.slint";

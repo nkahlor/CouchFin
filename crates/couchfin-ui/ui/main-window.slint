@@ -1,0 +1,26 @@
+import { Theme } from "theme.slint";
+import { Screen, AddressScreen, LoginScreen, HomeScreen } from "state.slint";
+import { AddressPage } from "screens/address.slint";
+import { HomePage } from "screens/home.slint";
+import { LoginPage } from "screens/login.slint";
+
+export {
+    Screen,
+    AddressScreen,
+    LoginScreen,
+    HomeScreen,
+}
+
+// The one window Couchfin shows. Only the current screen exists: switching
+// destroys the previous one (and anything typed into it, such as a
+// password), and the new one focuses its first control.
+export component MainWindow inherits Window {
+    in property <Screen> screen: Screen.address;
+
+    title: "Couchfin";
+    background: Theme.background;
+
+    if root.screen == Screen.address: AddressPage { }
+    if root.screen == Screen.login: LoginPage { }
+    if root.screen == Screen.home: HomePage { }
+}

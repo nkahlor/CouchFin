@@ -1,0 +1,80 @@
+import { Theme } from "../theme.slint";
+import { AddressScreen } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Status } from "../widgets/status.slint";
+import { TextField } from "../widgets/text-field.slint";
+
+// Focus order: address field, Connect. Escape anywhere asks to go back.
+export component AddressPage inherits Rectangle {
+    init => {
+        field.focus();
+    }
+
+    function submit() {
+        // One request at a time: core is already checking the address.
+        if !AddressScreen.busy {
+            AddressScreen.submit(AddressScreen.address);
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                width: min(Theme.form-width, root.width - 96px);
+                spacing: Theme.spacing;
+
+                Text {
+                    text: "Connect to Jellyfin";
+                    color: Theme.text;
+                    font-size: Theme.title-size;
+                    font-weight: 700;
+                }
+
+                Text {
+                    text: "Type your server's address, such as jellyfin.lan:8096";
+                    color: Theme.muted;
+                    font-size: Theme.body-size;
+                    wrap: word-wrap;
+                }
+
+                field := TextField {
+                    label: "Server address";
+                    text <=> AddressScreen.address;
+                    read-only: AddressScreen.busy;
+                    accepted => {
+                        root.submit();
+                    }
+                    move-next => {
+                        connect.focus();
+                    }
+                    back => {
+                        AddressScreen.back();
+                    }
+                }
+
+                connect := Button {
+                    text: "Connect";
+                    clicked => {
+                        root.submit();
+                    }
+                    move-previous => {
+                        field.focus();
+                    }
+                    back => {
+                        AddressScreen.back();
+                    }
+                }
+
+                Status {
+                    busy: AddressScreen.busy;
+                    busy-text: "Checking the server…";
+                    error: AddressScreen.error;
+                }
+            }
+        }
+    }
+}

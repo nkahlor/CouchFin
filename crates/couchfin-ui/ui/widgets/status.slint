@@ -1,0 +1,46 @@
+import { Theme } from "../theme.slint";
+
+// Progress while a request runs, and an error message after one fails. It
+// keeps its height when empty, so the buttons above it never jump.
+export component Status inherits VerticalLayout {
+    in property <bool> busy;
+    // Fixed wording per screen, such as "Checking the server…".
+    in property <string> busy-text;
+    // Empty shows nothing.
+    in property <string> error;
+
+    min-height: 120px;
+    spacing: 12px;
+    alignment: start;
+
+    if root.busy: HorizontalLayout {
+        spacing: 16px;
+        alignment: start;
+
+        // Three dots pulsing in turn, so a slow server still looks alive.
+        for index in 3: VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 20px;
+                height: 20px;
+                border-radius: self.width / 2;
+                background: Theme.focus;
+                opacity: 0.35 + 0.65 * max(0, sin(animation-tick() / 1.2s * 360deg - index * 60deg));
+            }
+        }
+
+        Text {
+            text: root.busy-text;
+            color: Theme.text;
+            font-size: Theme.body-size;
+        }
+    }
+
+    if root.error != "": Text {
+        text: root.error;
+        color: Theme.error;
+        font-size: Theme.body-size;
+        wrap: word-wrap;
+    }
+}

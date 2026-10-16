@@ -1,0 +1,62 @@
+// The data each screen renders and the requests it sends back. The app sets
+// these from couchfin-core's state and hands the callbacks to core; the
+// screens hold no logic beyond focus and key handling. Wording is the
+// UI's: properties carry data or already-worded messages, never error codes.
+
+// Which screen MainWindow shows.
+export enum Screen {
+    // Type the server's address.
+    address,
+    // Sign in to the server that the address check found.
+    login,
+    // Signed in.
+    home,
+}
+
+// The server address screen.
+export global AddressScreen {
+    // What is in the address field. The user's typing updates it, and the
+    // app may set it to prefill a previous address.
+    in-out property <string> address;
+    // True while the address is being checked: shows progress, and the field
+    // and Connect ignore input until it is false again.
+    in property <bool> busy;
+    // A message for the user, shown under the field; empty shows none.
+    in property <string> error;
+    // Connect (or Enter in the field) with the address as typed.
+    callback submit(address: string);
+    // Back (Escape) on this screen. It is the first screen, so the app quits.
+    callback back();
+}
+
+// The username and password screen.
+export global LoginScreen {
+    // The name the server's admin gave it, from /System/Info/Public.
+    in property <string> server-name;
+    // The canonical address the login goes to (after any redirects), shown
+    // before the password is typed so a redirect to another host is visible.
+    in property <string> server-address;
+    // What is in the username field; typing updates it, the app may prefill.
+    in-out property <string> username;
+    // True while signing in: shows progress and ignores input and submit.
+    in property <bool> busy;
+    // A message for the user, shown under the form; empty shows none.
+    in property <string> error;
+    // Sign in (or Enter in the password field). The password exists only in
+    // the field and in this callback's argument; no property holds it.
+    callback submit(username: string, password: string);
+    // Change server (or Escape): go back to the address screen.
+    callback back();
+}
+
+// The Phase 1 home screen.
+export global HomeScreen {
+    // The server's name, from /System/Info/Public.
+    in property <string> server-name;
+    // The server's Jellyfin version, such as 10.11.2.
+    in property <string> server-version;
+    // The signed-in user's name, from /Users/Me.
+    in property <string> username;
+    // Back (Escape or Backspace) on the home screen.
+    callback back();
+}
