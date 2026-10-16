@@ -48,7 +48,9 @@ and how to update it.
    through the same code ([decision 011](docs/decisions/011-home-row.md)),
    and the app falls back to the keyboard alone if SDL can't start. Logs go to
    stderr; set `RUST_LOG=debug` for more. They never include passwords or
-   tokens.
+   tokens. To diagnose input, run with `RUST_LOG=couchfin=debug`: it logs every
+   controller and navigation-key event with a timestamp, and any duplicate
+   it drops because Steam typed the same key ([decision 013](docs/decisions/013-steam-desktop-layout-dedupe.md)).
 
 To try changes to the Containerfile before they're merged, build the image
 locally:

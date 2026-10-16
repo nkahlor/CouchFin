@@ -14,7 +14,7 @@ use couchfin_ui::{Command, MainWindow, bind, render};
 use slint::ComponentHandle;
 use tokio::runtime::Handle;
 
-pub use gamepad::connect_gamepads;
+pub use gamepad::{connect_gamepads, connect_gamepads_with};
 
 /// Connects `flow` to `window` and starts it.
 ///

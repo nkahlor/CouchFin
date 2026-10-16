@@ -34,6 +34,21 @@ pub enum Intent {
 }
 
 impl Intent {
+    /// The intent a key's text stands for, or `None` for any other key,
+    /// such as the characters typed into a field.
+    pub(crate) fn from_key_text(text: &str) -> Option<Self> {
+        [
+            Intent::Up,
+            Intent::Down,
+            Intent::Left,
+            Intent::Right,
+            Intent::Activate,
+            Intent::Back,
+        ]
+        .into_iter()
+        .find(|intent| SharedString::from(intent.key()) == text)
+    }
+
     fn key(self) -> Key {
         match self {
             Intent::Up => Key::UpArrow,

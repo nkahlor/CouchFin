@@ -6,6 +6,7 @@
 //! Slint's testing event loop can start once per process, so this binary
 //! has a single test that runs the checks in order, one app launch each.
 
+#[allow(dead_code)] // shared helpers; this binary uses only some
 mod common;
 
 use std::collections::BTreeSet;
