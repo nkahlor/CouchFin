@@ -29,7 +29,7 @@ slint-build.workspace = true
 # because Slint's generated code carries #[allow(unsafe_code)], which "forbid"
 # rejects. Handwritten code here must not use unsafe; app/tests/lint_config.rs
 # checks this and keeps the table equal to the workspace one otherwise. See
-# docs/decisions/004-slint-generated-unsafe.md.
+# docs/decisions/005-slint-generated-unsafe.md.
 [lints.rust]
 unsafe_code = "deny"
 missing_docs = "warn"

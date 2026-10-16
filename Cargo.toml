@@ -10,9 +10,9 @@ rust-version = "1.99"
 license = "MIT"
 repository = "https://github.com/nkahlor/CouchFin"
 
-# couchfin-player keeps a copy of this table with `unsafe_code = "deny"`, since
-# Cargo can't override a single inherited lint. app/tests/lint_config.rs keeps
-# the two in step.
+# couchfin-player and couchfin-ui keep copies of this table with
+# `unsafe_code = "deny"`, since Cargo can't override a single inherited lint.
+# app/tests/lint_config.rs keeps them in step.
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"

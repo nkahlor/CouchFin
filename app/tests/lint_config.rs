@@ -5,7 +5,7 @@
 //! `couchfin-ui` carry their own copies of the table with `unsafe_code`
 //! lowered to `deny`. The player needs that for libmpv FFI; the UI only because
 //! Slint's generated code has `#[allow(unsafe_code)]`, which `forbid` rejects
-//! (docs/decisions/004-slint-generated-unsafe.md). This test keeps both copies
+//! (docs/decisions/005-slint-generated-unsafe.md). This test keeps both copies
 //! in step with the workspace and stops the UI's own code opting in.
 
 use std::fs;

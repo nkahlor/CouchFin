@@ -89,11 +89,12 @@ for how each crate is measured.
 
 Lint levels live in `[workspace.lints]` in the root `Cargo.toml`: Clippy's
 pedantic group warns, `unwrap()` outside tests is an error, and `unsafe` is
-forbidden everywhere except `couchfin-player`. `couchfin-ui` lowers that to
-`deny` only because Slint's generated code needs it
-([decision 004](docs/decisions/004-slint-generated-unsafe.md)). CI turns every
-warning into an error. Formatting is set by `rustfmt.toml`, `taplo.toml` and `.editorconfig`,
-licence and advisory rules by `deny.toml`. Format Slint files with
+forbidden everywhere except `couchfin-player`. `couchfin-ui` allows it only in
+Slint's generated code; handwritten UI code may not use it, and
+`app/tests/lint_config.rs` enforces that
+([decision 005](docs/decisions/005-slint-generated-unsafe.md)). CI turns every
+warning into an error. Formatting is set by `rustfmt.toml`, `taplo.toml` and
+`.editorconfig`, licence and advisory rules by `deny.toml`. Format Slint files with
 `slint-lsp format <file.slint>`.
 
 To catch formatting and Clippy failures before CI does, install the pre-commit

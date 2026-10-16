@@ -1,4 +1,4 @@
-# 004: unsafe_code in couchfin-ui
+# 005: unsafe_code in couchfin-ui
 
 Status: accepted · 2026-10-15
 
@@ -26,7 +26,10 @@ with previous forbid`). No Slint option avoids it.
 
 ## Consequences
 
-- "No `unsafe` outside `couchfin-player`" still holds for code we write.
-  The only `unsafe` in `couchfin-ui` is Slint's generated code.
+- `CLAUDE.md` reads: no `unsafe` outside `couchfin-player`, except that
+  `couchfin-ui` allows it in Slint's generated code. Handwritten UI code may
+  not use it, and `app/tests/lint_config.rs` enforces that.
+- `docs/PLAN.md` still says `unsafe_code` is forbidden everywhere except
+  `couchfin-player`. This decision is the one exception.
 - If a future Slint release stops emitting `#[allow(unsafe_code)]`,
   `couchfin-ui` can go back to inheriting the workspace lints.

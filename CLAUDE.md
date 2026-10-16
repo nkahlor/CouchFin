@@ -52,7 +52,7 @@ slint-lsp format <file.slint>
 ## Code conventions
 
 - No `unwrap()` outside tests. Use `thiserror` in libraries and `anyhow` in `app`.
-- No `unsafe` outside `couchfin-player`.
+- No `unsafe` outside `couchfin-player`. `couchfin-ui` allows it only in Slint's generated code; handwritten UI code may not use it (enforced by `app/tests/lint_config.rs`).
 - Make invalid states unrepresentable: newtypes for IDs (`ItemId`, `UserId`), enums instead of booleans and strings.
 - Keep business logic out of the UI. Screens render state from `couchfin-core` and send `Action`s back (one-way data flow).
 - Keep modules small and single-purpose, with `pub` only where needed. Aim for at most about 300 lines per file.
