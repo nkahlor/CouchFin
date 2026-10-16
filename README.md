@@ -40,13 +40,13 @@ and how to update it.
    placeholder title cards. Next time it skips straight to Home while the
    sign-in still works.
 
-   Everything works from the keyboard: Tab or the Up and Down arrows move
-   between controls, Left and Right slide the carousel one card at a time
-   (and move the cursor in a text field), Enter presses or selects, and
-   Escape goes back.
-   Escape on the address screen or on Home quits. A controller's D-pad, A
-   and B do the same as the arrows, Enter and Escape, through the same
-   code ([decision 011](docs/decisions/011-home-row.md)). Logs go to
+   Tab or the Up and Down arrows move between controls, Left and Right
+   slide the carousel one card at a time (and move the cursor in a text
+   field), Enter presses or selects, and Escape goes back.
+   Escape on the address screen or on Home quits. A controller works too:
+   the D-pad and left stick act as the arrows, A as Enter and B as Escape,
+   through the same code ([decision 011](docs/decisions/011-home-row.md)),
+   and the app falls back to the keyboard alone if SDL can't start. Logs go to
    stderr; set `RUST_LOG=debug` for more. They never include passwords or
    tokens.
 
