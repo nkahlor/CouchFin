@@ -7,10 +7,15 @@
 mod config;
 mod direction;
 mod event;
+pub mod fake;
 mod input;
 mod mapper;
+mod runner;
+mod source;
 
 pub use config::{ConfigError, Deadzone, MapperConfig, Repeat};
 pub use event::{Axis, Button, ButtonState, PadEvent, PadId};
 pub use input::Input;
 pub use mapper::Mapper;
+pub use runner::{Gamepads, StartError};
+pub use source::{Clock, EventSource, SystemClock, Wakeup};
