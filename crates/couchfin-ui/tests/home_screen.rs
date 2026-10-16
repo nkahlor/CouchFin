@@ -4,13 +4,13 @@
 mod common;
 
 use common::{Calls, labelled, press, shown, shows};
-use couchfin_ui::{HomeScreen, MainWindow, Screen};
+use couchfin_ui::{HomeView, MainWindow, Screen};
 use slint::ComponentHandle;
 use slint::platform::Key;
 
 fn home_screen() -> (MainWindow, Calls<()>) {
     let window = shown(Screen::Home);
-    let state = window.global::<HomeScreen>();
+    let state = window.global::<HomeView>();
     state.set_server_name("Living Room".into());
     state.set_server_version("10.11.2".into());
     state.set_username("alice".into());
@@ -42,7 +42,7 @@ fn switching_to_home_takes_focus_for_back() {
     let backs = Calls::new();
     let recorder = backs.clone();
     window
-        .global::<HomeScreen>()
+        .global::<HomeView>()
         .on_back(move || recorder.record(()));
     window.set_screen(Screen::Home);
     press(&window, Key::Escape);

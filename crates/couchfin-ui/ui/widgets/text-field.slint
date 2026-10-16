@@ -20,6 +20,14 @@ export component TextField inherits Rectangle {
     callback back();
 
     forward-focus: input;
+
+    // Focuses the field with the cursor after any prefilled text, so typing
+    // adds to it rather than going in front.
+    public function take-focus() {
+        input.focus();
+        input.select-all();
+        input.clear-selection();
+    }
     accessible-role: text-input;
     accessible-label: root.label;
     accessible-value: root.password ? "" : root.text;

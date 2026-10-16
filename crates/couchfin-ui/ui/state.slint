@@ -1,10 +1,15 @@
-// The data each screen renders and the requests it sends back. The app sets
-// these from couchfin-core's state and hands the callbacks to core; the
-// screens hold no logic beyond focus and key handling. Wording is the
-// UI's: properties carry data or already-worded messages, never error codes.
+// The data each screen renders and the requests it sends back. The binding
+// in src/bind.rs sets these from couchfin-core's LoginScreen and turns the
+// callbacks into core's actions; the screens hold no logic beyond focus and
+// key handling. Wording is the UI's: properties carry data or messages that
+// src/wording.rs chose, never error codes.
 
 // Which screen MainWindow shows.
 export enum Screen {
+    // Starting up, or checking a stored session.
+    connecting,
+    // Checking a stored session failed; offers Retry and Change server.
+    connect-failed,
     // Type the server's address.
     address,
     // Sign in to the server that the address check found.
@@ -13,8 +18,22 @@ export enum Screen {
     home,
 }
 
+// The startup screens: connecting, and why connecting failed.
+export global ConnectView {
+    // The stored server's address; empty before it is known.
+    in property <string> server;
+    // Why connecting failed, on connect-failed.
+    in property <string> error;
+    // Try the stored session again.
+    callback retry();
+    // Type another address.
+    callback change-server();
+    // Back (Escape, or Backspace on a button).
+    callback back();
+}
+
 // The server address screen.
-export global AddressScreen {
+export global AddressView {
     // What is in the address field. The user's typing updates it, and the
     // app may set it to prefill a previous address.
     in-out property <string> address;
@@ -25,12 +44,12 @@ export global AddressScreen {
     in property <string> error;
     // Connect (or Enter in the field) with the address as typed.
     callback submit(address: string);
-    // Back (Escape) on this screen. It is the first screen, so the app quits.
+    // Back (Escape) on this screen.
     callback back();
 }
 
 // The username and password screen.
-export global LoginScreen {
+export global LoginView {
     // The name the server's admin gave it, from /System/Info/Public.
     in property <string> server-name;
     // The canonical address the login goes to (after any redirects), shown
@@ -42,6 +61,9 @@ export global LoginScreen {
     in property <bool> busy;
     // A message for the user, shown under the form; empty shows none.
     in property <string> error;
+    // Each change empties the password field and focuses it. The binding
+    // bumps it on every failed sign-in, since core never holds the password.
+    in property <int> password-resets;
     // Sign in (or Enter in the password field). The password exists only in
     // the field and in this callback's argument; no property holds it.
     callback submit(username: string, password: string);
@@ -50,13 +72,18 @@ export global LoginScreen {
 }
 
 // The Phase 1 home screen.
-export global HomeScreen {
+export global HomeView {
     // The server's name, from /System/Info/Public.
     in property <string> server-name;
     // The server's Jellyfin version, such as 10.11.2.
     in property <string> server-version;
     // The signed-in user's name, from /Users/Me.
     in property <string> username;
-    // Back (Escape or Backspace) on the home screen.
+    // A quiet note under the details, such as a sign-in that couldn't be
+    // saved; empty shows none.
+    in property <string> notice;
+    // The Sign out button.
+    callback sign-out();
+    // Back (Escape or Backspace).
     callback back();
 }

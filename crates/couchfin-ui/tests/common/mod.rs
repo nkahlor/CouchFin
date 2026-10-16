@@ -4,6 +4,8 @@
 
 #![allow(dead_code)] // Each test binary uses a different subset.
 
+pub mod flow;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 

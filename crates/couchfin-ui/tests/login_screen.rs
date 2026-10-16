@@ -6,7 +6,7 @@
 mod common;
 
 use common::{Calls, all_elements, labelled, press, shift_tab, shown, shows, the, type_text};
-use couchfin_ui::{LoginScreen, MainWindow, Screen};
+use couchfin_ui::{LoginView, MainWindow, Screen};
 use slint::ComponentHandle;
 use slint::platform::Key;
 
@@ -19,7 +19,7 @@ type Login = (String, String);
 /// submit and back callbacks recorded.
 fn login_screen() -> (MainWindow, Calls<Login>, Calls<()>) {
     let window = shown(Screen::Login);
-    let state = window.global::<LoginScreen>();
+    let state = window.global::<LoginView>();
     state.set_server_name("Living Room".into());
     state.set_server_address("https://jellyfin.example/".into());
     let submits = Calls::new();
@@ -32,7 +32,7 @@ fn login_screen() -> (MainWindow, Calls<Login>, Calls<()>) {
 }
 
 fn username(window: &MainWindow) -> String {
-    window.global::<LoginScreen>().get_username().to_string()
+    window.global::<LoginView>().get_username().to_string()
 }
 
 fn login(user: &str, password: &str) -> Login {
@@ -49,7 +49,7 @@ fn shows_the_server_name_and_the_address_the_password_goes_to() {
 #[test]
 fn shows_a_prefilled_username() {
     let (window, _, _) = login_screen();
-    window.global::<LoginScreen>().set_username("alice".into());
+    window.global::<LoginView>().set_username("alice".into());
     assert_eq!(
         the(&window, "Username").accessible_value().as_deref(),
         Some("alice")
@@ -183,7 +183,7 @@ fn the_password_reaches_only_the_submit_callback() {
     let (window, submits, _) = login_screen();
     press(&window, Key::Tab);
     type_text(&window, SECRET);
-    let state = window.global::<LoginScreen>();
+    let state = window.global::<LoginView>();
     for visible in [
         state.get_username(),
         state.get_server_name(),
@@ -199,7 +199,7 @@ fn the_password_reaches_only_the_submit_callback() {
 #[test]
 fn shows_and_hides_an_error() {
     let (window, _, _) = login_screen();
-    let state = window.global::<LoginScreen>();
+    let state = window.global::<LoginView>();
     state.set_error("Wrong username or password".into());
     assert!(shows(&window, "Wrong username or password"));
     state.set_error("".into());
@@ -209,7 +209,7 @@ fn shows_and_hides_an_error() {
 #[test]
 fn busy_shows_progress_and_ignores_submit_and_typing() {
     let (window, submits, _) = login_screen();
-    let state = window.global::<LoginScreen>();
+    let state = window.global::<LoginView>();
     type_text(&window, "alice");
     assert!(labelled(&window, BUSY).is_empty());
 

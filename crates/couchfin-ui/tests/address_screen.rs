@@ -5,7 +5,7 @@
 mod common;
 
 use common::{Calls, labelled, press, shift_tab, shown, shows, the, type_text};
-use couchfin_ui::{AddressScreen, MainWindow, Screen};
+use couchfin_ui::{AddressView, MainWindow, Screen};
 use slint::ComponentHandle;
 use slint::platform::Key;
 
@@ -16,7 +16,7 @@ fn address_screen() -> (MainWindow, Calls<String>, Calls<()>) {
     let window = shown(Screen::Address);
     let submits = Calls::new();
     let backs = Calls::new();
-    let state = window.global::<AddressScreen>();
+    let state = window.global::<AddressView>();
     let recorder = submits.clone();
     state.on_submit(move |address| recorder.record(address.to_string()));
     let recorder = backs.clone();
@@ -25,14 +25,14 @@ fn address_screen() -> (MainWindow, Calls<String>, Calls<()>) {
 }
 
 fn address(window: &MainWindow) -> String {
-    window.global::<AddressScreen>().get_address().to_string()
+    window.global::<AddressView>().get_address().to_string()
 }
 
 #[test]
 fn shows_a_prefilled_address() {
     let (window, _, _) = address_screen();
     window
-        .global::<AddressScreen>()
+        .global::<AddressView>()
         .set_address("http://jellyfin.lan:8096".into());
     let field = the(&window, "Server address");
     assert_eq!(
@@ -116,7 +116,7 @@ fn backspace_edits_the_field_instead_of_going_back() {
 #[test]
 fn shows_and_hides_an_error() {
     let (window, _, _) = address_screen();
-    let state = window.global::<AddressScreen>();
+    let state = window.global::<AddressView>();
     assert!(labelled(&window, "No server answered at that address").is_empty());
     state.set_error("No server answered at that address".into());
     assert!(shows(&window, "No server answered at that address"));
@@ -127,7 +127,7 @@ fn shows_and_hides_an_error() {
 #[test]
 fn busy_shows_progress_and_ignores_submit_and_typing() {
     let (window, submits, _) = address_screen();
-    let state = window.global::<AddressScreen>();
+    let state = window.global::<AddressView>();
     type_text(&window, "a");
     assert!(labelled(&window, BUSY).is_empty());
 

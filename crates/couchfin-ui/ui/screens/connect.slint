@@ -1,0 +1,96 @@
+import { Theme } from "../theme.slint";
+import { ConnectView } from "../state.slint";
+import { Button } from "../widgets/button.slint";
+import { Keys, KeyIntent } from "../widgets/keys.slint";
+import { Status } from "../widgets/status.slint";
+
+// Startup, while core reads the settings and checks a stored session. No
+// controls, so the page holds focus to catch Back.
+export component ConnectingPage inherits FocusScope {
+    init => {
+        self.focus();
+    }
+
+    key-pressed(event) => {
+        if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+            ConnectView.back();
+            return accept;
+        }
+        return reject;
+    }
+
+    HorizontalLayout {
+        alignment: center;
+
+        VerticalLayout {
+            alignment: center;
+
+            Status {
+                busy: true;
+                busy-text: ConnectView.server == "" ? "Starting…" : "Connecting to " + ConnectView.server + "…";
+            }
+        }
+    }
+}
+
+// A stored session couldn't be checked: the server is down, or answered
+// with an error. Focus order: Retry, Change server.
+export component ConnectFailedPage inherits Rectangle {
+    init => {
+        retry.focus();
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                width: min(Theme.form-width, root.width - 96px);
+                spacing: Theme.spacing;
+
+                Text {
+                    text: "Couldn't connect to " + ConnectView.server;
+                    color: Theme.text;
+                    font-size: Theme.title-size;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: ConnectView.error;
+                    color: Theme.error;
+                    font-size: Theme.body-size;
+                    wrap: word-wrap;
+                }
+
+                retry := Button {
+                    text: "Retry";
+                    clicked => {
+                        ConnectView.retry();
+                    }
+                    move-next => {
+                        change-server.focus();
+                    }
+                    back => {
+                        ConnectView.back();
+                    }
+                }
+
+                change-server := Button {
+                    text: "Change server";
+                    clicked => {
+                        ConnectView.change-server();
+                    }
+                    move-previous => {
+                        retry.focus();
+                    }
+                    back => {
+                        ConnectView.back();
+                    }
+                }
+            }
+        }
+    }
+}

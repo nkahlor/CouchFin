@@ -1,5 +1,5 @@
 import { Theme } from "../theme.slint";
-import { LoginScreen } from "../state.slint";
+import { LoginView } from "../state.slint";
 import { Button } from "../widgets/button.slint";
 import { Status } from "../widgets/status.slint";
 import { TextField } from "../widgets/text-field.slint";
@@ -7,14 +7,23 @@ import { TextField } from "../widgets/text-field.slint";
 // Focus order: username, password, Sign in, Change server. Escape anywhere
 // asks to go back to the address screen.
 export component LoginPage inherits Rectangle {
+    // Core never holds the password, so after a failed sign-in the binding
+    // bumps LoginView.password-resets and the field is emptied here.
+    property <int> password-resets: LoginView.password-resets;
+
     init => {
-        username.focus();
+        username.take-focus();
+    }
+
+    changed password-resets => {
+        password.text = "";
+        password.take-focus();
     }
 
     function submit() {
         // One request at a time: core is already signing in.
-        if !LoginScreen.busy {
-            LoginScreen.submit(LoginScreen.username, password.text);
+        if !LoginView.busy {
+            LoginView.submit(LoginView.username, password.text);
         }
     }
 
@@ -29,7 +38,7 @@ export component LoginPage inherits Rectangle {
                 spacing: Theme.spacing;
 
                 Text {
-                    text: "Sign in to " + LoginScreen.server-name;
+                    text: "Sign in to " + LoginView.server-name;
                     color: Theme.text;
                     font-size: Theme.title-size;
                     font-weight: 700;
@@ -39,7 +48,7 @@ export component LoginPage inherits Rectangle {
                 // check_server follows redirects to any host, so the final
                 // address is shown before the password is typed.
                 Text {
-                    text: "Connected to " + LoginScreen.server-address;
+                    text: "Connected to " + LoginView.server-address;
                     color: Theme.text;
                     font-size: Theme.body-size;
                     wrap: word-wrap;
@@ -47,23 +56,23 @@ export component LoginPage inherits Rectangle {
 
                 username := TextField {
                     label: "Username";
-                    text <=> LoginScreen.username;
-                    read-only: LoginScreen.busy;
+                    text <=> LoginView.username;
+                    read-only: LoginView.busy;
                     accepted => {
-                        password.focus();
+                        password.take-focus();
                     }
                     move-next => {
-                        password.focus();
+                        password.take-focus();
                     }
                     back => {
-                        LoginScreen.back();
+                        LoginView.back();
                     }
                 }
 
                 password := TextField {
                     label: "Password";
                     password: true;
-                    read-only: LoginScreen.busy;
+                    read-only: LoginView.busy;
                     accepted => {
                         root.submit();
                     }
@@ -71,10 +80,10 @@ export component LoginPage inherits Rectangle {
                         sign-in.focus();
                     }
                     move-previous => {
-                        username.focus();
+                        username.take-focus();
                     }
                     back => {
-                        LoginScreen.back();
+                        LoginView.back();
                     }
                 }
 
@@ -87,30 +96,30 @@ export component LoginPage inherits Rectangle {
                         change-server.focus();
                     }
                     move-previous => {
-                        password.focus();
+                        password.take-focus();
                     }
                     back => {
-                        LoginScreen.back();
+                        LoginView.back();
                     }
                 }
 
                 change-server := Button {
                     text: "Change server";
                     clicked => {
-                        LoginScreen.back();
+                        LoginView.back();
                     }
                     move-previous => {
                         sign-in.focus();
                     }
                     back => {
-                        LoginScreen.back();
+                        LoginView.back();
                     }
                 }
 
                 Status {
-                    busy: LoginScreen.busy;
+                    busy: LoginView.busy;
                     busy-text: "Signing in…";
-                    error: LoginScreen.error;
+                    error: LoginView.error;
                 }
             }
         }
