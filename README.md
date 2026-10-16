@@ -1,5 +1,7 @@
 # Couchfin
 
+[![Made with Slint](https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-whitebg.png)](https://slint.dev)
+
 A controller-first [Jellyfin](https://jellyfin.org) client for Bazzite/SteamOS
 and Steam Big Picture, written in Rust with libmpv for playback and Slint for
 the UI.
@@ -122,6 +124,7 @@ how the notes are put together.
 ## Licence
 
 Couchfin is [MIT](LICENSE). It uses [Slint](https://slint.dev) under the Slint
-Royalty-free Desktop, Mobile, and Web Applications License 2.0, which requires
-attribution in released builds. See
+Royalty-free Desktop, Mobile, and Web Applications License 2.0. That licence
+requires the "Made with Slint" badge on the page where Couchfin is downloaded,
+so it appears at the top of this README and in every release's notes. See
 [decision 003](docs/decisions/003-slint-licence.md).

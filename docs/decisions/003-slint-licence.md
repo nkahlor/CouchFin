@@ -44,8 +44,13 @@ distribute Slint inside an application on these conditions:
      where the binaries are downloaded (for us, the GitHub Releases page or
      the README).
 
-   Nothing is distributed yet. The first release (Phase 6) must meet (a) or
-   (b). Option (b) in the README and release notes is the simplest.
+   We use **(b)**. The repo is public, so the badge sits at the top of the
+   README, and `release.yml` appends `.github/release-footer.md` to every
+   GitHub Release's notes, which is where the binaries are downloaded. Releases can be cut from
+   Phase 0 onwards (`release.yml`), so this is in place before the first one.
+   `app/tests/slint_attribution.rs` fails if either badge is removed. If
+   Couchfin is ever distributed somewhere else (Flathub, for example), that
+   page needs the badge too, or the app needs option (a).
 2. **Desktop applications only.** The licence excludes "Embedded Systems", meaning a
    computer system built to do one task inside a larger mechanical or
    electrical system. A Bazzite/SteamOS PC or a Steam Deck is a general-purpose
@@ -66,7 +71,7 @@ distribute Slint inside an application on these conditions:
 
 - The Couchfin source stays MIT. The distributed binary includes Slint under
   its royalty-free licence, and the release must carry the attribution above.
-- Phase 6 (packaging and releases) has a new task: add the Slint attribution
-  and include Slint's licence text with the Flatpak.
+- Phase 6 (packaging) has a new task: include Slint's licence text with the
+  Flatpak, and give the Flathub listing the badge or switch to option (a).
 - If any condition becomes a problem, the choices are a paid Slint licence or
   another toolkit. Moving to GPL would mean relicensing Couchfin.
