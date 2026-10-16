@@ -1,0 +1,29 @@
+// Phase 0 placeholder screen: proves the window, renderer and Back key work.
+// Back is the Escape key (or Backspace) until controller input arrives in
+// Phase 2, when couchfin-input's Back action takes over.
+export component HelloWindow inherits Window {
+    // Asks the app to quit; the app decides what quitting means.
+    callback quit-requested();
+
+    title: "Couchfin";
+    background: #101418;
+    forward-focus: keys;
+
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape || event.text == Key.Backspace) {
+                root.quit-requested();
+                return accept;
+            }
+            return reject;
+        }
+
+        Text {
+            text: "Hello";
+            color: #f0f0f0;
+            font-size: 96px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}

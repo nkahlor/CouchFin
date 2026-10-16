@@ -38,6 +38,9 @@ and how to update it.
    cargo run
    ```
 
+   For now this opens a fullscreen window that says "Hello". Escape (or
+   Backspace) quits.
+
 To try changes to the Containerfile before they're merged, build the image
 locally:
 
@@ -86,8 +89,10 @@ for how each crate is measured.
 
 Lint levels live in `[workspace.lints]` in the root `Cargo.toml`: Clippy's
 pedantic group warns, `unwrap()` outside tests is an error, and `unsafe` is
-forbidden everywhere except `couchfin-player`. CI turns every warning into an
-error. Formatting is set by `rustfmt.toml`, `taplo.toml` and `.editorconfig`,
+forbidden everywhere except `couchfin-player`. `couchfin-ui` lowers that to
+`deny` only because Slint's generated code needs it
+([decision 004](docs/decisions/004-slint-generated-unsafe.md)). CI turns every
+warning into an error. Formatting is set by `rustfmt.toml`, `taplo.toml` and `.editorconfig`,
 licence and advisory rules by `deny.toml`. Format Slint files with
 `slint-lsp format <file.slint>`.
 
@@ -115,4 +120,7 @@ how the notes are put together.
 
 ## Licence
 
-[MIT](LICENSE)
+Couchfin is [MIT](LICENSE). It uses [Slint](https://slint.dev) under the Slint
+Royalty-free Desktop, Mobile, and Web Applications License 2.0, which requires
+attribution in released builds. See
+[decision 003](docs/decisions/003-slint-licence.md).

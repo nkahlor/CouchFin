@@ -3,11 +3,20 @@
 
 [graph]
 all-features = true
+# Couchfin only ships for Linux (Bazzite/SteamOS) on the dev image's two
+# architectures, so Windows- and Apple-only crates are left out of the checks.
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 [advisories]
 # Unmaintained and yanked crates fail the check alongside vulnerabilities.
 unmaintained = "all"
 yanked = "deny"
+ignore = [
+  # ttf-parser comes in only through winit's Wayland client-side decorations
+  # (sctk-adwaita), which a fullscreen window doesn't draw. It is unmaintained,
+  # not vulnerable, and no upgrade exists yet. Drop this once winit moves on.
+  { id = "RUSTSEC-2026-0192", reason = "unmaintained ttf-parser via winit's sctk-adwaita; no fix available" },
+]
 
 [licenses]
 # Permissive licences compatible with shipping Couchfin as MIT. Add to this
@@ -25,6 +34,43 @@ allow = [
 confidence-threshold = 0.9
 # The list is written ahead of the dependencies that will need it.
 unused-allowed-license = "allow"
+
+# Slint is GPL-3.0-only OR one of its own licences. Couchfin takes the
+# royalty-free desktop licence, never GPL, and only for Slint's own crates.
+# Its attribution and other conditions are in
+# docs/decisions/003-slint-licence.md.
+exceptions = [
+  { crate = "i-slint-backend-selector", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-backend-winit", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-common", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-compiler", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-core", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-core-macros", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "i-slint-renderer-femtovg", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "slint", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "slint-build", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+  { crate = "slint-macros", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
+]
 
 [licenses.private]
 # Workspace crates are publish = false and inherit the root MIT licence.

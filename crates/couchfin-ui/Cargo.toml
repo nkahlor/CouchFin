@@ -10,6 +10,30 @@ repository.workspace = true
 
 [dependencies]
 couchfin-core.workspace = true
+# Only the winit backend and the femtovg OpenGL renderer: mpv will draw into
+# the same GL window in Phase 4.
+slint = { workspace = true, features = [
+  "std",
+  "compat-1-2",
+  "backend-winit",
+  "renderer-femtovg",
+] }
 
-[lints]
-workspace = true
+[dev-dependencies]
+i-slint-backend-testing.workspace = true
+
+[build-dependencies]
+slint-build.workspace = true
+
+# A copy of [workspace.lints] with unsafe_code lowered from "forbid" to "deny",
+# because Slint's generated code carries #[allow(unsafe_code)], which "forbid"
+# rejects. Handwritten code here must not use unsafe; app/tests/lint_config.rs
+# checks this and keeps the table equal to the workspace one otherwise. See
+# docs/decisions/004-slint-generated-unsafe.md.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"

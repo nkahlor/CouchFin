@@ -1,8 +1,12 @@
 //! Checks that every crate gets the workspace lints, and that `couchfin-player`
-//! is the only crate where `unsafe` is possible.
+//! is the only crate where handwritten `unsafe` is possible.
 //!
-//! Cargo can't override one inherited lint, so `couchfin-player` carries its
-//! own copy of the table. This test keeps that copy in step with the workspace.
+//! Cargo can't override one inherited lint, so `couchfin-player` and
+//! `couchfin-ui` carry their own copies of the table with `unsafe_code`
+//! lowered to `deny`. The player needs that for libmpv FFI; the UI only because
+//! Slint's generated code has `#[allow(unsafe_code)]`, which `forbid` rejects
+//! (docs/decisions/004-slint-generated-unsafe.md). This test keeps both copies
+//! in step with the workspace and stops the UI's own code opting in.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,9 +18,10 @@ const CRATES: &[&str] = &[
     "crates/couchfin-api",
     "crates/couchfin-core",
     "crates/couchfin-input",
-    "crates/couchfin-ui",
 ];
-const PLAYER: &str = "crates/couchfin-player";
+/// Crates with their own copy of the lints, `unsafe_code` lowered to `deny`.
+const DENY_UNSAFE: &[&str] = &["crates/couchfin-player", "crates/couchfin-ui"];
+const UI_SOURCES: &[&str] = &["crates/couchfin-ui/src", "crates/couchfin-ui/build.rs"];
 
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -67,7 +72,7 @@ fn workspace_lints_match_the_plan() {
 }
 
 #[test]
-fn every_crate_but_the_player_inherits_the_workspace_lints() {
+fn every_other_crate_inherits_the_workspace_lints() {
     for dir in CRATES {
         let lints = manifest(dir).get("lints").cloned();
         assert_eq!(
@@ -79,25 +84,50 @@ fn every_crate_but_the_player_inherits_the_workspace_lints() {
 }
 
 #[test]
-fn player_lints_differ_from_the_workspace_only_in_allowing_unsafe() {
-    let player = manifest(PLAYER)
-        .get("lints")
-        .and_then(Value::as_table)
-        .cloned()
-        .expect("couchfin-player has its own [lints] table");
-    assert_eq!(
-        level(&player, "rust", "unsafe_code").as_deref(),
-        Some("deny")
-    );
-
+fn deny_unsafe_lints_differ_from_the_workspace_only_in_unsafe_code() {
     let mut expected = workspace_lints();
     expected
         .get_mut("rust")
         .and_then(Value::as_table_mut)
         .expect("workspace has rust lints")
         .insert("unsafe_code".into(), Value::String("deny".into()));
-    assert_eq!(
-        player, expected,
-        "couchfin-player's [lints] drifted from [workspace.lints]"
-    );
+
+    for dir in DENY_UNSAFE {
+        let lints = manifest(dir)
+            .get("lints")
+            .and_then(Value::as_table)
+            .cloned()
+            .unwrap_or_else(|| panic!("{dir} needs its own [lints] table"));
+        assert_eq!(
+            lints, expected,
+            "{dir}'s [lints] drifted from [workspace.lints]"
+        );
+    }
+}
+
+fn rust_files(path: &Path, files: &mut Vec<PathBuf>) {
+    if path.is_dir() {
+        for entry in fs::read_dir(path).expect("directory is readable") {
+            rust_files(&entry.expect("directory entry").path(), files);
+        }
+    } else if path.extension().is_some_and(|ext| ext == "rs") {
+        files.push(path.to_path_buf());
+    }
+}
+
+#[test]
+fn ui_code_never_opts_in_to_unsafe() {
+    let mut files = Vec::new();
+    for source in UI_SOURCES {
+        rust_files(&workspace_root().join(source), &mut files);
+    }
+    assert!(!files.is_empty(), "found no couchfin-ui sources");
+    for file in files {
+        let text = fs::read_to_string(&file).expect("source is readable");
+        assert!(
+            !text.contains("allow(unsafe_code)"),
+            "{} allows unsafe_code; only couchfin-player may",
+            file.display()
+        );
+    }
 }
