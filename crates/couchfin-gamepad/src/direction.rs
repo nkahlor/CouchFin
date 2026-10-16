@@ -66,57 +66,50 @@ impl Stick {
     /// Re-reads the position after it moved. Returns the direction if the
     /// stick has just engaged one.
     ///
-    /// A held direction stays until its own axis falls below the release
-    /// threshold, whatever the other axis does, so a stick near a diagonal
-    /// can't flick between two directions. Engaging picks the stronger axis
-    /// (horizontal on an exact tie).
+    /// A held direction is locked: it stays until the stick's distance from
+    /// the centre falls below the release threshold, whatever direction the
+    /// stick points meanwhile, so a sloppy thumb can't flick to a neighbour.
+    /// Engaging needs the stronger axis past the press threshold and the
+    /// stick within the deadzone's cone of that axis; in the diagonal wedges
+    /// nothing engages.
     pub(crate) fn moved(
         &mut self,
         deadzone: Deadzone,
         now: Instant,
         repeat: Repeat,
     ) -> Option<Direction> {
-        if let Some(held) = self.held {
-            if self.along(held.direction) >= deadzone.release() {
+        if self.held.is_some() {
+            if self.distance() >= f64::from(deadzone.release()) {
                 return None;
             }
             self.held = None;
         }
         let (across, up_down) = (self.x.unsigned_abs(), self.y.unsigned_abs());
-        let (strength, direction) = if up_down > across {
+        let (strength, off_axis, direction) = if up_down > across {
             let direction = if self.y < 0 {
                 Direction::Up
             } else {
                 Direction::Down
             };
-            (up_down, direction)
+            (up_down, across, direction)
         } else {
             let direction = if self.x < 0 {
                 Direction::Left
             } else {
                 Direction::Right
             };
-            (across, direction)
+            (across, up_down, direction)
         };
-        if strength < deadzone.press() {
+        let widest = f64::from(strength) * f64::from(deadzone.cone()).to_radians().tan();
+        if strength < deadzone.press() || f64::from(off_axis) > widest {
             return None;
         }
         self.held = Some(Held::new(direction, now, repeat));
         Some(direction)
     }
 
-    /// How far the stick points in `direction` (zero if the other way).
-    fn along(&self, direction: Direction) -> u16 {
-        let (value, sign) = match direction {
-            Direction::Up => (self.y, -1),
-            Direction::Down => (self.y, 1),
-            Direction::Left => (self.x, -1),
-            Direction::Right => (self.x, 1),
-        };
-        if value.signum() == sign {
-            value.unsigned_abs()
-        } else {
-            0
-        }
+    /// How far the stick is from the centre.
+    fn distance(&self) -> f64 {
+        f64::from(self.x).hypot(f64::from(self.y))
     }
 }

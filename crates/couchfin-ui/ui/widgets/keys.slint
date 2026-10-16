@@ -1,7 +1,8 @@
 // One place that decides what a key means, so every control agrees. A
 // controller arrives here too: the app turns its D-pad and A and B buttons
 // into arrow keys, Enter and Escape (couchfin_ui::navigate, decision 010),
-// so these rules cover both.
+// so these rules cover both. MainWindow offers each key to the duplicate
+// guard before it gets here (decision 013).
 
 export enum KeyIntent {
     none,

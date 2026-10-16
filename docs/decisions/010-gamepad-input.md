@@ -82,3 +82,14 @@ Findings (October 2026):
   couchfin-core's settings, read by both couchfin-gamepad and couchfin-ui.
 - A new `sdl3` crate release is a deliberate upgrade, tested on the TV and
   later on a Steam Deck.
+
+## Update: Steam's Desktop Layout types keys too
+
+The decision covered two gamepads for one controller (Steam's virtual pad
+next to the physical one), not Steam also typing a keyboard. With Steam
+running but Couchfin not launched from it, Steam Input's Desktop Layout makes
+the controller send arrow, Enter and Escape keys to the focused window as
+well, so each press moved the UI twice (and a hold moved extra steps, 1, 3,
+5). SDL can't filter this, because the keys arrive through the window.
+[Decision 013](013-steam-desktop-layout-dedupe.md) merges them in
+couchfin-ui.

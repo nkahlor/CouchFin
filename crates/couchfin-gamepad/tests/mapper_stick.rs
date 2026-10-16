@@ -1,5 +1,6 @@
 //! The left stick as four directions, with a deadzone and hysteresis.
-//! The default deadzone engages at 16384 and releases below 10923.
+//! The default deadzone engages at 21000 and releases below 14000.
+//! Direction locking and diagonals are in `mapper_stick_lock.rs`.
 
 mod common;
 
@@ -9,10 +10,10 @@ use couchfin_gamepad::{Axis, Button, Deadzone, Input, MapperConfig, PadEvent};
 #[test]
 fn pushing_past_the_press_threshold_gives_the_direction() {
     for (stick_axis, value, input) in [
-        (Axis::LeftX, 16_384, Input::Right),
-        (Axis::LeftX, -16_384, Input::Left),
-        (Axis::LeftY, -16_384, Input::Up),
-        (Axis::LeftY, 16_384, Input::Down),
+        (Axis::LeftX, 21_000, Input::Right),
+        (Axis::LeftX, -21_000, Input::Left),
+        (Axis::LeftY, -21_000, Input::Up),
+        (Axis::LeftY, 21_000, Input::Down),
     ] {
         let mut rig = Rig::new();
         assert_eq!(rig.feed(0, &[axis(PAD, stick_axis, value)]), [input]);
@@ -36,16 +37,16 @@ fn full_travel_either_way_counts() {
 #[test]
 fn inside_the_deadzone_gives_nothing() {
     let mut rig = Rig::new();
-    assert_eq!(rig.feed(0, &[axis(PAD, Axis::LeftX, 16_383)]), []);
-    assert_eq!(rig.feed(1, &[axis(PAD, Axis::LeftY, -16_383)]), []);
+    assert_eq!(rig.feed(0, &[axis(PAD, Axis::LeftX, 20_999)]), []);
+    assert_eq!(rig.feed(1, &[axis(PAD, Axis::LeftY, -20_999)]), []);
     assert_eq!(rig.deadline_ms(), None);
 }
 
 #[test]
 fn a_stick_resting_near_the_threshold_does_not_flicker() {
     let mut rig = Rig::new();
-    assert_eq!(rig.feed(0, &[axis(PAD, Axis::LeftY, -16_400)]), [Input::Up]);
-    for (ms, value) in [(10, -16_000), (20, -16_500), (30, -12_000), (40, -16_384)] {
+    assert_eq!(rig.feed(0, &[axis(PAD, Axis::LeftY, -21_100)]), [Input::Up]);
+    for (ms, value) in [(10, -20_500), (20, -21_500), (30, -15_000), (40, -21_000)] {
         assert_eq!(
             rig.feed(ms, &[axis(PAD, Axis::LeftY, value)]),
             [],
@@ -58,7 +59,7 @@ fn a_stick_resting_near_the_threshold_does_not_flicker() {
 fn coming_back_below_the_release_threshold_lets_go() {
     let mut rig = Rig::new();
     rig.feed(0, &[axis(PAD, Axis::LeftX, 30_000)]);
-    assert_eq!(rig.feed(100, &[axis(PAD, Axis::LeftX, 10_922)]), []);
+    assert_eq!(rig.feed(100, &[axis(PAD, Axis::LeftX, 13_999)]), []);
     assert_eq!(rig.deadline_ms(), None);
     assert_eq!(
         rig.feed(200, &[axis(PAD, Axis::LeftX, 30_000)]),
@@ -71,7 +72,7 @@ fn between_the_thresholds_after_letting_go_stays_released() {
     let mut rig = Rig::new();
     rig.feed(0, &[axis(PAD, Axis::LeftX, 30_000)]);
     rig.feed(100, &[axis(PAD, Axis::LeftX, 0)]);
-    assert_eq!(rig.feed(200, &[axis(PAD, Axis::LeftX, 14_000)]), []);
+    assert_eq!(rig.feed(200, &[axis(PAD, Axis::LeftX, 17_000)]), []);
 }
 
 #[test]
@@ -87,18 +88,18 @@ fn a_held_stick_repeats_like_the_dpad() {
 #[test]
 fn moving_within_the_held_direction_keeps_the_repeat_timing() {
     let mut rig = Rig::new();
-    rig.feed(0, &[axis(PAD, Axis::LeftY, 20_000)]);
+    rig.feed(0, &[axis(PAD, Axis::LeftY, 22_000)]);
     assert_eq!(rig.feed(200, &[axis(PAD, Axis::LeftY, 32_767)]), []);
     assert_eq!(rig.deadline_ms(), Some(400));
 }
 
 #[test]
-fn the_stronger_axis_wins_on_a_diagonal() {
+fn the_stronger_axis_wins_when_the_other_is_small() {
     let mut rig = Rig::new();
     let inputs = rig.feed(
         0,
         &[
-            axis(PAD, Axis::LeftX, 20_000),
+            axis(PAD, Axis::LeftX, 5_000),
             axis(PAD, Axis::LeftY, -25_000),
         ],
     );
@@ -108,44 +109,11 @@ fn the_stronger_axis_wins_on_a_diagonal() {
     let inputs = rig.feed(
         0,
         &[
-            axis(PAD, Axis::LeftY, 20_000),
+            axis(PAD, Axis::LeftY, 5_000),
             axis(PAD, Axis::LeftX, -25_000),
         ],
     );
     assert_eq!(inputs, [Input::Left]);
-}
-
-#[test]
-fn an_exact_diagonal_picks_one_direction_only() {
-    let mut rig = Rig::new();
-    let inputs = rig.feed(
-        0,
-        &[
-            axis(PAD, Axis::LeftX, 20_000),
-            axis(PAD, Axis::LeftY, 20_000),
-        ],
-    );
-    assert_eq!(inputs.len(), 1, "{inputs:?}");
-}
-
-#[test]
-fn the_held_direction_stays_until_its_axis_lets_go() {
-    // Rolling the stick from up towards right: it stays Up while the
-    // vertical axis is still past the release threshold, so wobbling near
-    // the diagonal can't flick between the two.
-    let mut rig = Rig::new();
-    rig.feed(0, &[axis(PAD, Axis::LeftY, -30_000)]);
-    let inputs = rig.feed(
-        10,
-        &[
-            axis(PAD, Axis::LeftX, 25_000),
-            axis(PAD, Axis::LeftY, -20_000),
-        ],
-    );
-    assert_eq!(inputs, []);
-    let inputs = rig.feed(20, &[axis(PAD, Axis::LeftY, -5_000)]);
-    assert_eq!(inputs, [Input::Right]);
-    assert_eq!(rig.deadline_ms(), Some(420));
 }
 
 #[test]

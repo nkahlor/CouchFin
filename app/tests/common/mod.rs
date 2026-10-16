@@ -10,6 +10,8 @@ use i_slint_backend_testing::ElementHandle;
 use slint::ComponentHandle;
 use slint::platform::{Key, WindowEvent};
 
+pub mod steam;
+
 thread_local! {
     /// The window under test. It lives on the UI thread, so only closures
     /// passed to `ui` touch it.
@@ -95,4 +97,13 @@ pub fn erase(len: usize) {
     for _ in 0..len {
         press(Key::Backspace);
     }
+}
+
+/// The "Selected: ..." note on Home, if any.
+pub fn selected() -> Option<String> {
+    with_window(|window| {
+        labels(window)
+            .into_iter()
+            .find(|label| label.starts_with("Selected: "))
+    })
 }

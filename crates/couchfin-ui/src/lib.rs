@@ -15,7 +15,8 @@
 //!
 //! - [`navigate`] feeds a controller's [`Intent`] (D-pad, A, B) into the
 //!   window as its key, so a controller and the keyboard share one focus
-//!   path.
+//!   path. [`Navigator`] wraps it and drops the duplicate key Steam's
+//!   Desktop Layout types for the same press (decision 013).
 //!
 //! Every screen works from the keyboard alone: Tab or Down moves to the next
 //! control, Shift+Tab or Up to the previous one, Enter (or Space on a
@@ -60,7 +61,9 @@
 //! ```
 
 mod bind;
+mod guard;
 mod navigate;
+mod navigator;
 pub mod wording;
 
 mod generated {
@@ -71,7 +74,9 @@ mod generated {
 }
 
 pub use bind::{Command, bind, render};
+pub use guard::{Clock, Dropped, DuplicateGuard, GuardConfig, SystemClock, Verdict};
 pub use navigate::{Intent, navigate};
+pub use navigator::{INPUT_LOG, Navigator, log_stamp};
 
 /// The one window Couchfin shows: a dark backdrop with the current
 /// [`Screen`] on it. The app makes it fullscreen.

@@ -28,12 +28,28 @@ export component MainWindow inherits Window {
     // server. src/bind.rs sets it from core's state and reads it on Back.
     in property <bool> back-quits: true;
 
+    // Offered every key before the focused control sees it, as its text and
+    // whether it is an auto-repeat. Returns true to swallow a duplicate
+    // (src/navigator.rs; decision 013). Unset, nothing is swallowed.
+    callback filter-key(string, bool) -> bool;
+
     title: "Couchfin";
     background: Theme.background;
 
-    if root.screen == Screen.connecting: ConnectingPage { }
-    if root.screen == Screen.connect-failed: ConnectFailedPage { }
-    if root.screen == Screen.address: AddressPage { }
-    if root.screen == Screen.login: LoginPage { }
-    if root.screen == Screen.home: HomePage { }
+    FocusScope {
+        width: parent.width;
+        height: parent.height;
+        capture-key-pressed(event) => {
+            if root.filter-key(event.text, event.repeat) {
+                return EventResult.accept;
+            }
+            EventResult.reject
+        }
+
+        if root.screen == Screen.connecting: ConnectingPage { }
+        if root.screen == Screen.connect-failed: ConnectFailedPage { }
+        if root.screen == Screen.address: AddressPage { }
+        if root.screen == Screen.login: LoginPage { }
+        if root.screen == Screen.home: HomePage { }
+    }
 }
