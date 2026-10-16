@@ -12,7 +12,7 @@ use serde_json::Value;
 /// `app` wires everything together, so it is the only crate allowed to use all.
 const ALLOWED: &[(&str, &[&str])] = &[
     ("couchfin-api", &[]),
-    ("couchfin-input", &[]),
+    ("couchfin-gamepad", &[]),
     ("couchfin-player", &[]),
     ("couchfin-core", &["couchfin-api"]),
     ("couchfin-ui", &["couchfin-core"]),
@@ -21,7 +21,7 @@ const ALLOWED: &[(&str, &[&str])] = &[
         &[
             "couchfin-api",
             "couchfin-core",
-            "couchfin-input",
+            "couchfin-gamepad",
             "couchfin-player",
             "couchfin-ui",
         ],

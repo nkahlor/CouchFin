@@ -4,7 +4,7 @@
 FROM registry.fedoraproject.org/fedora:44
 
 LABEL org.opencontainers.image.source="https://github.com/nkahlor/CouchFin" \
-      org.opencontainers.image.description="Couchfin dev environment: Rust, libmpv, SDL2, Mesa"
+      org.opencontainers.image.description="Couchfin dev environment: Rust, libmpv, SDL3, Mesa"
 
 ARG RUST_VERSION=1.99.1
 ARG CARGO_BINSTALL_VERSION=1.25.3
@@ -30,7 +30,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         # playback
         'pkgconfig(mpv)' \
         # input
-        'pkgconfig(sdl2)' \
+        'pkgconfig(sdl3)' \
         # graphics: GL/EGL headers plus drivers so the app can reach the GPU
         mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers mesa-vulkan-drivers \
         libva-utils \

@@ -17,7 +17,7 @@ const CRATES: &[&str] = &[
     "app",
     "crates/couchfin-api",
     "crates/couchfin-core",
-    "crates/couchfin-input",
+    "crates/couchfin-gamepad",
 ];
 /// Crates with their own copy of the lints, `unsafe_code` lowered to `deny`.
 const DENY_UNSAFE: &[&str] = &["crates/couchfin-player", "crates/couchfin-ui"];

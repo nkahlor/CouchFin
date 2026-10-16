@@ -46,3 +46,8 @@ CI, so both see the same toolchain and libraries.
 The repo and the `couchfin-dev` package are now public, so Distrobox pulls the
 image without logging in to GHCR. The consequence above about logging in no
 longer applies.
+
+## Update (2026-10-16, decision 010)
+
+The image now installs `pkgconfig(sdl3)` instead of `pkgconfig(sdl2)`:
+controllers go through SDL3.

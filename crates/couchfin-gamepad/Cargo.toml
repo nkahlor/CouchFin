@@ -1,6 +1,6 @@
 [package]
-name = "couchfin-input"
-description = "SDL controller and keyboard events mapped to app actions"
+name = "couchfin-gamepad"
+description = "Game controllers via SDL3, mapped to navigation and playback inputs"
 publish = false
 version.workspace = true
 edition.workspace = true

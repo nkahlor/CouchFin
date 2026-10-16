@@ -48,7 +48,7 @@ both the PR's own commits and a "Merge pull request #N" commit for each PR.
   after it merges and `devcontainer.yml` pushes it. A PR that needs a new tool
   in CI has to land the image change first.
 - The release binary links against the dev image's Fedora 44 libraries
-  (glibc, libmpv, SDL2), so it runs on Fedora 44 or newer, such as current
+  (glibc, libmpv, SDL3 since decision 010), so it runs on Fedora 44 or newer, such as current
   Bazzite. The Phase 6 Flatpak replaces it as the way to install Couchfin.
 - Commits that aren't Conventional Commits don't appear in the release notes.
 - git-cliff is installed at runtime in the `publish` job, the one exception to

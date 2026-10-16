@@ -127,7 +127,7 @@ dependencies = [
  "anyhow",
  "couchfin-api",
  "couchfin-core",
- "couchfin-input",
+ "couchfin-gamepad",
  "couchfin-player",
  "couchfin-ui",
  "i-slint-backend-testing",
@@ -859,7 +859,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "couchfin-input"
+name = "couchfin-gamepad"
 version = "0.1.0"
 
 [[package]]
