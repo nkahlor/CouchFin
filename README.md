@@ -94,6 +94,23 @@ new device ID unless `COUCHFIN_DEVICE_ID` is set to one it printed before. See
 [decision 006](docs/decisions/006-api-client-design.md) for how the client is
 built.
 
+### Checking a controller
+
+`couchfin-gamepad` has an example that prints every input from every
+connected controller (Up, Down, Left, Right, Select, Back, Menu) and logs
+each connect and disconnect with the pad's name and type, so you can check a
+pad without the app. Ctrl+C quits:
+
+```sh
+cargo run -p couchfin-gamepad --example gamepads
+```
+
+The D-pad and left stick repeat while held (after 400 ms, then every 60 ms).
+Buttons go by position: the bottom face button selects and the right one goes
+back, on every pad. Under Steam Input only Steam's virtual pad should show
+up, not the physical one as well. See
+[decision 012](docs/decisions/012-gamepad-mapping-and-thread.md).
+
 ### Where Couchfin keeps its data
 
 `couchfin-core` stores the session, so a restart skips the login while the
