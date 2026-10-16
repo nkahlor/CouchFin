@@ -1,50 +1,138 @@
 name: CI
 
-# The same checks as the pre-commit hook, plus cargo deny and cargo doc, on
-# every PR and on main. The CI/CD task moves these jobs into the dev container
-# image.
+# Every check from CLAUDE.md, run in the dev container image so CI sees the
+# same toolchain, tools and libraries as local development. Nothing is
+# installed at runtime. Each check is its own job so they run in parallel and
+# branch protection can require them by name: fmt, clippy, test, doc, deny,
+# coverage. Keep those job names stable. release.yml calls this workflow too,
+# so a tag can't be released unless the checks pass on it.
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Container jobs default to `sh`. bash also adds pipefail, so a failing
+# command piped into another still fails the step.
+defaults:
+  run:
+    shell: bash
 
 env:
   CARGO_TERM_COLOR: always
   RUSTDOCFLAGS: -D warnings
 
 jobs:
-  check:
+  fmt:
+    name: fmt
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    # The image is private while the repo is, so pulling it needs a token with
+    # packages: read. The image's toolchain matches rust-toolchain.toml.
+    container: &dev-image
+      image: ghcr.io/nkahlor/couchfin-dev:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-
-      # rustup reads rust-toolchain.toml and installs the pinned toolchain.
-      - name: Install toolchain
-        run: rustup show active-toolchain || rustup toolchain install
-
-      # Same versions as the dev container image.
-      - name: Install cargo-deny and taplo
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deny@0.20.2,taplo@0.10.0
-
-      - name: fmt
+      - name: cargo fmt
         run: cargo fmt --all --check
-
-      - name: taplo
+      - name: taplo fmt
         run: taplo fmt --check
 
-      - name: clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    steps:
+      - uses: actions/checkout@v7
+      # Only main saves the cache, so PRs can't evict it or poison it; PRs
+      # restore main's.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
-      - name: test
-        run: cargo test --workspace
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: cargo test
+        run: cargo test --workspace --locked
 
-      - name: doc
-        run: cargo doc --workspace --no-deps
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: cargo doc
+        run: cargo doc --workspace --no-deps --locked
 
-      - name: deny
+  deny:
+    name: deny
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    steps:
+      - uses: actions/checkout@v7
+      - name: cargo deny
         run: cargo deny check
+
+  # couchfin-api and couchfin-core must each stay at or above 80% line
+  # coverage. A crate with no executable lines yet is skipped with a warning;
+  # see docs/dev-environment.md ("Coverage").
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Test the coverage gate
+        run: python3 -m unittest discover -s .github/scripts
+      - name: cargo llvm-cov
+        run: cargo llvm-cov --workspace --locked --no-report
+      - name: Coverage report
+        run: |
+          cargo llvm-cov report --summary-only
+          cargo llvm-cov report --json --summary-only --output-path target/llvm-cov.json
+      - name: Enforce 80% for couchfin-api and couchfin-core
+        run: python3 .github/scripts/coverage_gate.py target/llvm-cov.json --min 80 couchfin-api couchfin-core
