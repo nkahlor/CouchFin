@@ -57,6 +57,7 @@ slint-lsp format <file.slint>
 - Keep business logic out of the UI. Screens render state from `couchfin-core` and send `Action`s back (one-way data flow).
 - Keep modules small and single-purpose, with `pub` only where needed. Aim for at most about 300 lines per file.
 - Every UI action must be reachable by controller. Check focus on every new screen.
+- Styling comes from `Theme` in `crates/couchfin-ui/ui/theme.slint`: every colour, length and font weight in a screen or widget is a `Theme` property, never a literal. Add a named property when you need a new value (enforced by `crates/couchfin-ui/tests/theme_tokens.rs`; see decision 009).
 - Never log secrets (access tokens, passwords). Tokens live in the system keyring, with a 0600 file as the fallback.
 - Log through `tracing`; stdout is hidden when launched from Steam.
 

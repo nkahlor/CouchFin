@@ -9,12 +9,12 @@ export component Status inherits VerticalLayout {
     // Empty shows nothing.
     in property <string> error;
 
-    min-height: 120px;
-    spacing: 12px;
+    min-height: Theme.status-height;
+    spacing: Theme.status-spacing;
     alignment: start;
 
     if root.busy: HorizontalLayout {
-        spacing: 16px;
+        spacing: Theme.indicator-gap;
         alignment: start;
 
         // Three dots pulsing in turn, so a slow server still looks alive.
@@ -22,8 +22,8 @@ export component Status inherits VerticalLayout {
             alignment: center;
 
             Rectangle {
-                width: 20px;
-                height: 20px;
+                width: Theme.indicator-size;
+                height: Theme.indicator-size;
                 border-radius: self.width / 2;
                 background: Theme.focus;
                 opacity: 0.35 + 0.65 * max(0, sin(animation-tick() / 1.2s * 360deg - index * 60deg));

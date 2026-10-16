@@ -31,7 +31,7 @@ export component HomePage inherits FocusScope {
             text: HomeView.server-name;
             color: Theme.text;
             font-size: Theme.title-size;
-            font-weight: 700;
+            font-weight: Theme.strong-weight;
             horizontal-alignment: center;
         }
 
@@ -53,7 +53,7 @@ export component HomePage inherits FocusScope {
             alignment: center;
 
             sign-out := Button {
-                width: 480px;
+                width: Theme.button-width;
                 text: "Sign out";
                 clicked => {
                     HomeView.sign-out();
