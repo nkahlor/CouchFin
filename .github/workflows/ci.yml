@@ -1,7 +1,8 @@
 name: CI
 
-# fmt, clippy and tests on every PR and on main. The CI/CD task moves these
-# jobs into the dev container image and adds the remaining checks.
+# The same checks as the pre-commit hook, plus cargo deny and cargo doc, on
+# every PR and on main. The CI/CD task moves these jobs into the dev container
+# image.
 on:
   pull_request:
   push:
@@ -12,6 +13,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTDOCFLAGS: -D warnings
 
 jobs:
   check:
@@ -23,11 +25,26 @@ jobs:
       - name: Install toolchain
         run: rustup show active-toolchain || rustup toolchain install
 
+      # Same versions as the dev container image.
+      - name: Install cargo-deny and taplo
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2,taplo@0.10.0
+
       - name: fmt
         run: cargo fmt --all --check
+
+      - name: taplo
+        run: taplo fmt --check
 
       - name: clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: test
         run: cargo test --workspace
+
+      - name: doc
+        run: cargo doc --workspace --no-deps
+
+      - name: deny
+        run: cargo deny check

@@ -7,3 +7,14 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+
+# A copy of [workspace.lints] with unsafe_code lowered from "forbid" to "deny",
+# so each libmpv FFI block can opt in with #[allow(unsafe_code)]. Keep it equal
+# to the workspace table otherwise; app/tests/lint_config.rs checks this.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"

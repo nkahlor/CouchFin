@@ -27,6 +27,7 @@ check "llvm-tools"         bash -c 'rustup component list --installed | grep -q 
 check "cargo-deny"         cargo deny --version
 check "taplo"              taplo --version
 check "slint-lsp format"   slint-lsp format --help
+check "pre-commit"         pre-commit --version
 check "C compiler"         cc --version
 check "clang (bindgen)"    clang --version
 

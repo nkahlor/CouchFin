@@ -1,0 +1,41 @@
+# cargo-deny: licences, security advisories, banned crates and sources.
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = true
+
+[advisories]
+# Unmaintained and yanked crates fail the check alongside vulnerabilities.
+unmaintained = "all"
+yanked = "deny"
+
+[licenses]
+# Permissive licences compatible with shipping Couchfin as MIT. Add to this
+# list deliberately, in the PR that adds the dependency.
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MIT",
+  "Unicode-3.0",
+  "Zlib",
+]
+confidence-threshold = 0.9
+# The list is written ahead of the dependencies that will need it.
+unused-allowed-license = "allow"
+
+[licenses.private]
+# Workspace crates are publish = false and inherit the root MIT licence.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies between workspace crates have no version.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,2 @@
+# unwrap_used is denied everywhere except tests, where a panic is the failure.
+allow-unwrap-in-tests = true
