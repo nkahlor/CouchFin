@@ -89,16 +89,18 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 
 ### Phase 2: Controller navigation and placeholder cards
 
-- [ ] couchfin-gamepad: SDL3 controllers mapped to one `Input` enum, with key repeat on held D-pad and stick, and the app sending each input to the UI as the same navigation intent the keyboard (arrow keys, Enter, Escape/Backspace, handled in couchfin-ui) already uses (decision 010)
-- [ ] couchfin-ui: Home screen with a horizontal row of 10 hard-coded placeholder title cards and a clear focus highlight
+- [x] couchfin-gamepad: SDL3 controllers mapped to one `Input` enum, with key repeat on held D-pad and stick, and the app sending each input to the UI as the same navigation intent the keyboard (arrow keys, Enter, Escape/Backspace, handled in couchfin-ui) already uses (decision 010)
+- [x] couchfin-ui: Home screen with a horizontal row of 10 hard-coded placeholder title cards and a clear focus highlight
 
 **Done when:** the D-pad and the arrow keys both move focus, A/Enter selects, and B/Escape goes back, with no mouse needed
 
 ### Phase 3: Real library
 
-- [ ] couchfin-api: `GET /UserViews`, `GET /Items` (paged), `GET /Items/{id}/Images/Primary`, and `GET /UserItems/Resume`
+- [ ] couchfin-api: `GET /UserViews`, `GET /Items` (paged), `GET /Items/{id}`, `GET /UserItems/Resume`, `GET /Shows/NextUp`, `GET /Items/Latest` (per library), seasons and episodes (`/Shows/{id}/Seasons`, `/Shows/{id}/Episodes`), and images (`Primary`, `Backdrop`, `Thumb`), with an `ItemId` newtype (decision 014)
 - [ ] couchfin-core: async image loading with a disk cache. For each poster it also produces a blurred variant, which Home's carousel shows for the cards already passed (Slint can't blur content; decision 011)
-- [ ] couchfin-ui: Home rows for Continue Watching plus one row per library, a library grid and a detail page
+- [ ] couchfin-core: library state and the navigation stack: which Home rows exist (empty ones hidden), the paged library grid, detail loading (movie, series, season), and Back going up one level with Home keeping its row positions (decision 014)
+- [ ] couchfin-ui: Home as a stack of carousel rows (Continue Watching, Next Up, Recently Added per library, Libraries) with Up/Down between rows and per-row focus, a paged poster grid per library, and movie and series detail pages (decision 014)
+- [ ] couchfin-ui / app: hide the mouse cursor after ~3 s idle, and show it again only on real pointer activity (mouse, or a Steam Deck/Controller trackpad in mouse mode), never on controller or keyboard input. Low priority, after the UI task ([#40](https://github.com/nkahlor/CouchFin/issues/40))
 
 **Done when:** your real server's libraries all browse correctly, and an automated test runs against a fake Jellyfin server (wiremock with a generated fixture of 2,000 items and placeholder posters). In that test, scrolling the grid stays at 60 fps and the first row of posters appears within 1 s. The functional checks run in CI. The frame-rate check runs on the TV PC or a self-hosted GPU runner, because GitHub's runners have no GPU
 

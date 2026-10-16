@@ -141,3 +141,10 @@ so the entry point had to be fixed first.
   rows from the library, and fills `image` and `blurred-image`. Several rows
   will need Up and Down between rows, each remembering its own card, with
   the same one-`FocusScope`-per-row pattern.
+
+## Update (2026-10-16, decision 014)
+
+In Phase 3, Home becomes a vertical stack of these carousel rows: Continue
+Watching, Next Up, Recently Added per library, and Libraries. Up and Down
+move between rows, and each row remembers its own focused card. The carousel
+behaviour above applies to every row.
