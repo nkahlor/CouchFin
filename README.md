@@ -19,21 +19,15 @@ GPU and controllers, and CI builds and tests in the same image. See
 [docs/dev-environment.md](docs/dev-environment.md) for what the image contains
 and how to update it.
 
-1. While the repo is private, log in to GitHub's container registry with a
-   token that has the `read:packages` scope:
-
-   ```sh
-   podman login ghcr.io -u <github-user>
-   ```
-
-2. Create the box and enter it:
+1. Create the box and enter it. The image is public, so no registry login is
+   needed:
 
    ```sh
    distrobox create --name couchfin-dev --image ghcr.io/nkahlor/couchfin-dev:latest
    distrobox enter couchfin-dev
    ```
 
-3. Check that every tool and library is present, then build and run:
+2. Check that every tool and library is present, then build and run:
 
    ```sh
    check-devenv

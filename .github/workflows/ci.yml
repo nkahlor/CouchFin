@@ -36,8 +36,9 @@ jobs:
     permissions:
       contents: read
       packages: read
-    # The image is private while the repo is, so pulling it needs a token with
-    # packages: read. The image's toolchain matches rust-toolchain.toml.
+    # The image is public; pulling with the workflow token (packages: read)
+    # keeps CI working if it is ever made private again. The image's
+    # toolchain matches rust-toolchain.toml.
     container: &dev-image
       image: ghcr.io/nkahlor/couchfin-dev:latest
       credentials:

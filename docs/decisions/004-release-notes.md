@@ -53,3 +53,13 @@ both the PR's own commits and a "Merge pull request #N" commit for each PR.
 - Commits that aren't Conventional Commits don't appear in the release notes.
 - git-cliff is installed at runtime in the `publish` job, the one exception to
   "nothing installed at runtime", because only releases need it.
+
+## Update (2026-10-16)
+
+- The repo and the dev image are now public. The jobs still pull with
+  `GITHUB_TOKEN` and `packages: read`, which costs nothing and keeps CI working
+  if the package is ever made private again.
+- Merging is now squash-only, with the PR title as the commit title, so each PR
+  lands as one Conventional Commit. The merge commits described in the context
+  above exist only in the history before this change. Dropping non-conventional
+  commits still handles them.

@@ -23,9 +23,10 @@ trim = true
 
 [git]
 conventional_commits = true
-# PRs are merged with merge commits ("Merge pull request #N ..."), which aren't
-# Conventional Commits; dropping every non-conventional commit removes them
-# while keeping the commits from the PR branches.
+# PRs are squash-merged with the PR title as the commit title, so each PR is
+# one Conventional Commit. The first PRs were merged with merge commits
+# ("Merge pull request #N ..."), which aren't Conventional Commits; dropping
+# every non-conventional commit removes those while keeping their PR commits.
 filter_unconventional = true
 split_commits = false
 protect_breaking_commits = true
