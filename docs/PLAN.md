@@ -34,7 +34,7 @@ The app is Rust throughout, with libmpv for playback and Slint for the UI, rende
 | Language | Rust (stable, 2024 edition) | Cargo workspace |
 | Playback | libmpv2 crate | Render API into an OpenGL texture/FBO; hardware decoding via `hwdec=auto-safe` |
 | UI | Slint | Use the femtovg/OpenGL renderer so mpv frames can draw under the UI |
-| Input | sdl2 crate (GameController API) | Works with Steam Input's virtual Xbox pad; fall back to keyboard for dev |
+| Input | SDL3 via the sdl3 crate (gamepad API), pinned | Controllers only; Steam Input's virtual pad is filtered correctly, and the Steam Deck and Steam Controllers are supported natively. The keyboard comes from the window, through Slint (decision 010) |
 | HTTP / API | reqwest + serde + tokio | Hand-written typed client for the endpoints M1 needs |
 | Images | reqwest + image crate | Disk cache under `$XDG_CACHE_HOME` |
 | Config | serde + toml, directories crate | Server URL and access token under `$XDG_CONFIG_HOME` |
@@ -51,12 +51,12 @@ The workspace is split into crates with narrow interfaces, so agents can work in
 |---|---|---|
 | couchfin-api | Typed Jellyfin HTTP client: auth, items, images, playback reporting | reqwest, serde |
 | couchfin-core | App state, navigation stack, settings, image cache | couchfin-api |
-| couchfin-input | SDL controller events mapped to app actions (Up, Down, Select, Back, Menu, Seek) | sdl2 |
+| couchfin-gamepad | Game controller events mapped to inputs (Up, Down, Left, Right, Select, Back, Menu, Seek) | sdl3 |
 | couchfin-player | libmpv wrapper: load, play/pause, seek, tracks, position events | libmpv2 |
 | couchfin-ui | Slint screens and components; focus handling | slint, couchfin-core |
 | app | Binary: wires everything together, window, main loop | all of the above |
 
-**Rule:** couchfin-api, couchfin-input and couchfin-player never depend on each other or on the UI. Each one gets a mock or fake so it can be tested on its own.
+**Rule:** couchfin-api, couchfin-gamepad and couchfin-player never depend on each other or on the UI. Each one gets a mock or fake so it can be tested on its own.
 
 ## Phases and tasks
 
@@ -66,7 +66,7 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 
 - [x] Confirm the Couchfin name is free on GitHub and Flathub, then create a GitHub repo named couchfin
 - [x] Repo settings: protected main (PRs only, CI must pass), PR and issue templates, Dependabot for Cargo, and one GitHub issue per task in this plan
-- [x] Dev environment as a container image: a Containerfile (Fedora base, Rust toolchain, mpv-devel, SDL2-devel, Mesa) in `.devcontainer/`. Use it on Bazzite through Distrobox (Podman, preinstalled) so the app can reach the GPU, display and controllers; CI builds and tests in the same image on GitHub Actions
+- [x] Dev environment as a container image: a Containerfile (Fedora base, Rust toolchain, mpv-devel, SDL2-devel (SDL3-devel since decision 010), Mesa) in `.devcontainer/`. Use it on Bazzite through Distrobox (Podman, preinstalled) so the app can reach the GPU, display and controllers; CI builds and tests in the same image on GitHub Actions
 - [x] Set up the Cargo workspace with the six crates, CI (fmt, clippy, test), and a README covering the Distrobox setup
 - [x] Linting and formatting: a `rustfmt.toml`; workspace-wide Clippy settings in `[workspace.lints]` in the root Cargo.toml (`clippy::pedantic` on as warnings, `unwrap_used` denied, `unsafe_code` forbidden except in couchfin-player, and in couchfin-ui only for Slint's generated code); cargo-deny for licences and advisories; taplo for TOML formatting; `.editorconfig`; a pre-commit hook (via cargo-husky or pre-commit) that runs fmt and clippy; CI runs the same checks with `-D warnings`. Slint files are formatted with `slint-lsp format`.
 - [x] app opens a fullscreen Slint window that says "Hello" and quits on Back/Escape
@@ -76,9 +76,9 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 
 ### Phase 1: Login
 
-- [ ] couchfin-api: `POST /Users/AuthenticateByName`, the `Authorization: MediaBrowser ...` header, and `GET /System/Info/Public` to check the server, plus `GET /Users/Me`. The auth header sends a stable per-install device ID and the device name "Couchfin", so the server lists it under Devices
-- [ ] couchfin-core: persist the server URL and token (token in the system keyring via the keyring crate, falling back to a file only the user can read, with permissions 0600), and skip login when the token is still valid
-- [ ] couchfin-ui: server URL and username/password screen; keyboard entry is fine for now (Steam's on-screen keyboard handles the couch case)
+- [x] couchfin-api: `POST /Users/AuthenticateByName`, the `Authorization: MediaBrowser ...` header, and `GET /System/Info/Public` to check the server, plus `GET /Users/Me`. The auth header sends a stable per-install device ID and the device name "Couchfin", so the server lists it under Devices
+- [x] couchfin-core: persist the server URL and token (token in the system keyring via the keyring crate, falling back to a file only the user can read, with permissions 0600), and skip login when the token is still valid
+- [x] couchfin-ui: server URL and username/password screen; keyboard entry is fine for now (Steam's on-screen keyboard handles the couch case)
 
 **Done when:**
 1. Home shows the server name and version from `/System/Info/Public` plus the logged-in username from `/Users/Me`.
@@ -89,7 +89,7 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 
 ### Phase 2: Controller navigation and placeholder cards
 
-- [ ] couchfin-input: SDL controller and keyboard (arrow keys, Enter, Escape/Backspace) both mapped to one `Action` enum, with key repeat on held D-pad and stick
+- [ ] couchfin-gamepad: SDL3 controllers mapped to one `Input` enum, with key repeat on held D-pad and stick, and the app sending each input to the UI as the same navigation intent the keyboard (arrow keys, Enter, Escape/Backspace, handled in couchfin-ui) already uses (decision 010)
 - [ ] couchfin-ui: Home screen with a horizontal row of 10 hard-coded placeholder title cards and a clear focus highlight
 
 **Done when:** the D-pad and the arrow keys both move focus, A/Enter selects, and B/Escape goes back, with no mouse needed
@@ -121,7 +121,7 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 ### Phase 6: Steam integration
 
 - [ ] Launch script plus instructions for adding it as a non-Steam game, and a Steam Input template
-- [ ] Flatpak: a manifest (`io.github.<user>.Couchfin`) bundling libmpv and SDL2, built in CI on every tag and attached to the GitHub Release; Flathub submission comes later
+- [ ] Flatpak: a manifest (`io.github.<user>.Couchfin`) bundling libmpv and SDL3, built in CI on every tag and attached to the GitHub Release; Flathub submission comes later
 
 **Done when:** it launches from Big Picture, runs fullscreen and returns to Steam cleanly on quit
 

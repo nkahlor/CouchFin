@@ -24,7 +24,7 @@ unwrap_used = "deny"
 [workspace.dependencies]
 couchfin-api = { path = "crates/couchfin-api" }
 couchfin-core = { path = "crates/couchfin-core" }
-couchfin-input = { path = "crates/couchfin-input" }
+couchfin-gamepad = { path = "crates/couchfin-gamepad" }
 couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 

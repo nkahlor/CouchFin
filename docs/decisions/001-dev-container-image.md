@@ -46,3 +46,13 @@ CI, so both see the same toolchain and libraries.
 The repo and the `couchfin-dev` package are now public, so Distrobox pulls the
 image without logging in to GHCR. The consequence above about logging in no
 longer applies.
+
+## Update (2026-10-16, decision 010)
+
+The image now installs `pkgconfig(sdl3)` instead of `pkgconfig(sdl2)`:
+controllers go through SDL3.
+
+cargo-deny and cargo-llvm-cov are now downloaded straight from their release
+URLs, like taplo and slint-lsp. cargo-binstall looked them up through the
+GitHub API, and anonymous API calls from CI runners failed the build at random
+with 403 rate-limit errors.

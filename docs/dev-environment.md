@@ -11,7 +11,7 @@ The image contains:
 
 - the pinned Rust toolchain with rustfmt, clippy and llvm-tools
 - cargo-deny, cargo-llvm-cov, taplo, slint-lsp and pre-commit
-- the libmpv, SDL2, Mesa (GL/EGL, VA-API, Vulkan), Slint windowing, D-Bus and
+- the libmpv, SDL3, Mesa (GL/EGL, VA-API, Vulkan), Slint windowing, D-Bus and
   OpenSSL development packages
 - ffmpeg and the Mesa VA-API drivers from RPM Fusion, which include the
   H.264/HEVC support Fedora's own builds leave out (see

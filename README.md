@@ -59,12 +59,12 @@ distrobox create --name couchfin-dev-local --image localhost/couchfin-dev
 |---|---|
 | [`couchfin-api`](crates/couchfin-api) | Typed Jellyfin HTTP client: auth, items, images, playback reporting |
 | [`couchfin-core`](crates/couchfin-core) | App state, navigation stack, settings, image cache |
-| [`couchfin-input`](crates/couchfin-input) | SDL controller and keyboard events mapped to one `Action` enum |
+| [`couchfin-gamepad`](crates/couchfin-gamepad) | Game controllers via SDL3, mapped to one `Input` enum (the keyboard is handled in `couchfin-ui`) |
 | [`couchfin-player`](crates/couchfin-player) | libmpv wrapper: load, play/pause, seek, tracks, position events |
 | [`couchfin-ui`](crates/couchfin-ui) | Slint screens and components; focus handling |
 | [`app`](app) | The `couchfin` binary: wires everything together, window, main loop |
 
-`couchfin-api`, `couchfin-input` and `couchfin-player` never depend on each
+`couchfin-api`, `couchfin-gamepad` and `couchfin-player` never depend on each
 other or on the UI, and `couchfin-core` depends only on `couchfin-api`.
 `app/tests/workspace_layout.rs` enforces this, so a forbidden dependency fails
 `cargo test`.

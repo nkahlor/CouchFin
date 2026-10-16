@@ -32,7 +32,7 @@ check "C compiler"         cc --version
 check "clang (bindgen)"    clang --version
 
 # Native libraries the crates link against.
-for module in mpv sdl2 egl gl fontconfig freetype2 xkbcommon wayland-client x11 dbus-1 openssl; do
+for module in mpv sdl3 egl gl fontconfig freetype2 xkbcommon wayland-client x11 dbus-1 openssl; do
     check "pkg-config $module" pkg-config --exists "$module"
 done
 

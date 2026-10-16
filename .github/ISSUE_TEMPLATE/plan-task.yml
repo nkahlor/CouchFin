@@ -42,7 +42,7 @@ body:
       options:
         - label: couchfin-api
         - label: couchfin-core
-        - label: couchfin-input
+        - label: couchfin-gamepad
         - label: couchfin-player
         - label: couchfin-ui
         - label: app

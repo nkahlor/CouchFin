@@ -17,12 +17,12 @@ Each session works on exactly one task from `docs/PLAN.md`, on its own git workt
 |---|---|
 | `couchfin-api` | Typed Jellyfin HTTP client: auth, items, images, playback reporting |
 | `couchfin-core` | App state, navigation stack, settings, image cache |
-| `couchfin-input` | SDL controller and keyboard events mapped to one `Action` enum |
+| `couchfin-gamepad` | Game controllers via SDL3, mapped to one `Input` enum (the keyboard is handled in `couchfin-ui`) |
 | `couchfin-player` | libmpv wrapper: load, play/pause, seek, tracks, position events |
 | `couchfin-ui` | Slint screens and components; focus handling |
 | `app` | Binary: wires everything together, window, main loop |
 
-**Dependency rule:** `couchfin-api`, `couchfin-input` and `couchfin-player` never depend on each other or on the UI. `couchfin-core` depends only on `couchfin-api`. Each crate provides a fake or mock so others can be tested without it.
+**Dependency rule:** `couchfin-api`, `couchfin-gamepad` and `couchfin-player` never depend on each other or on the UI. `couchfin-core` depends only on `couchfin-api`. Each crate provides a fake or mock so others can be tested without it.
 
 ## Commands
 
@@ -54,7 +54,7 @@ slint-lsp format <file.slint>
 - No `unwrap()` outside tests. Use `thiserror` in libraries and `anyhow` in `app`.
 - No `unsafe` outside `couchfin-player`. `couchfin-ui` allows it only in Slint's generated code; handwritten UI code may not use it (enforced by `app/tests/lint_config.rs`).
 - Make invalid states unrepresentable: newtypes for IDs (`ItemId`, `UserId`), enums instead of booleans and strings.
-- Keep business logic out of the UI. Screens render state from `couchfin-core` and send `Action`s back (one-way data flow).
+- Keep business logic out of the UI. Screens render state from `couchfin-core` and send actions (such as `LoginAction`) back to it (one-way data flow).
 - Keep modules small and single-purpose, with `pub` only where needed. Aim for at most about 300 lines per file.
 - Every UI action must be reachable by controller. Check focus on every new screen.
 - Styling comes from `Theme` in `crates/couchfin-ui/ui/theme.slint`: every colour, length and font weight in a screen or widget is a `Theme` property, never a literal. Add a named property when you need a new value (enforced by `crates/couchfin-ui/tests/theme_tokens.rs`; see decision 009).
