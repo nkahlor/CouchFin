@@ -13,7 +13,7 @@ export component Button inherits FocusScope {
     // Escape or Backspace.
     callback back();
 
-    min-height: 96px;
+    min-height: Theme.control-height;
     accessible-role: button;
     accessible-label: root.text;
     accessible-action-default => {
@@ -43,14 +43,14 @@ export component Button inherits FocusScope {
     Rectangle {
         background: root.has-focus ? Theme.focus : Theme.surface;
         border-radius: Theme.radius;
-        border-width: root.has-focus ? Theme.focus-ring : 2px;
+        border-width: root.has-focus ? Theme.focus-ring : Theme.border;
         border-color: root.has-focus ? Theme.text : Theme.muted;
 
         Text {
             text: root.text;
             color: root.has-focus ? Theme.on-focus : Theme.text;
             font-size: Theme.body-size;
-            font-weight: 700;
+            font-weight: Theme.strong-weight;
             horizontal-alignment: center;
             vertical-alignment: center;
             // The button itself carries the label.

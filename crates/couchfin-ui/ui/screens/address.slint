@@ -24,14 +24,14 @@ export component AddressPage inherits Rectangle {
             alignment: center;
 
             VerticalLayout {
-                width: min(Theme.form-width, root.width - 96px);
+                width: min(Theme.form-width, root.width - Theme.form-gutter);
                 spacing: Theme.spacing;
 
                 Text {
                     text: "Connect to Jellyfin";
                     color: Theme.text;
                     font-size: Theme.title-size;
-                    font-weight: 700;
+                    font-weight: Theme.strong-weight;
                 }
 
                 Text {

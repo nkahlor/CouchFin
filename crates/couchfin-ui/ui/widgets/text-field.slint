@@ -34,7 +34,7 @@ export component TextField inherits Rectangle {
     accessible-read-only: root.read-only;
 
     VerticalLayout {
-        spacing: 8px;
+        spacing: Theme.label-gap;
 
         Text {
             text: root.label;
@@ -45,15 +45,15 @@ export component TextField inherits Rectangle {
         }
 
         Rectangle {
-            min-height: 96px;
+            min-height: Theme.control-height;
             background: Theme.surface;
             border-radius: Theme.radius;
-            border-width: input.has-focus ? Theme.focus-ring : 2px;
+            border-width: input.has-focus ? Theme.focus-ring : Theme.border;
             border-color: input.has-focus ? Theme.focus : Theme.muted;
 
             input := TextInput {
-                x: 28px;
-                width: parent.width - 56px;
+                x: Theme.field-padding;
+                width: parent.width - 2 * Theme.field-padding;
                 height: parent.height;
                 vertical-alignment: center;
                 single-line: true;

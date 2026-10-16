@@ -1,5 +1,10 @@
 // Colours and sizes for a 10-foot UI: read from a sofa, on a TV, with only
 // focus to show where you are.
+//
+// The only place styling values are written down: screens and widgets read
+// every colour, length and font weight from here, so a theme can change the
+// look in one place. crates/couchfin-ui/tests/theme_tokens.rs fails on a
+// literal anywhere else.
 export global Theme {
     out property <color> background: #101418;
     out property <color> surface: #1c232b;
@@ -13,9 +18,35 @@ export global Theme {
     out property <length> title-size: 72px;
     out property <length> body-size: 40px;
     out property <length> label-size: 32px;
+    // Titles and button labels.
+    out property <int> strong-weight: 700;
+
     out property <length> focus-ring: 6px;
+    // The outline of an unfocused field or button.
+    out property <length> border: 2px;
     out property <length> radius: 12px;
+
     out property <length> spacing: 24px;
+    // Between a field's label and its box.
+    out property <length> label-gap: 8px;
+    // Between the busy line and an error message.
+    out property <length> status-spacing: 12px;
+    // Between the busy dots and their text.
+    out property <length> indicator-gap: 16px;
+    out property <length> indicator-size: 20px;
+
+    // Fields and buttons: a comfortable target for the focus ring.
+    out property <length> control-height: 96px;
+    // Inside a text field, on each side of the text.
+    out property <length> field-padding: 28px;
+    // A button on its own, such as Sign out on Home.
+    out property <length> button-width: 480px;
+    // Room kept for the busy line and one error line, so buttons above it
+    // never jump when either appears.
+    out property <length> status-height: 120px;
+
     // Wide enough for a long https:// address at body size.
     out property <length> form-width: 1200px;
+    // Space kept free beside a form on a narrow window, both sides together.
+    out property <length> form-gutter: 96px;
 }

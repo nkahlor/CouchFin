@@ -47,14 +47,14 @@ export component ConnectFailedPage inherits Rectangle {
             alignment: center;
 
             VerticalLayout {
-                width: min(Theme.form-width, root.width - 96px);
+                width: min(Theme.form-width, root.width - Theme.form-gutter);
                 spacing: Theme.spacing;
 
                 Text {
                     text: "Couldn't connect to " + ConnectView.server;
                     color: Theme.text;
                     font-size: Theme.title-size;
-                    font-weight: 700;
+                    font-weight: Theme.strong-weight;
                     wrap: word-wrap;
                 }
 
