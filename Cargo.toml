@@ -29,6 +29,12 @@ couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 
 anyhow = "1"
+# Config paths under $XDG_CONFIG_HOME. Brings in option-ext (MPL-2.0); see
+# docs/decisions/007-session-persistence.md.
+directories = "6"
+# The keyring ecosystem's core API, with its pure-Rust (zbus) Secret Service
+# store below, rather than the `keyring` wrapper crate: see decision 007.
+keyring-core = "1"
 rcgen = "0.14"
 # Only the features couchfin-api uses. TLS is rustls with ring as its crypto
 # provider, not OpenSSL or aws-lc-rs: see docs/decisions/006-api-client-design.md.
@@ -46,11 +52,18 @@ rustls = { version = "0.23.4", default-features = false, features = [
 rustls-platform-verifier = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 toml = "1.1"
+tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 wiremock = "0.6.5"
+# D-Bus through zbus (pure Rust) and Rust crypto, so neither libdbus nor
+# OpenSSL is linked.
+zbus-secret-service-keyring-store = { version = "1", features = [
+  "crypto-rust",
+] }
 
 # Slint's internal crates must all be the same version, so all three are
 # pinned exactly. Licence: docs/decisions/003-slint-licence.md.

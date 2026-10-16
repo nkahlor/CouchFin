@@ -70,6 +70,12 @@ exceptions = [
   { crate = "slint-macros", allow = [
     "LicenseRef-Slint-Royalty-free-2.0",
   ] },
+  # MPL-2.0 is copyleft per file: only changes to option-ext's own files would
+  # have to be shared, and we use it unmodified, through `directories`. See
+  # docs/decisions/007-session-persistence.md.
+  { crate = "option-ext", allow = [
+    "MPL-2.0",
+  ] },
 ]
 
 [licenses.private]
