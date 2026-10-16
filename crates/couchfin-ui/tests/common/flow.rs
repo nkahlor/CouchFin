@@ -6,10 +6,9 @@ use couchfin_core::{
     Request, RestoreStatus, Restoring, ServerUrl, TokenStoreError, User,
 };
 use couchfin_ui::{Command, MainWindow, bind, render};
-use i_slint_backend_testing::init_no_event_loop;
 use slint::ComponentHandle;
 
-use super::Calls;
+use super::{Calls, init};
 
 pub const SERVER: &str = "https://jellyfin.example/";
 
@@ -85,7 +84,7 @@ pub fn describe(command: Command) -> String {
 
 /// A shown window, bound and rendering `screen`, recording its commands.
 pub fn bound(screen: &LoginScreen) -> (MainWindow, Calls<String>) {
-    init_no_event_loop();
+    init();
     let window = MainWindow::new().expect("window is created");
     let commands = Calls::new();
     let recorder = commands.clone();

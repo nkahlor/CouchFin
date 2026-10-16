@@ -49,7 +49,9 @@ whatever field has focus.
   neighbour rather than relying on Slint's tree-order Tab chain, so the
   order is written down next to the controls and Phase 2 can send the same
   intents from the D-pad and the A and B buttons. Backspace deletes in a
-  field and means back everywhere else. Focus doesn't wrap.
+  field and means back everywhere else. Focus doesn't wrap. (Phase 2 added
+  left and right for the arrow keys, and `navigate` for controllers:
+  [decision 011](011-home-row.md).)
 - **Busy blocks input in the view.** While `busy`, fields are read-only and
   submit isn't sent, so a second Enter can't start a second request. Back
   still works, so core can cancel.

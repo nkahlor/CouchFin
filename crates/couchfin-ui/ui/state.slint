@@ -71,7 +71,8 @@ export global LoginView {
     callback back();
 }
 
-// The Phase 1 home screen.
+// The home screen: the server, who is signed in, a row of placeholder
+// title cards and Sign out.
 export global HomeView {
     // The server's name, from /System/Info/Public.
     in property <string> server-name;
@@ -82,6 +83,9 @@ export global HomeView {
     // A quiet note under the details, such as a sign-in that couldn't be
     // saved; empty shows none.
     in property <string> notice;
+    // Enter on a placeholder card, with its place in the row (0 is the
+    // first). There is nothing to open until Phase 3.
+    callback card-activated(index: int);
     // The Sign out button.
     callback sign-out();
     // Back (Escape or Backspace).

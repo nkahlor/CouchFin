@@ -13,12 +13,16 @@
 //! - [`wording`] is every message the user reads about an error. An error's
 //!   `Display` text is for the log only.
 //!
-//! Every screen works from the keyboard alone, with the same keys Phase 2's
-//! controller input will send: Tab or Down moves to the next control,
-//! Shift+Tab or Up to the previous one, Enter (or Space on a button) presses
-//! it, and Escape asks to go back. Backspace deletes in a text field and
-//! means back everywhere else. Showing a screen focuses its first control.
-//! The design is in `docs/decisions/008-login-screens.md`.
+//! - [`navigate`] feeds a controller's [`Intent`] (D-pad, A, B) into the
+//!   window as its key, so a controller and the keyboard share one focus
+//!   path.
+//!
+//! Every screen works from the keyboard alone: Tab or Down moves to the next
+//! control, Shift+Tab or Up to the previous one, Enter (or Space on a
+//! button) presses it, and Escape asks to go back. Backspace deletes in a
+//! text field and means back everywhere else. Showing a screen focuses its
+//! first control. The design is in `docs/decisions/008-login-screens.md`,
+//! and controller input in `010-gamepad-input.md`.
 //!
 //! # Examples
 //!
@@ -56,6 +60,7 @@
 //! ```
 
 mod bind;
+mod navigate;
 pub mod wording;
 
 mod generated {
@@ -66,6 +71,7 @@ mod generated {
 }
 
 pub use bind::{Command, bind, render};
+pub use navigate::{Intent, navigate};
 
 /// The one window Couchfin shows: a dark backdrop with the current
 /// [`Screen`] on it. The app makes it fullscreen.
@@ -139,15 +145,24 @@ pub use generated::AddressView;
 /// argument, which [`bind`] puts straight into a `Password`.
 pub use generated::LoginView;
 
-/// The Phase 1 home screen's data and callbacks.
+/// The home screen's data and callbacks.
 ///
-/// The page holds focus on arrival; Down or Tab moves to Sign out.
+/// Under the header is a carousel of ten placeholder title cards ("Title 1"
+/// to "Title 10"), until Phase 3 fills it from the library. The first card
+/// has focus on arrival, so an Enter held from signing in can't press Sign
+/// out. Left and Right step through the cards and stop at the ends: the
+/// current card stays in one slot near the left and the row slides under
+/// it, with the card before it peeking in and the cards passed dimmed. Down
+/// or Tab moves to Sign out; Up or Shift+Tab returns to the card you left.
 ///
 /// - `server-name` (in): the title.
 /// - `server-version` (in): shown as "Jellyfin {version}".
 /// - `username` (in): shown as "Signed in as {username}".
 /// - `notice` (in): a quiet note, such as a sign-in that couldn't be saved;
 ///   empty shows none.
+/// - `card-activated(index)`: Enter on a card, with its place in the row
+///   (0 is the first). The page also shows "Selected: {title}". [`bind`]
+///   only logs it, since there is no detail page yet.
 /// - `sign-out()`: the Sign out button.
 /// - `back()`: Escape or Backspace.
 pub use generated::HomeView;

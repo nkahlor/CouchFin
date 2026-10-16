@@ -36,12 +36,17 @@ and how to update it.
 
    This opens Couchfin fullscreen. The first time, type your server's
    address (for example `jellyfin.lan:8096`), then sign in. Home shows the
-   server's name and version and who is signed in. Next time it skips
-   straight to Home while the sign-in still works.
+   server's name and version, who is signed in, and a carousel of
+   placeholder title cards. Next time it skips straight to Home while the
+   sign-in still works.
 
-   Everything works from the keyboard until controller support arrives:
-   Tab or the arrow keys move between controls, Enter presses, and Escape
-   goes back. Escape on the address screen or on Home quits. Logs go to
+   Everything works from the keyboard: Tab or the Up and Down arrows move
+   between controls, Left and Right slide the carousel one card at a time
+   (and move the cursor in a text field), Enter presses or selects, and
+   Escape goes back.
+   Escape on the address screen or on Home quits. A controller's D-pad, A
+   and B do the same as the arrows, Enter and Escape, through the same
+   code ([decision 011](docs/decisions/011-home-row.md)). Logs go to
    stderr; set `RUST_LOG=debug` for more. They never include passwords or
    tokens.
 

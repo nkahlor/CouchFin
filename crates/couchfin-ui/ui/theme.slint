@@ -10,7 +10,7 @@ export global Theme {
     out property <color> surface: #1c232b;
     out property <color> text: #f0f0f0;
     out property <color> muted: #a9b4bf;
-    // The focus highlight: a thick, bright ring that reads at TV distance.
+    // The focus highlight: bright, so it reads at TV distance.
     out property <color> focus: #4fc3f7;
     out property <color> on-focus: #0b1a22;
     out property <color> error: #ff8a80;
@@ -20,6 +20,8 @@ export global Theme {
     out property <length> label-size: 32px;
     // Titles and button labels.
     out property <int> strong-weight: 700;
+    // Body text, and a card's title while it isn't focused.
+    out property <int> regular-weight: 400;
 
     out property <length> focus-ring: 6px;
     // The outline of an unfocused field or button.
@@ -44,6 +46,41 @@ export global Theme {
     // Room kept for the busy line and one error line, so buttons above it
     // never jump when either appears.
     out property <length> status-height: 120px;
+
+    // Home: the space between the screen's edge and the header, row and
+    // Sign out.
+    out property <length> page-margin: 40px;
+
+    // Title cards: poster-shaped (2:3), sized to the room the screen leaves
+    // for the row, between these heights.
+    out property <length> poster-min-height: 200px;
+    out property <length> poster-max-height: 420px;
+    out property <float> poster-aspect: 2 / 3;
+    out property <length> card-gap: 32px;
+    // The title under a poster: one line at label size.
+    out property <length> card-title-height: 44px;
+    out property <length> card-title-gap: 12px;
+    // The active card: larger than the rest, with a thin ring and a soft
+    // glow. Light on its own, but with the size and the dimmed cards behind
+    // it the active one is plain from the sofa.
+    out property <float> card-active-scale: 1.1;
+    out property <length> card-active-ring: 3px;
+    out property <color> card-glow: #4fc3f780;
+    out property <length> card-glow-blur: 28px;
+    // Kept free around the row so a grown card isn't cut off.
+    out property <length> card-focus-room: 24px;
+    // Carousel: the active card's slot, measured from the screen's left edge.
+    // Less than a card and its gap, so the card before it peeks in, cut off
+    // by the edge.
+    out property <length> carousel-inset: 160px;
+    // Cards already passed: a shade of the background over the poster and a
+    // dimmer title, rather than opacity, which would cost a layer per card.
+    // Phase 3 also cross-fades them to a pre-blurred poster.
+    out property <color> passed-card-shade: #101418a0;
+    out property <color> passed-title: #a9b4bf80;
+    // Short, so focus never feels behind the D-pad.
+    out property <duration> focus-duration: 120ms;
+    out property <duration> scroll-duration: 150ms;
 
     // Wide enough for a long https:// address at body size.
     out property <length> form-width: 1200px;

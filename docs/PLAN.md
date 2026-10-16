@@ -97,7 +97,7 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 ### Phase 3: Real library
 
 - [ ] couchfin-api: `GET /UserViews`, `GET /Items` (paged), `GET /Items/{id}/Images/Primary`, and `GET /UserItems/Resume`
-- [ ] couchfin-core: async image loading with a disk cache
+- [ ] couchfin-core: async image loading with a disk cache. For each poster it also produces a blurred variant, which Home's carousel shows for the cards already passed (Slint can't blur content; decision 011)
 - [ ] couchfin-ui: Home rows for Continue Watching plus one row per library, a library grid and a detail page
 
 **Done when:** your real server's libraries all browse correctly, and an automated test runs against a fake Jellyfin server (wiremock with a generated fixture of 2,000 items and placeholder posters). In that test, scrolling the grid stays at 60 fps and the first row of posters appears within 1 s. The functional checks run in CI. The frame-rate check runs on the TV PC or a self-hosted GPU runner, because GitHub's runners have no GPU
