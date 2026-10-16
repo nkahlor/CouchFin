@@ -36,13 +36,14 @@ and how to update it.
 
    This opens Couchfin fullscreen. The first time, type your server's
    address (for example `jellyfin.lan:8096`), then sign in. Home shows the
-   server's name and version, who is signed in, and a row of placeholder
-   title cards. Next time it skips straight to Home while the sign-in
-   still works.
+   server's name and version, who is signed in, and a carousel of
+   placeholder title cards. Next time it skips straight to Home while the
+   sign-in still works.
 
    Everything works from the keyboard: Tab or the Up and Down arrows move
-   between controls, Left and Right move along the row of cards (and the
-   cursor in a text field), Enter presses or selects, and Escape goes back.
+   between controls, Left and Right slide the carousel one card at a time
+   (and move the cursor in a text field), Enter presses or selects, and
+   Escape goes back.
    Escape on the address screen or on Home quits. A controller's D-pad, A
    and B do the same as the arrows, Enter and Escape, through the same
    code ([decision 011](docs/decisions/011-home-row.md)). Logs go to

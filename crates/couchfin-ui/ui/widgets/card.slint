@@ -1,17 +1,27 @@
 import { Theme } from "../theme.slint";
 
 // A poster-shaped title card with its title underneath. It takes no focus
-// itself: the row it sits in holds focus and says which card is current, so
-// moving along a row is one property change, and the row remembers its place
-// while focus is elsewhere.
+// itself: the row it sits in holds focus and says which card is current and
+// which it has passed, so moving along a row is one property change, and the
+// row remembers its place while focus is elsewhere.
+//
+// The card's own size is its slot in the row. The active card's poster grows
+// past the slot, about its centre, so neighbours never move.
 export component Card inherits Rectangle {
     in property <string> title;
-    // The poster's height; the width follows at 2:3.
+    // The poster's height at rest; the width follows at 2:3.
     in property <length> poster-height;
+    // The poster, and a blurred copy shown once the row has passed the card.
+    // Both empty for placeholders; couchfin-core's image cache makes them in
+    // Phase 3 (Slint can't blur content itself).
+    in property <image> image;
+    in property <image> blurred-image;
     // The row's current card, whether or not the row has focus.
     in property <bool> current;
-    // Current in a focused row: grown and ringed.
+    // Current in a focused row: larger, ringed and glowing.
     in property <bool> highlighted;
+    // Left of the row's current card: shaded, with a dimmer title.
+    in property <bool> passed;
     // Its place in the row, and the row's length, for screen readers.
     in property <int> index;
     in property <int> count;
@@ -19,9 +29,15 @@ export component Card inherits Rectangle {
     // Enter while highlighted, a click, or a screen reader's default action.
     callback activated();
 
-    // The height is left to the row: the parts are placed by y, and a fixed
-    // height here would feed back into the row's size (a binding loop).
-    width: root.poster-height * Theme.poster-aspect;
+    property <length> poster-width: root.poster-height * Theme.poster-aspect;
+    property <float> grow: root.highlighted ? Theme.card-active-scale : 1;
+    animate grow {
+        duration: Theme.focus-duration;
+        easing: ease-out;
+    }
+
+    width: self.poster-width;
+    height: root.poster-height + Theme.card-title-gap + Theme.card-title-height;
 
     accessible-role: list-item;
     accessible-label: root.title;
@@ -33,42 +49,69 @@ export component Card inherits Rectangle {
         root.activated();
     }
 
-    Rectangle {
-        transform-scale: root.highlighted ? Theme.card-focus-scale : 100%;
-        animate transform-scale { duration: Theme.focus-duration; }
+    poster := Rectangle {
+        width: root.poster-width * root.grow;
+        height: root.poster-height * root.grow;
+        x: (root.poster-width - self.width) / 2;
+        y: (root.poster-height - self.height) / 2;
+        background: Theme.surface;
+        border-radius: Theme.radius;
+        drop-shadow-color: root.highlighted ? Theme.card-glow : Theme.card-glow.with-alpha(0);
+        drop-shadow-blur: Theme.card-glow-blur;
+        animate drop-shadow-color { duration: Theme.focus-duration; }
 
-        poster := Rectangle {
-            y: 0px;
-            height: root.poster-height;
-            background: Theme.surface;
+        Rectangle {
             border-radius: Theme.radius;
             clip: true;
-            // Phase 3 puts the poster image here, filling this rectangle.
+
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.image;
+                image-fit: cover;
+                accessible-role: none;
+            }
+
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.blurred-image;
+                image-fit: cover;
+                opacity: root.passed ? 1 : 0;
+                animate opacity { duration: Theme.focus-duration; }
+                accessible-role: none;
+            }
+
+            shade := Rectangle {
+                background: Theme.passed-card-shade;
+                opacity: root.passed ? 1 : 0;
+                animate opacity { duration: Theme.focus-duration; }
+            }
         }
 
-        // Over the poster, so an image never covers the ring.
-        Rectangle {
-            y: 0px;
-            height: root.poster-height;
+        // Over the poster, so an image never covers it.
+        ring := Rectangle {
             border-radius: Theme.radius;
-            border-width: root.highlighted ? Theme.card-focus-ring : 0px;
+            border-width: Theme.card-active-ring;
             border-color: Theme.focus;
-            animate border-width { duration: Theme.focus-duration; }
+            opacity: root.highlighted ? 1 : 0;
+            animate opacity { duration: Theme.focus-duration; }
         }
+    }
 
-        Text {
-            y: root.poster-height + Theme.card-title-gap;
-            height: Theme.card-title-height;
-            text: root.title;
-            color: root.highlighted ? Theme.text : Theme.muted;
-            font-size: Theme.label-size;
-            font-weight: root.highlighted ? Theme.strong-weight : Theme.regular-weight;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-            overflow: elide;
-            // The card itself carries the title.
-            accessible-role: none;
-        }
+    title := Text {
+        y: poster.y + poster.height + Theme.card-title-gap;
+        height: Theme.card-title-height;
+        text: root.title;
+        color: root.highlighted ? Theme.text : root.passed ? Theme.passed-title : Theme.muted;
+        animate color { duration: Theme.focus-duration; }
+        font-size: Theme.label-size;
+        font-weight: root.highlighted ? Theme.strong-weight : Theme.regular-weight;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+        // The card itself carries the title.
+        accessible-role: none;
     }
 
     TouchArea {

@@ -10,7 +10,7 @@ export global Theme {
     out property <color> surface: #1c232b;
     out property <color> text: #f0f0f0;
     out property <color> muted: #a9b4bf;
-    // The focus highlight: a thick, bright ring that reads at TV distance.
+    // The focus highlight: bright, so it reads at TV distance.
     out property <color> focus: #4fc3f7;
     out property <color> on-focus: #0b1a22;
     out property <color> error: #ff8a80;
@@ -60,12 +60,24 @@ export global Theme {
     // The title under a poster: one line at label size.
     out property <length> card-title-height: 44px;
     out property <length> card-title-gap: 12px;
-    // The focused card grows and gets a ring, thicker than a field's so it
-    // reads on a poster from across the room.
-    out property <percent> card-focus-scale: 108%;
-    out property <length> card-focus-ring: 8px;
+    // The active card: larger than the rest, with a thin ring and a soft
+    // glow. Light on its own, but with the size and the dimmed cards behind
+    // it the active one is plain from the sofa.
+    out property <float> card-active-scale: 1.1;
+    out property <length> card-active-ring: 3px;
+    out property <color> card-glow: #4fc3f780;
+    out property <length> card-glow-blur: 28px;
     // Kept free around the row so a grown card isn't cut off.
     out property <length> card-focus-room: 24px;
+    // Carousel: the active card's slot, measured from the screen's left edge.
+    // Less than a card and its gap, so the card before it peeks in, cut off
+    // by the edge.
+    out property <length> carousel-inset: 160px;
+    // Cards already passed: a shade of the background over the poster and a
+    // dimmer title, rather than opacity, which would cost a layer per card.
+    // Phase 3 also cross-fades them to a pre-blurred poster.
+    out property <color> passed-card-shade: #101418a0;
+    out property <color> passed-title: #a9b4bf80;
     // Short, so focus never feels behind the D-pad.
     out property <duration> focus-duration: 120ms;
     out property <duration> scroll-duration: 150ms;

@@ -4,11 +4,12 @@ import { Button } from "../widgets/button.slint";
 import { Card } from "../widgets/card.slint";
 import { Keys, KeyIntent } from "../widgets/keys.slint";
 
-// Home: which server and who is signed in, a row of title cards, and Sign
-// out. The row takes focus on arrival, so an Enter still held from signing
-// in selects a card rather than pressing Sign out.
+// Home: which server and who is signed in, a carousel of title cards, and
+// Sign out. The row takes focus on arrival, so an Enter still held from
+// signing in selects a card rather than pressing Sign out.
 //
-// Focus map: Left and Right walk the row and stop at its ends. Down (or Tab)
+// Focus map: Left and Right step through the row and stop at its ends; the
+// current card stays in one slot and the row slides under it. Down (or Tab)
 // goes to Sign out; Up (or Shift+Tab) comes back to the card you left.
 // Escape or Backspace anywhere asks to go back.
 export component HomePage inherits Rectangle {
@@ -95,13 +96,8 @@ export component HomePage inherits Rectangle {
                 self.height - self.around-poster,
                 Theme.poster-min-height,
                 Theme.poster-max-height);
-            property <length> card-width: self.poster-height * Theme.poster-aspect;
-            // Edge space lets even the first and last cards stay centered.
-            property <length> side-padding: max(
-                Theme.card-focus-room + Theme.card-gap,
-                (self.width - self.card-width) / 2);
-            property <length> content-width: self.count * self.card-width + (self.count - 1) * Theme.card-gap + 2 * self.side-padding;
-            property <length> scroll: self.side-padding + self.current * (self.card-width + Theme.card-gap) + (self.card-width - self.width) / 2;
+            // One card and the gap after it: how far the row slides per step.
+            property <length> slot: self.poster-height * Theme.poster-aspect + Theme.card-gap;
 
             // Set here rather than from the cards, whose size follows the
             // row's: the row takes what the screen leaves, within these.
@@ -135,44 +131,39 @@ export component HomePage inherits Rectangle {
                 return reject;
             }
 
-            // Scrolled by focus only. A Flickable rather than a clipping
+            // The carousel: the current card always sits in the slot at
+            // Theme.carousel-inset, and the row slides under it, one slot per
+            // step, to the very last card. `current` changes at once and only
+            // the slide animates, so a held D-pad retargets it mid-way rather
+            // than waiting. It runs from the screen's left edge, past the page
+            // margin, so the card before the current one is cut off by the
+            // edge of the screen. A Flickable rather than a clipping
             // Rectangle, so screen readers still list the cards out of view.
             Flickable {
+                x: -Theme.page-margin;
+                width: parent.width + 2 * Theme.page-margin;
                 interactive: false;
-                content-width: row.content-width;
-                content-x: -row.scroll;
+                content-width: Theme.carousel-inset + row.count * row.slot + self.width;
+                content-x: -row.current * row.slot;
                 animate content-x {
                     duration: Theme.scroll-duration;
                     easing: ease-out;
                 }
 
-                HorizontalLayout {
-                    padding: Theme.card-focus-room;
-                    spacing: Theme.card-gap;
-                    alignment: start;
-
-                    Rectangle {
-                        width: row.side-padding - Theme.card-focus-room - Theme.card-gap;
-                        height: 0px;
-                    }
-
-                    for title[index] in root.titles: Card {
-                        title: title;
-                        poster-height: row.poster-height;
-                        current: index == row.current;
-                        highlighted: row.has-focus && index == row.current;
-                        index: index;
-                        count: row.count;
-                        activated => {
-                            row.current = index;
-                            row.focus();
-                            root.activate(index);
-                        }
-                    }
-
-                    Rectangle {
-                        width: row.side-padding - Theme.card-focus-room - Theme.card-gap;
-                        height: 0px;
+                for title[index] in root.titles: Card {
+                    x: Theme.carousel-inset + index * row.slot;
+                    y: Theme.card-focus-room;
+                    title: title;
+                    poster-height: row.poster-height;
+                    current: index == row.current;
+                    highlighted: row.has-focus && index == row.current;
+                    passed: index < row.current;
+                    index: index;
+                    count: row.count;
+                    activated => {
+                        row.current = index;
+                        row.focus();
+                        root.activate(index);
                     }
                 }
             }

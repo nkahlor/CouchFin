@@ -5,10 +5,13 @@
 
 mod common;
 
+use std::time::Duration;
+
 use common::flow::{bound, enter_address, failed, home, log_in, restoring};
 use common::{all_elements, press, type_text};
 use couchfin_core::{ApiError, LoginScreen, Request, RestoreStatus};
 use couchfin_ui::{Intent, MainWindow, navigate};
+use i_slint_backend_testing::mock_elapsed_time;
 use slint::platform::Key;
 
 const INTENTS: [Intent; 6] = [
@@ -58,43 +61,62 @@ fn screens() -> Vec<(&'static str, LoginScreen)> {
 }
 
 /// What a person (or a screen reader) can tell about the window: every
-/// element's label, value and selection, in tree order.
+/// on-screen element's label, value and selection, and where it is, how big
+/// and how opaque, in tree order. Geometry and opacity catch a carousel that
+/// slides, scales or dims differently.
 fn looks(window: &MainWindow) -> Vec<String> {
     all_elements(window)
         .iter()
         .map(|element| {
+            let at = element.absolute_position();
+            let size = element.size();
             format!(
-                "{:?} {:?} {:?}",
+                "{:?} {:?} {:?} {:.1},{:.1} {:.1}x{:.1} {:.3}",
                 element.accessible_label(),
                 element.accessible_value(),
                 element.accessible_item_selected(),
+                at.x,
+                at.y,
+                size.width,
+                size.height,
+                element.computed_opacity(),
             )
         })
-        .filter(|seen| seen != "None None None")
         .collect()
 }
 
-/// Runs `steps` on `screen` and records the commands sent and how the
-/// window looks after each step. Typing "x" at the end shows where focus
-/// and the text cursor ended up; a final Activate shows what is focused.
-fn run(screen: &LoginScreen, steps: &[Intent], step: fn(&MainWindow, Intent)) -> Vec<String> {
-    let (window, commands) = bound(screen);
-    let mut seen = Vec::new();
-    for &intent in steps.iter().chain(&[Intent::Activate]) {
-        step(&window, intent);
-        seen.push(format!("{intent:?}: {:?}", commands.taken()));
-        seen.extend(looks(&window));
-        if intent != Intent::Activate {
-            continue;
-        }
-        type_text(&window, "x");
-        seen.extend(looks(&window));
+/// Runs `steps` on `screen` in two windows side by side, one through
+/// `navigate` and one through the keys, and checks that after each step both
+/// sent the same commands and look the same. Both are checked at the same
+/// moment, part-way through any animation, as a held D-pad sees them.
+/// Typing "x" at the end shows where focus and the text cursor ended up; a
+/// final Activate shows what is focused.
+fn assert_same(name: &str, screen: &LoginScreen, steps: &[Intent]) {
+    let (by_intent, intent_commands) = bound(screen);
+    let (by_key, key_commands) = bound(screen);
+    let seen = |window: &MainWindow, commands: &common::Calls<String>, label: &str| {
+        let mut seen = vec![format!("{label}: {:?}", commands.taken())];
+        seen.extend(looks(window));
+        seen
+    };
+    for (n, &intent) in steps.iter().chain(&[Intent::Activate]).enumerate() {
+        navigate(&by_intent, intent);
+        press(&by_key, key(intent));
+        mock_elapsed_time(Duration::from_millis(60));
+        let label = format!("step {n}, {intent:?}");
+        assert_eq!(
+            seen(&by_intent, &intent_commands, &label),
+            seen(&by_key, &key_commands, &label),
+            "{name}: {steps:?} by navigate differs from the keys at {label}"
+        );
     }
-    seen
-}
-
-fn by_key(window: &MainWindow, intent: Intent) {
-    press(window, key(intent));
+    type_text(&by_intent, "x");
+    type_text(&by_key, "x");
+    assert_eq!(
+        seen(&by_intent, &intent_commands, "typed"),
+        seen(&by_key, &key_commands, "typed"),
+        "{name}: {steps:?} then typing differs"
+    );
 }
 
 #[test]
@@ -102,12 +124,21 @@ fn every_intent_does_what_its_key_does_on_every_screen() {
     for (name, screen) in screens() {
         for first in INTENTS {
             for second in INTENTS {
-                let steps = [first, second];
-                assert_eq!(
-                    run(&screen, &steps, navigate),
-                    run(&screen, &steps, by_key),
-                    "{name}: {steps:?} by navigate differs from the keys"
-                );
+                assert_same(name, &screen, &[first, second]);
+            }
+        }
+    }
+}
+
+#[test]
+fn every_intent_does_what_its_key_does_along_the_home_carousel() {
+    // From the middle and the end of the row, every pair of intents.
+    for moved in [4, 9] {
+        for first in INTENTS {
+            for second in INTENTS {
+                let mut steps = vec![Intent::Right; moved];
+                steps.extend([first, second]);
+                assert_same(&format!("home after {moved} cards"), &home(None), &steps);
             }
         }
     }

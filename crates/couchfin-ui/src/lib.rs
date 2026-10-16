@@ -147,12 +147,13 @@ pub use generated::LoginView;
 
 /// The home screen's data and callbacks.
 ///
-/// Under the header is a row of ten placeholder title cards ("Title 1" to
-/// "Title 10"), until Phase 3 fills it from the library. The first card has
-/// focus on arrival, so an Enter held from signing in can't press Sign out.
-/// Left and Right walk the row and stop at its ends, and the row scrolls to
-/// keep the focused card in view. Down or Tab moves to Sign out; Up or
-/// Shift+Tab returns to the card you left.
+/// Under the header is a carousel of ten placeholder title cards ("Title 1"
+/// to "Title 10"), until Phase 3 fills it from the library. The first card
+/// has focus on arrival, so an Enter held from signing in can't press Sign
+/// out. Left and Right step through the cards and stop at the ends: the
+/// current card stays in one slot near the left and the row slides under
+/// it, with the card before it peeking in and the cards passed dimmed. Down
+/// or Tab moves to Sign out; Up or Shift+Tab returns to the card you left.
 ///
 /// - `server-name` (in): the title.
 /// - `server-version` (in): shown as "Jellyfin {version}".
