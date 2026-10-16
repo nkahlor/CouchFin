@@ -6,7 +6,7 @@
 
 pub mod flow;
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use couchfin_ui::{MainWindow, Screen};
@@ -14,10 +14,22 @@ use i_slint_backend_testing::{ElementHandle, ElementQuery, init_no_event_loop};
 use slint::ComponentHandle;
 use slint::platform::{Key, WindowEvent};
 
+thread_local! {
+    static PLATFORM_READY: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Sets up Slint's testing backend on this thread, once. Slint's platform is
+/// per thread, and each test runs on its own thread, but a test may open
+/// several windows.
+pub fn init() {
+    if !PLATFORM_READY.replace(true) {
+        init_no_event_loop();
+    }
+}
+
 /// Shows a fresh window on the testing backend, on the given screen.
 pub fn shown(screen: Screen) -> MainWindow {
-    // Slint's platform is per thread, and each test runs on its own thread.
-    init_no_event_loop();
+    init();
     let window = MainWindow::new().expect("window is created");
     window.set_screen(screen);
     window.show().expect("window is shown");

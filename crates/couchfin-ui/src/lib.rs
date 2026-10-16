@@ -13,12 +13,16 @@
 //! - [`wording`] is every message the user reads about an error. An error's
 //!   `Display` text is for the log only.
 //!
-//! Every screen works from the keyboard alone, with the same keys Phase 2's
-//! controller input will send: Tab or Down moves to the next control,
-//! Shift+Tab or Up to the previous one, Enter (or Space on a button) presses
-//! it, and Escape asks to go back. Backspace deletes in a text field and
-//! means back everywhere else. Showing a screen focuses its first control.
-//! The design is in `docs/decisions/008-login-screens.md`.
+//! - [`navigate`] feeds a controller's [`Intent`] (D-pad, A, B) into the
+//!   window as its key, so a controller and the keyboard share one focus
+//!   path.
+//!
+//! Every screen works from the keyboard alone: Tab or Down moves to the next
+//! control, Shift+Tab or Up to the previous one, Enter (or Space on a
+//! button) presses it, and Escape asks to go back. Backspace deletes in a
+//! text field and means back everywhere else. Showing a screen focuses its
+//! first control. The design is in `docs/decisions/008-login-screens.md`,
+//! and controller input in `010-gamepad-input.md`.
 //!
 //! # Examples
 //!
@@ -56,6 +60,7 @@
 //! ```
 
 mod bind;
+mod navigate;
 pub mod wording;
 
 mod generated {
@@ -66,6 +71,7 @@ mod generated {
 }
 
 pub use bind::{Command, bind, render};
+pub use navigate::{Intent, navigate};
 
 /// The one window Couchfin shows: a dark backdrop with the current
 /// [`Screen`] on it. The app makes it fullscreen.
