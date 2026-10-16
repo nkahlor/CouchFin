@@ -50,14 +50,22 @@ thread that isn't the process's main thread when Slint owns that one.
   than catching up in a burst that would overshoot.
 - Disconnecting a pad, or SDL reporting it again (`Added`), drops whatever it
   was holding, so its repeat stops.
-- **Stick:** the stronger axis must reach half travel (16384) to engage, and
-  the engaged direction holds until its own axis falls below a third
-  (10923), whatever the other axis does. The gap is hysteresis, so a stick
-  resting near the threshold can't flicker, and holding a direction until it
-  lets go stops a stick near a diagonal flicking between two directions. The
-  stick is read after each batch of events, so a diagonal that arrives as
-  separate X and Y events still picks the stronger axis. `Deadzone` makes the
-  thresholds configurable.
+- **Stick:** engages when its stronger axis reaches about 64% of full travel
+  (21000) *and* the stick points within 30 degrees of that axis. In the
+  60 degree wedges between, nothing engages. Once engaged, the direction is
+  locked until the stick's distance from the centre falls below about 43%
+  (14000): it can't switch to another direction mid-hold, and passing
+  through a diagonal doesn't cancel it. The gap is hysteresis, so a stick
+  resting near a threshold can't flicker. The stick is read after each batch
+  of events, so a push that arrives as separate X and Y events is judged as
+  one position. `Deadzone` makes press, release and cone configurable
+  (`new(press, release)` and `with_cone(degrees)`, validated).
+  - *Update, after the TV test:* the first version engaged at half travel
+    (16384) on the stronger axis and held until that axis fell below a third
+    (10923). A thumb pushing Right drifted down, its X relaxed below the
+    release point while Y was still high, and the stick re-engaged as Down,
+    which on Home leaves the carousel. Judging release by distance from the
+    centre, locking, the cone and the higher threshold fix this.
 - The right stick is left out until something needs it (seeking, perhaps).
 
 ### Threading

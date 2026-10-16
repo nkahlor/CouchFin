@@ -18,9 +18,10 @@ use crate::input::Input;
 ///   then repeats as [`Repeat`](crate::Repeat) says until released. The
 ///   most recent D-pad press is the one that repeats; letting go of it
 ///   stops the repeat, as with a keyboard. The stick uses a
-///   [`Deadzone`](crate::Deadzone) with hysteresis, and is read after each
-///   batch of events, so a diagonal arriving as two axis events still
-///   picks the stronger axis.
+///   [`Deadzone`](crate::Deadzone): it engages only near an axis (not in the
+///   diagonal wedges), locks that direction until the stick returns to
+///   the centre, and is read after each batch of events, so a push
+///   arriving as two axis events is judged as one position.
 /// - Every pad is listened to, each with its own held directions.
 ///   Disconnecting a pad drops what it was holding.
 /// - The right stick, triggers and other buttons are ignored for now.
