@@ -1,0 +1,42 @@
+name: Bug
+description: Something in Couchfin doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste access tokens, passwords or API keys** into this issue, including inside logs or config files. Check what you paste and replace any secret with `REDACTED`.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include which buttons or keys you pressed.
+      placeholder: |
+        1. Launch Couchfin from Big Picture
+        2. Press A on ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Couchfin version or commit, OS (e.g. Bazzite 42), controller, Jellyfin server version, and whether it was launched from Steam.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The relevant part of the Couchfin log file. Remove any access tokens or passwords first.
+      render: text

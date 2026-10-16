@@ -8,7 +8,8 @@ Each session works on exactly one task from `docs/PLAN.md`, on its own git workt
 
 - Stay inside the assigned crate. If you must change another crate's public API, explain why in the PR description.
 - If the task is unclear or conflicts with this file or the plan, stop and ask rather than guessing.
-- Finish by opening a PR (see "Before opening a PR" below).
+- Each task has a GitHub issue (label `phase-N`, milestone M1). Link it from the PR.
+- Finish by opening a PR (see "Before opening a PR" below). `.github/pull_request_template.md` carries the same checklist.
 
 ## Workspace layout
 

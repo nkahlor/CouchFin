@@ -1,0 +1,54 @@
+name: Plan task
+description: One task from docs/PLAN.md, worked on by one agent on one branch.
+title: "Phase N: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Each task in [docs/PLAN.md](https://github.com/nkahlor/CouchFin/blob/main/docs/PLAN.md) gets one issue. Copy the task and its "Done when" check verbatim, so the issue and the plan never disagree, then add the `phase-N` and crate labels.
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - "Phase 0: Skeleton"
+        - "Phase 1: Login"
+        - "Phase 2: Controller navigation and placeholder cards"
+        - "Phase 3: Real library"
+        - "Phase 4: Playback"
+        - "Phase 5: Resume and subtitles"
+        - "Phase 6: Steam integration"
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: The task text, verbatim from docs/PLAN.md.
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: The phase's "Done when" check, verbatim from docs/PLAN.md.
+    validations:
+      required: true
+  - type: checkboxes
+    id: crates
+    attributes:
+      label: Crate(s) the task may touch
+      description: Stay inside these. Changing another crate's public API needs a reason in the PR description.
+      options:
+        - label: couchfin-api
+        - label: couchfin-core
+        - label: couchfin-input
+        - label: couchfin-player
+        - label: couchfin-ui
+        - label: app
+        - label: Repo, CI, container or packaging (infra)
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else the agent needs, such as related issues or open questions.
