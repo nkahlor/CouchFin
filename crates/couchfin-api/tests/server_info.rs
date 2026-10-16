@@ -1,4 +1,5 @@
-//! `GET /System/Info/Public`: the "is this a Jellyfin server?" check, and the
+//! `check_server` (`GET /System/Info/Public`): the "is this a Jellyfin server?"
+//! check, and the
 //! failure modes the login screen has to tell apart.
 
 mod common;
@@ -21,11 +22,10 @@ async fn reads_the_server_name_version_and_id() {
         .mount(&server)
         .await;
 
-    let info = client()
-        .public_system_info(&server_url(&server))
-        .await
-        .unwrap();
+    let check = client().check_server(&server_url(&server)).await.unwrap();
 
+    assert_eq!(check.server, server_url(&server));
+    let info = check.info;
     assert_eq!(info.server_name, "Living Room");
     assert_eq!(info.version, "10.11.2");
     assert_eq!(info.id.as_str(), SERVER_ID);
@@ -42,9 +42,10 @@ async fn keeps_a_reverse_proxy_base_path() {
         .await;
     let url: ServerUrl = format!("{}/jellyfin", server.uri()).parse().unwrap();
 
-    let info = client().public_system_info(&url).await.unwrap();
+    let check = client().check_server(&url).await.unwrap();
 
-    assert_eq!(info.server_name, "Living Room");
+    assert_eq!(check.server, url);
+    assert_eq!(check.info.server_name, "Living Room");
 }
 
 #[tokio::test]
@@ -56,7 +57,7 @@ async fn a_web_page_is_not_a_jellyfin_server() {
         .await;
 
     let error = client()
-        .public_system_info(&server_url(&server))
+        .check_server(&server_url(&server))
         .await
         .unwrap_err();
 
@@ -72,7 +73,7 @@ async fn json_without_the_jellyfin_fields_is_not_a_jellyfin_server() {
         .await;
 
     let error = client()
-        .public_system_info(&server_url(&server))
+        .check_server(&server_url(&server))
         .await
         .unwrap_err();
 
@@ -84,7 +85,7 @@ async fn a_missing_endpoint_is_not_a_jellyfin_server() {
     let server = MockServer::start().await;
 
     let error = client()
-        .public_system_info(&server_url(&server))
+        .check_server(&server_url(&server))
         .await
         .unwrap_err();
 
@@ -100,7 +101,7 @@ async fn a_server_error_reports_its_status() {
         .await;
 
     let error = client()
-        .public_system_info(&server_url(&server))
+        .check_server(&server_url(&server))
         .await
         .unwrap_err();
 
@@ -110,7 +111,7 @@ async fn a_server_error_reports_its_status() {
 #[tokio::test]
 async fn a_closed_port_is_unreachable() {
     let error = client()
-        .public_system_info(&common::closed_port_url())
+        .check_server(&common::closed_port_url())
         .await
         .unwrap_err();
 
@@ -133,7 +134,7 @@ async fn a_slow_server_times_out() {
         .await;
 
     let error = client_with_timeout(Duration::from_millis(200))
-        .public_system_info(&server_url(&server))
+        .check_server(&server_url(&server))
         .await
         .unwrap_err();
 
@@ -153,6 +154,8 @@ fn every_error_has_a_message() {
         ApiError::InvalidCredentials,
         ApiError::TokenRejected,
         ApiError::Status { status: 500 },
+        ApiError::Redirected { server: None },
+        ApiError::InsecureRedirect,
     ];
     for error in errors {
         assert!(!error.to_string().is_empty(), "{error:?}");

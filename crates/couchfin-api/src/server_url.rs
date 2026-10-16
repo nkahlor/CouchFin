@@ -81,9 +81,14 @@ impl FromStr for ServerUrl {
         } else {
             format!("http://{input}")
         };
-        let mut url =
-            Url::parse(&with_scheme).map_err(|e| ServerUrlError::Invalid(e.to_string()))?;
+        let url = Url::parse(&with_scheme).map_err(|e| ServerUrlError::Invalid(e.to_string()))?;
+        Self::from_url(url)
+    }
+}
 
+impl ServerUrl {
+    /// Checks and normalises an already parsed URL.
+    fn from_url(mut url: Url) -> Result<Self, ServerUrlError> {
         if !matches!(url.scheme(), "http" | "https") {
             return Err(ServerUrlError::UnsupportedScheme(url.scheme().to_owned()));
         }
@@ -94,6 +99,21 @@ impl FromStr for ServerUrl {
         url.set_fragment(None);
         url.set_path(&base_path(url.path()));
         Ok(Self(url))
+    }
+
+    /// The server base of an endpoint URL: `https://host/jellyfin/` from
+    /// `https://host/jellyfin/System/Info/Public` and `System/Info/Public`.
+    /// `None` if the URL isn't that endpoint. Proxies may change the case of
+    /// the path, and Jellyfin ignores it, so the match does too.
+    pub(crate) fn from_endpoint(url: &Url, endpoint: &str) -> Option<Self> {
+        let path = url.path();
+        let (base, tail) = path.split_at_checked(path.len().checked_sub(endpoint.len())?)?;
+        if !base.ends_with('/') || !tail.eq_ignore_ascii_case(endpoint) {
+            return None;
+        }
+        let mut base_url = url.clone();
+        base_url.set_path(base);
+        Self::from_url(base_url).ok()
     }
 }
 

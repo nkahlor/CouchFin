@@ -1,4 +1,5 @@
-//! Checks a real Jellyfin server by hand: public info, login, then
+//! Checks a real Jellyfin server by hand: public info (following redirects to
+//! the canonical address, which it prints), login, then
 //! `/Users/Me`. Afterwards the server's Dashboard > Devices lists "Couchfin".
 //!
 //! ```sh
@@ -28,20 +29,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let (Some(url), Some(username), None) = (args.next(), args.next(), args.next()) else {
         return Err("usage: probe <server-url> <username>".into());
     };
-    let server: ServerUrl = url.parse()?;
+    let typed: ServerUrl = url.parse()?;
     let device_id = match std::env::var("COUCHFIN_DEVICE_ID") {
         Ok(id) => id.parse()?,
         Err(_) => DeviceId::generate(),
     };
     let client = JellyfinClient::new(device_id)?;
-    println!("server:    {server}");
+    println!("address:   {typed}");
     println!("device ID: {}", client.device_id());
 
     let runtime = tokio::runtime::Runtime::new()?;
-    let info = runtime.block_on(client.public_system_info(&server))?;
+    let check = runtime.block_on(client.check_server(&typed))?;
+    // Everything after the check uses the address the server really answers
+    // on, which differs from the typed one when it redirects (http -> https).
+    let server = check.server;
+    println!("server:    {server}");
     println!(
         "found:     {} (Jellyfin {})",
-        info.server_name, info.version
+        check.info.server_name, check.info.version
     );
 
     let password = Password::new(rpassword::prompt_password(format!(

@@ -24,7 +24,9 @@ async fn log_in(fake: &FakeJellyfin) -> Session {
 
 #[tokio::test]
 async fn reports_its_server_info() {
-    let info = fake().public_system_info(&url()).await.unwrap();
+    let check = fake().check_server(&url()).await.unwrap();
+    assert_eq!(check.server, url());
+    let info = check.info;
     assert_eq!(info.server_name, "Living Room");
     assert_eq!(info.version, "10.11.2");
 }
@@ -79,7 +81,7 @@ async fn an_unknown_or_revoked_token_is_rejected() {
 #[tokio::test]
 async fn any_other_url_is_unreachable() {
     let other: ServerUrl = "http://elsewhere.lan".parse().unwrap();
-    let error = fake().public_system_info(&other).await.unwrap_err();
+    let error = fake().check_server(&other).await.unwrap_err();
     assert!(matches!(error, ApiError::Unreachable { .. }), "{error:?}");
 }
 
@@ -90,7 +92,7 @@ async fn a_scripted_failure_applies_to_every_call_until_cleared() {
     fake.fail_with(ApiError::Timeout);
 
     assert_eq!(
-        fake.public_system_info(&url()).await.unwrap_err(),
+        fake.check_server(&url()).await.unwrap_err(),
         ApiError::Timeout
     );
     assert_eq!(
@@ -123,8 +125,33 @@ async fn clones_share_one_server() {
 #[tokio::test]
 async fn defaults_describe_a_plausible_server() {
     let fake = FakeJellyfin::new(url());
-    let info = fake.public_system_info(&url()).await.unwrap();
+    let info = fake.check_server(&url()).await.unwrap().info;
     assert_ne!(info.server_name, "");
     assert_ne!(info.version, "");
     assert_eq!(fake.server(), &url());
+}
+
+#[tokio::test]
+async fn an_old_address_redirects_to_the_canonical_one() {
+    let old: ServerUrl = "http://old.lan:8096".parse().unwrap();
+    let fake = fake().with_redirect_from(old.clone());
+
+    let check = fake.check_server(&old).await.unwrap();
+    assert_eq!(check.server, url());
+
+    let redirected = ApiError::Redirected {
+        server: Some(url()),
+    };
+    assert_eq!(
+        fake.authenticate_by_name(&old, "alice", &Password::new("hunter2"))
+            .await
+            .unwrap_err(),
+        redirected
+    );
+    let session = log_in(&fake).await;
+    let old_session = Session::new(old, session.token().clone());
+    assert_eq!(
+        fake.current_user(&old_session).await.unwrap_err(),
+        redirected
+    );
 }

@@ -4,7 +4,7 @@
 
 use std::future::Future;
 
-use crate::dto::{AuthenticationResult, PublicSystemInfo, User};
+use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
@@ -75,52 +75,68 @@ impl Session {
 ///
 /// async fn log_in<A: JellyfinApi>(
 ///     api: &A,
-///     server: &ServerUrl,
+///     typed: &ServerUrl,
 ///     password: &Password,
 /// ) -> Result<String, ApiError> {
-///     let info = api.public_system_info(server).await?;
-///     let login = api.authenticate_by_name(server, "alice", password).await?;
-///     let session = Session::new(server.clone(), login.access_token);
+///     // Check first, then use the canonical address for everything else.
+///     let check = api.check_server(typed).await?;
+///     let login = api.authenticate_by_name(&check.server, "alice", password).await?;
+///     let session = Session::new(check.server.clone(), login.access_token);
 ///     let me = api.current_user(&session).await?;
-///     Ok(format!("{} on {}", me.name, info.server_name))
+///     Ok(format!("{} on {} at {}", me.name, check.info.server_name, check.server))
 /// }
 ///
-/// let server: ServerUrl = "http://jellyfin.lan:8096".parse()?;
-/// let fake = FakeJellyfin::new(server.clone())
+/// // The server moved behind an HTTPS proxy; the old address redirects.
+/// let server: ServerUrl = "https://jellyfin.lan".parse()?;
+/// let typed: ServerUrl = "jellyfin.lan".parse()?;
+/// let fake = FakeJellyfin::new(server)
+///     .with_redirect_from(typed.clone())
 ///     .with_server_info("Living Room", "10.11.2")
 ///     .with_user("alice", "hunter2");
 ///
 /// let runtime = tokio::runtime::Builder::new_current_thread().build()?;
-/// let greeting = runtime.block_on(log_in(&fake, &server, &Password::new("hunter2")))?;
-/// assert_eq!(greeting, "alice on Living Room");
+/// let greeting = runtime.block_on(log_in(&fake, &typed, &Password::new("hunter2")))?;
+/// assert_eq!(greeting, "alice on Living Room at https://jellyfin.lan/");
 ///
-/// let wrong = runtime.block_on(log_in(&fake, &server, &Password::new("nope")));
+/// let wrong = runtime.block_on(log_in(&fake, &typed, &Password::new("nope")));
 /// assert_eq!(wrong, Err(ApiError::InvalidCredentials));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub trait JellyfinApi: Send + Sync {
-    /// `GET /System/Info/Public`: checks that `server` is a Jellyfin server
-    /// and returns its name, version and ID. Needs no login.
+    /// `GET /System/Info/Public`: checks that `address` is a Jellyfin server
+    /// and returns its name, version and ID, plus its canonical address.
+    /// Needs no login.
+    ///
+    /// This is the only call that follows redirects (up to 10), because it
+    /// sends no password or token. The canonical address is where the
+    /// redirects end, minus `System/Info/Public`, so it keeps a reverse-proxy
+    /// base path. Call this first and use [`ServerCheck::server`] from then
+    /// on; the other calls refuse to follow redirects.
     ///
     /// # Errors
     ///
     /// [`ApiError::Unreachable`] or [`ApiError::Timeout`] if the server can't
-    /// be reached, [`ApiError::NotJellyfin`] if the reply isn't Jellyfin's
-    /// (including a 404), [`ApiError::Status`] for other HTTP errors.
-    fn public_system_info(
+    /// be reached; [`ApiError::NotJellyfin`] if the reply isn't Jellyfin's
+    /// (including a 404, a redirect loop, or a redirect away from the API);
+    /// [`ApiError::InsecureRedirect`] for a redirect from `https` to `http`;
+    /// [`ApiError::Status`] for other HTTP errors.
+    fn check_server(
         &self,
-        server: &ServerUrl,
-    ) -> impl Future<Output = Result<PublicSystemInfo, ApiError>> + Send;
+        address: &ServerUrl,
+    ) -> impl Future<Output = Result<ServerCheck, ApiError>> + Send;
 
     /// `POST /Users/AuthenticateByName`: logs in and returns the user and a
     /// new access token. The server registers this device (by its
     /// [`DeviceId`](crate::DeviceId) and the name
     /// [`DEVICE_NAME`](crate::DEVICE_NAME)) under Dashboard > Devices.
     ///
+    /// `server` should come from [`JellyfinApi::check_server`].
+    ///
     /// # Errors
     ///
-    /// [`ApiError::InvalidCredentials`] for a wrong username or password,
-    /// otherwise as for [`JellyfinApi::public_system_info`].
+    /// [`ApiError::InvalidCredentials`] for a wrong username or password;
+    /// [`ApiError::Redirected`] if the server answers with a redirect, which
+    /// is never followed; otherwise as for [`JellyfinApi::check_server`].
     fn authenticate_by_name(
         &self,
         server: &ServerUrl,
@@ -134,8 +150,10 @@ pub trait JellyfinApi: Send + Sync {
     /// # Errors
     ///
     /// [`ApiError::TokenRejected`] if the server no longer accepts the
-    /// token, so the user must log in again; otherwise as for
-    /// [`JellyfinApi::public_system_info`].
+    /// token, so the user must log in again; [`ApiError::Redirected`] if the
+    /// server answers with a redirect (run [`JellyfinApi::check_server`]
+    /// again: the address has changed); otherwise as for
+    /// [`JellyfinApi::check_server`].
     fn current_user(
         &self,
         session: &Session,

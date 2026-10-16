@@ -2,6 +2,8 @@
 //! subset, so unused ones are allowed.
 #![allow(dead_code)]
 
+pub mod tls;
+
 use std::time::Duration;
 
 use couchfin_api::{AccessToken, DeviceId, JellyfinClient, ServerUrl, Session};
@@ -22,7 +24,10 @@ pub fn client() -> JellyfinClient {
 }
 
 pub fn client_with_timeout(timeout: Duration) -> JellyfinClient {
-    JellyfinClient::with_timeout(device_id(), timeout).expect("client builds")
+    JellyfinClient::builder(device_id())
+        .timeout(timeout)
+        .build()
+        .expect("client builds")
 }
 
 pub fn server_url(server: &MockServer) -> ServerUrl {

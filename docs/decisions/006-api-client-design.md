@@ -30,7 +30,8 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
   behind a cargo feature. It is about 250 lines of safe code with no
   dependencies of its own. A feature would have to be turned on by every
   crate that tests with it, and doctests in this crate would need it too.
-  The fake answers on one `ServerUrl` (others are `Unreachable`), knows users
+  The fake answers on one `ServerUrl` (others are `Unreachable`, except
+  addresses set up to redirect to it), knows users
   and passwords, issues and revokes tokens, and can be told to fail every
   call with a given `ApiError`. Clones share state, so a test keeps a handle
   while the code under test owns another.
@@ -38,7 +39,8 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
   refused, TLS), `Timeout`, `NotJellyfin` (404 on a Jellyfin endpoint, a web
   page, or JSON missing required fields), `InvalidCredentials` (401 on login),
   `TokenRejected` (401 on a logged-in call, so core sends the user back to
-  login) and `Status` for any other HTTP error. It is `Clone + PartialEq` so
+  login), `Redirected` and `InsecureRedirect` (see below) and `Status` for
+  any other HTTP error. It is `Clone + PartialEq` so
   the fake can return scripted errors, and it exposes no reqwest types.
   Requests time out after 10 s by default (`JellyfinClient::DEFAULT_TIMEOUT`).
 - **The header needs no escaping, because nothing unsafe can reach it.**
@@ -74,7 +76,44 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
   process default if no provider is installed yet. Certificates are checked
   against the system's trust store through rustls-platform-verifier, so a
   certificate the system trusts (such as a home CA added to Bazzite) works.
-  No OpenSSL is linked.
+  `JellyfinClient::builder(..).add_root_certificates_pem(..)` trusts extra
+  CAs on top, for a home CA that isn't in the system store; the redirect
+  tests use it to run a real HTTPS server. No OpenSSL is linked.
+
+## Redirects and canonical addresses
+
+Added after the first real-server test (2026-10-16). The server answered
+`http://<host>/Users/AuthenticateByName` with `301` to `https://`, as a
+reverse proxy forcing HTTPS does. reqwest followed it, which HTTP clients do
+by turning the POST into a GET without the body, and on the cross-origin hop
+it also dropped the `Authorization` header. Jellyfin saw an anonymous GET and
+answered 401, which became "wrong username or password".
+
+- **reqwest never follows redirects** (`Policy::none()`); each call decides.
+- **`check_server` follows them by hand** (up to 10), because it is a GET
+  with no token or password. Where they end, minus `System/Info/Public`, is
+  the server's canonical address, keeping any reverse-proxy base path
+  (matched case-insensitively, as Jellyfin is). It returns that as
+  `ServerCheck::server` next to the public info, and callers use it for
+  every later request: core stores it (#12), and the UI can show
+  "Connected to https://…" (#13). Redirects that end somewhere other than
+  `System/Info/Public`, loops, and redirects without a `Location` are
+  `NotJellyfin`. `check_server` replaced `public_system_info`, so no caller
+  can read the info without also getting the canonical address.
+- **Login and token calls never follow a redirect.** Following would resend a
+  password or token to an address the user didn't choose, and a POST can't
+  be safely replayed anyway. A 301, 302, 303, 307 or 308 becomes
+  `ApiError::Redirected { server }`, where `server` is the new base address
+  when the target is the same endpoint under another base, so the UI can say
+  "the server moved to https://…, use that address", or core can run
+  `check_server` again. A redirect is never `InvalidCredentials` or
+  `TokenRejected`.
+- **Never downgrade.** Any redirect from `https` to a non-`https` URL is
+  `ApiError::InsecureRedirect`, on every call, because following it would
+  later send the token in plaintext.
+- `FakeJellyfin::with_redirect_from(old)` makes the fake behave the same way
+  for `old`: `check_server` returns the canonical address, and the other
+  calls fail with `Redirected`.
 
 ## Consequences
 
@@ -89,4 +128,8 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
 - Later phases add methods to `JellyfinApi` that take a `Session`. Adding a
   method breaks other implementors, which today is only the fake.
 - `crates/couchfin-api/examples/probe.rs` checks a real server by hand
-  (public info, login, `/Users/Me`), reading the password without echo.
+  (`check_server`, then login and `/Users/Me` on the canonical address it
+  prints), reading the password without echo.
+- The redirect tests generate a throwaway CA with `rcgen` (a dev-dependency,
+  MIT OR Apache-2.0, using ring) and serve HTTPS from a small rustls server
+  in `tests/common/tls.rs`, since wiremock only speaks plain HTTP.

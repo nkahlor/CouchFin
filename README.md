@@ -67,8 +67,10 @@ The Rust toolchain is pinned in [rust-toolchain.toml](rust-toolchain.toml).
 
 `couchfin-api` has a small example that checks a server, logs in and calls
 `/Users/Me`, so you can try the client against your own server before the
-login screen exists. It asks for the password without echoing it and never
-prints it or the token:
+login screen exists. If the address redirects (for example a proxy sending
+`http://` to `https://`), it prints the address the server really answers on
+and uses that from then on. It asks for the password without echoing it and
+never prints it or the token:
 
 ```sh
 cargo run -p couchfin-api --example probe -- http://jellyfin.lan:8096 alice

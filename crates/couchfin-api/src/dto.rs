@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::ids::{ServerId, UserId};
 use crate::secret::AccessToken;
+use crate::server_url::ServerUrl;
 
 /// What `GET /System/Info/Public` says about a server. Anyone can read it
 /// without logging in, so it is how Couchfin checks an address is a Jellyfin
@@ -57,4 +58,21 @@ pub struct AuthenticationResult {
     pub access_token: AccessToken,
     /// The ID of the server that issued the token.
     pub server_id: ServerId,
+}
+
+/// The result of [`JellyfinApi::check_server`]: the server's public info, and
+/// the address it really answers on.
+///
+/// `server` differs from the address the user typed when the server
+/// redirects, for example a reverse proxy sending `http://` to `https://`,
+/// or adding a base path such as `/jellyfin/`. Use it, not the typed address,
+/// for logging in and every request after; it is the address to store.
+///
+/// [`JellyfinApi::check_server`]: crate::JellyfinApi::check_server
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerCheck {
+    /// The canonical server address.
+    pub server: ServerUrl,
+    /// What the server says about itself.
+    pub info: PublicSystemInfo,
 }

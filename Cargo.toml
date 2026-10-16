@@ -29,6 +29,7 @@ couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 
 anyhow = "1"
+rcgen = "0.14"
 # Only the features couchfin-api uses. TLS is rustls with ring as its crypto
 # provider, not OpenSSL or aws-lc-rs: see docs/decisions/006-api-client-design.md.
 reqwest = { version = "0.13.5", default-features = false, features = [

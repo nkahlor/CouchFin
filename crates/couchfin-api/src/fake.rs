@@ -7,7 +7,7 @@ use std::future::{Future, ready};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::api::{JellyfinApi, Session};
-use crate::dto::{AuthenticationResult, PublicSystemInfo, User};
+use crate::dto::{AuthenticationResult, PublicSystemInfo, ServerCheck, User};
 use crate::error::ApiError;
 use crate::ids::{InvalidValueError, UserId};
 use crate::secret::{AccessToken, Password};
@@ -17,7 +17,10 @@ use crate::server_url::ServerUrl;
 /// scripted failures.
 ///
 /// - Requests to any other [`ServerUrl`] fail with
-///   [`ApiError::Unreachable`].
+///   [`ApiError::Unreachable`], except addresses added with
+///   [`FakeJellyfin::with_redirect_from`]: there `check_server` succeeds and
+///   returns the fake's own address as canonical, and the other calls fail
+///   with [`ApiError::Redirected`], as the real client does.
 /// - Logging in with a known user name (exact match) and password issues a
 ///   new token; anything else is [`ApiError::InvalidCredentials`].
 /// - [`JellyfinApi::current_user`] accepts only issued tokens;
@@ -38,10 +41,10 @@ use crate::server_url::ServerUrl;
 /// let fake = FakeJellyfin::new(server.clone());
 /// let runtime = tokio::runtime::Builder::new_current_thread().build()?;
 ///
-/// assert!(runtime.block_on(fake.public_system_info(&server)).is_ok());
+/// assert!(runtime.block_on(fake.check_server(&server)).is_ok());
 ///
 /// fake.fail_with(ApiError::Timeout);
-/// let error = runtime.block_on(fake.public_system_info(&server));
+/// let error = runtime.block_on(fake.check_server(&server));
 /// assert_eq!(error, Err(ApiError::Timeout));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -58,6 +61,7 @@ struct State {
     tokens: Vec<(AccessToken, UserId)>,
     issued: usize,
     failure: Option<ApiError>,
+    redirects_from: Vec<ServerUrl>,
 }
 
 #[derive(Debug)]
@@ -82,6 +86,7 @@ impl FakeJellyfin {
             tokens: Vec::new(),
             issued: 0,
             failure: None,
+            redirects_from: Vec::new(),
         };
         Self {
             server,
@@ -114,6 +119,14 @@ impl FakeJellyfin {
                 password: Password::new(password),
             });
         }
+        self
+    }
+
+    /// Makes `old` redirect to this fake's address, like a proxy that sends
+    /// `http://` to `https://`.
+    #[must_use]
+    pub fn with_redirect_from(self, old: ServerUrl) -> Self {
+        self.lock().redirects_from.push(old);
         self
     }
 
@@ -151,12 +164,17 @@ impl FakeJellyfin {
         if let Some(error) = &state.failure {
             return Err(error.clone());
         }
-        if *server != self.server {
-            return Err(ApiError::Unreachable {
+        if *server == self.server {
+            Ok(state)
+        } else if state.redirects_from.contains(server) {
+            Err(ApiError::Redirected {
+                server: Some(self.server.clone()),
+            })
+        } else {
+            Err(ApiError::Unreachable {
                 detail: format!("the fake server only answers on {}", self.server),
-            });
+            })
         }
-        Ok(state)
     }
 }
 
@@ -168,8 +186,16 @@ fn fake_id<T: TryFrom<String, Error = InvalidValueError>>(kind: &str, n: usize) 
 // The fake has nothing to wait for, so each trait method computes its answer
 // here, when it is called, and returns it in a ready future.
 impl FakeJellyfin {
-    fn info(&self, server: &ServerUrl) -> Result<PublicSystemInfo, ApiError> {
-        Ok(self.answer(server)?.info.clone())
+    fn check(&self, address: &ServerUrl) -> Result<ServerCheck, ApiError> {
+        let state = match self.answer(address) {
+            // check_server follows the redirect to the canonical address.
+            Err(ApiError::Redirected { .. }) => self.answer(&self.server)?,
+            other => other?,
+        };
+        Ok(ServerCheck {
+            server: self.server.clone(),
+            info: state.info.clone(),
+        })
     }
 
     fn log_in(
@@ -214,11 +240,11 @@ impl FakeJellyfin {
 }
 
 impl JellyfinApi for FakeJellyfin {
-    fn public_system_info(
+    fn check_server(
         &self,
-        server: &ServerUrl,
-    ) -> impl Future<Output = Result<PublicSystemInfo, ApiError>> + Send {
-        ready(self.info(server))
+        address: &ServerUrl,
+    ) -> impl Future<Output = Result<ServerCheck, ApiError>> + Send {
+        ready(self.check(address))
     }
 
     fn authenticate_by_name(

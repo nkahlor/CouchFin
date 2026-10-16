@@ -17,6 +17,7 @@ thiserror.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+rcgen.workspace = true
 rpassword.workspace = true
 tokio.workspace = true
 wiremock.workspace = true
