@@ -29,4 +29,4 @@ couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 
 serde_json = "1"
-toml = "0.9"
+toml = "1.1"
