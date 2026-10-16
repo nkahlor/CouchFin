@@ -170,13 +170,11 @@ fn check_status(response: &Response, on_unauthorized: ApiError) -> Result<(), Ap
     })
 }
 
-/// Reads a JSON body. A body that isn't the JSON Jellyfin sends means this
-/// isn't (a compatible) Jellyfin.
+/// Reads a JSON body. A body that is cut off or isn't the JSON Jellyfin sends
+/// means this isn't (a compatible) Jellyfin; a timeout while reading stays a
+/// timeout.
 async fn read_json<T: DeserializeOwned>(response: Response) -> Result<T, ApiError> {
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| ApiError::transport(&e))?;
+    let bytes = response.bytes().await.map_err(|e| ApiError::body(&e))?;
     serde_json::from_slice(&bytes).map_err(|e| ApiError::NotJellyfin {
         detail: e.to_string(),
     })

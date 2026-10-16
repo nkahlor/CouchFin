@@ -66,27 +66,7 @@ impl ServerUrl {
         url.set_path(&format!("{}{path}", self.0.path()));
         url
     }
-}
 
-impl FromStr for ServerUrl {
-    type Err = ServerUrlError;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let input = input.trim();
-        if input.is_empty() {
-            return Err(ServerUrlError::Empty);
-        }
-        let with_scheme = if input.contains("://") {
-            input.to_owned()
-        } else {
-            format!("http://{input}")
-        };
-        let url = Url::parse(&with_scheme).map_err(|e| ServerUrlError::Invalid(e.to_string()))?;
-        Self::from_url(url)
-    }
-}
-
-impl ServerUrl {
     /// Checks and normalises an already parsed URL.
     fn from_url(mut url: Url) -> Result<Self, ServerUrlError> {
         if !matches!(url.scheme(), "http" | "https") {
@@ -114,6 +94,24 @@ impl ServerUrl {
         let mut base_url = url.clone();
         base_url.set_path(base);
         Self::from_url(base_url).ok()
+    }
+}
+
+impl FromStr for ServerUrl {
+    type Err = ServerUrlError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let input = input.trim();
+        if input.is_empty() {
+            return Err(ServerUrlError::Empty);
+        }
+        let with_scheme = if input.contains("://") {
+            input.to_owned()
+        } else {
+            format!("http://{input}")
+        };
+        let url = Url::parse(&with_scheme).map_err(|e| ServerUrlError::Invalid(e.to_string()))?;
+        Self::from_url(url)
     }
 }
 

@@ -54,7 +54,7 @@ impl TryFrom<String> for AccessToken {
     type Error = InvalidValueError;
 
     fn try_from(token: String) -> Result<Self, Self::Error> {
-        validate(&token, "access token")?;
+        validate(&token, "Access token")?;
         Ok(Self(token))
     }
 }

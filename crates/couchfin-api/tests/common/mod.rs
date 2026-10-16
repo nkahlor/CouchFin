@@ -2,13 +2,15 @@
 //! subset, so unused ones are allowed.
 #![allow(dead_code)]
 
+pub mod raw_http;
 pub mod tls;
 
 use std::time::Duration;
 
-use couchfin_api::{AccessToken, DeviceId, JellyfinClient, ServerUrl, Session};
+use couchfin_api::{AccessToken, DeviceId, JellyfinClient, Password, ServerUrl, Session};
 use serde_json::{Value, json};
-use wiremock::{Match, MockServer, Request};
+use wiremock::matchers::method;
+use wiremock::{Match, Mock, MockServer, Request, ResponseTemplate};
 
 pub const DEVICE_ID: &str = "3f2b9c1e-8d4a-4b6f-9e2d-7a1c5b8e0f42";
 pub const TOKEN: &str = "0123456789abcdef0123456789abcdef";
@@ -117,4 +119,24 @@ pub fn closed_port_url() -> ServerUrl {
     format!("http://127.0.0.1:{port}")
         .parse()
         .expect("local URL is valid")
+}
+
+/// A Jellyfin mock that must not receive any request.
+pub async fn untouched_jellyfin() -> MockServer {
+    let jellyfin = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&jellyfin)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&jellyfin)
+        .await;
+    jellyfin
+}
+
+pub fn password() -> Password {
+    Password::new("hunter2")
 }

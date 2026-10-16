@@ -765,6 +765,7 @@ dependencies = [
  "reqwest",
  "rpassword",
  "rustls",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

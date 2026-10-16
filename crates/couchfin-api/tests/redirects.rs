@@ -3,16 +3,18 @@
 //!
 //! - `check_server` follows redirects (a GET with no token) and returns the
 //!   address the server really answers on;
-//! - login and token calls never follow one, and say where it pointed;
-//! - nothing follows a redirect from `https` down to `http`.
+//! - login and token calls never follow one, and say where it pointed.
+//!
+//! The HTTPS cases, including refusing `https` to `http`, are in
+//! `tls_redirects.rs`.
 
 mod common;
 
-use common::tls::{self, TlsServer};
 use common::{
-    authentication_result_json, client, device_id, public_info_json, server_url, session, user_json,
+    authentication_result_json, client, password, public_info_json, server_url, session,
+    untouched_jellyfin,
 };
-use couchfin_api::{ApiError, JellyfinApi, JellyfinClient, Password, ServerUrl};
+use couchfin_api::{ApiError, JellyfinApi, ServerUrl};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -33,34 +35,6 @@ async fn redirect_all(from: &MockServer, to: &str, status: u16) {
             .mount(from)
             .await;
     }
-}
-
-/// A Jellyfin mock that must not receive any request.
-async fn untouched_jellyfin() -> MockServer {
-    let jellyfin = MockServer::start().await;
-    Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(200))
-        .expect(0)
-        .mount(&jellyfin)
-        .await;
-    Mock::given(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .expect(0)
-        .mount(&jellyfin)
-        .await;
-    jellyfin
-}
-
-fn trusting(server: &TlsServer) -> JellyfinClient {
-    JellyfinClient::builder(device_id())
-        .add_root_certificates_pem(server.ca_pem.as_bytes())
-        .expect("CA certificate parses")
-        .build()
-        .expect("client builds")
-}
-
-fn password() -> Password {
-    Password::new("hunter2")
 }
 
 #[tokio::test]
@@ -234,77 +208,6 @@ async fn a_redirect_without_a_location_is_not_jellyfin() {
         .unwrap_err();
 
     assert!(matches!(error, ApiError::NotJellyfin { .. }), "{error:?}");
-}
-
-#[tokio::test]
-async fn check_server_works_over_https() {
-    let server = tls::start(|_, _| tls::ok_json(&public_info_json()));
-
-    let check = trusting(&server).check_server(&server.url).await.unwrap();
-
-    assert_eq!(check.server, server.url);
-}
-
-#[tokio::test]
-async fn an_untrusted_certificate_is_unreachable() {
-    let server = tls::start(|_, _| tls::ok_json(&public_info_json()));
-
-    let error = client().check_server(&server.url).await.unwrap_err();
-
-    assert!(matches!(error, ApiError::Unreachable { .. }), "{error:?}");
-}
-
-#[tokio::test]
-async fn check_server_refuses_a_redirect_from_https_to_http() {
-    let jellyfin = untouched_jellyfin().await;
-    let location = format!("{}/System/Info/Public", jellyfin.uri());
-    let server = tls::start(move |_, _| tls::redirect(301, &location));
-
-    let error = trusting(&server)
-        .check_server(&server.url)
-        .await
-        .unwrap_err();
-
-    assert_eq!(error, ApiError::InsecureRedirect);
-    assert_ne!(error.to_string(), "");
-}
-
-#[tokio::test]
-async fn a_login_redirected_from_https_to_http_is_insecure() {
-    let jellyfin = untouched_jellyfin().await;
-    let base = jellyfin.uri();
-    let server = tls::start(move |_, path| tls::redirect(308, &format!("{base}{path}")));
-
-    let error = trusting(&server)
-        .authenticate_by_name(&server.url, "alice", &password())
-        .await
-        .unwrap_err();
-
-    assert_eq!(error, ApiError::InsecureRedirect);
-}
-
-#[tokio::test]
-async fn a_login_over_https_with_a_trusted_certificate_succeeds() {
-    let server = tls::start(|method, path| match (method, path) {
-        ("POST", "/Users/AuthenticateByName") => tls::ok_json(&authentication_result_json()),
-        _ => tls::ok_json(&user_json()),
-    });
-    let client = trusting(&server);
-
-    let login = client
-        .authenticate_by_name(&server.url, "alice", &password())
-        .await
-        .unwrap();
-
-    assert_eq!(login.user.name, "alice");
-}
-
-#[test]
-fn a_certificate_that_is_not_pem_is_refused() {
-    let error = JellyfinClient::builder(device_id())
-        .add_root_certificates_pem(b"not a certificate")
-        .unwrap_err();
-    assert_ne!(error.to_string(), "");
 }
 
 #[test]

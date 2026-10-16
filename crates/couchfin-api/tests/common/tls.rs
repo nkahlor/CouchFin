@@ -8,7 +8,7 @@ use std::net::TcpListener;
 use std::sync::Arc;
 use std::thread;
 
-use couchfin_api::ServerUrl;
+use couchfin_api::{JellyfinClient, ServerUrl};
 use rcgen::{BasicConstraints, CertificateParams, CertifiedIssuer, IsCa, KeyPair};
 use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
 use rustls::{ServerConfig, ServerConnection, StreamOwned};
@@ -117,4 +117,13 @@ pub fn ok_json(body: &serde_json::Value) -> String {
 /// A redirect response without a body.
 pub fn redirect(status: u16, location: &str) -> String {
     format!("HTTP/1.1 {status} Redirect\r\nLocation: {location}\r\n")
+}
+
+/// A client that trusts `server`'s CA.
+pub fn trusting(server: &TlsServer) -> JellyfinClient {
+    JellyfinClient::builder(super::device_id())
+        .add_root_certificates_pem(server.ca_pem.as_bytes())
+        .expect("CA certificate parses")
+        .build()
+        .expect("client builds")
 }

@@ -110,8 +110,20 @@ fn ids_reject_characters_that_could_break_the_header() {
         assert!(bad.parse::<UserId>().is_err(), "{bad:?}");
         assert!(bad.parse::<ServerId>().is_err(), "{bad:?}");
     }
-    let error = "a b".parse::<DeviceId>().unwrap_err();
-    assert!(error.to_string().contains("device ID"), "{error}");
+}
+
+#[test]
+fn invalid_value_messages_name_the_value_without_a_wrong_article() {
+    let rule = "must be 1 to 256 characters of ASCII letters, digits, '.', '_', '~' or '-'";
+    let cases = [
+        ("Device ID", "a b".parse::<DeviceId>().unwrap_err()),
+        ("Access token", AccessToken::new("a b").unwrap_err()),
+        ("User ID", "a b".parse::<UserId>().unwrap_err()),
+        ("Server ID", "a b".parse::<ServerId>().unwrap_err()),
+    ];
+    for (what, error) in cases {
+        assert_eq!(error.to_string(), format!("{what} {rule}"));
+    }
 }
 
 #[test]

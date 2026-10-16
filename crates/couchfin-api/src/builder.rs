@@ -1,11 +1,13 @@
 //! Configuring a [`JellyfinClient`]: timeout and extra trusted certificates.
 
+use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::Certificate;
 use reqwest::redirect::Policy;
+use rustls::ClientConfig;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
+use rustls_platform_verifier::Verifier;
 
 use crate::client::JellyfinClient;
 use crate::ids::DeviceId;
@@ -40,7 +42,7 @@ pub struct BuildError(String);
 pub struct JellyfinClientBuilder {
     device_id: DeviceId,
     timeout: Duration,
-    roots: Vec<Certificate>,
+    roots: Vec<CertificateDer<'static>>,
 }
 
 impl JellyfinClientBuilder {
@@ -74,10 +76,7 @@ impl JellyfinClientBuilder {
         if certs.is_empty() {
             return Err(BuildError("no PEM certificate found".to_owned()));
         }
-        for cert in certs {
-            let cert = Certificate::from_der(&cert).map_err(|e| BuildError(e.to_string()))?;
-            self.roots.push(cert);
-        }
+        self.roots.extend(certs);
         Ok(self)
     }
 
@@ -85,20 +84,39 @@ impl JellyfinClientBuilder {
     ///
     /// # Errors
     ///
-    /// [`BuildError`] if TLS can't be set up.
+    /// [`BuildError`] if TLS can't be set up, for example if the system's
+    /// trust store can't be read.
     pub fn build(self) -> Result<JellyfinClient, BuildError> {
-        // reqwest uses the process-wide rustls provider. Installing ring only
-        // fails if a provider is already installed, which is fine to use.
-        let _ = rustls::crypto::ring::default_provider().install_default();
-        let mut http = reqwest::Client::builder()
+        let http = reqwest::Client::builder()
             .timeout(self.timeout)
             // Each call handles redirects itself (see redirect.rs): following
             // them silently turns a login POST into an anonymous GET.
-            .redirect(Policy::none());
-        for root in self.roots {
-            http = http.add_root_certificate(root);
-        }
-        let http = http.build().map_err(|e| BuildError(e.to_string()))?;
+            .redirect(Policy::none())
+            .tls_backend_preconfigured(tls_config(self.roots)?)
+            .build()
+            .map_err(|e| BuildError(e.to_string()))?;
         Ok(JellyfinClient::from_parts(http, self.device_id))
     }
+}
+
+/// The TLS setup, with ring passed in explicitly. Leaving it to reqwest would
+/// mean installing ring as rustls's process-wide default provider, global
+/// state a library shouldn't touch, and which silently loses if something
+/// else installs a provider first.
+///
+/// Certificates are checked the way reqwest checks them by default: by
+/// rustls-platform-verifier, against the system trust store plus `roots`.
+fn tls_config(roots: Vec<CertificateDer<'static>>) -> Result<ClientConfig, BuildError> {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let verifier = Verifier::new_with_extra_roots(roots, Arc::clone(&provider))
+        .map_err(|e| BuildError(format!("couldn't load trusted certificates: {e}")))?;
+    let config = ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .map_err(|e| BuildError(e.to_string()))?
+        // "dangerous" only because it takes a custom verifier; this one does
+        // full certificate and hostname verification.
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(verifier))
+        .with_no_client_auth();
+    Ok(config)
 }

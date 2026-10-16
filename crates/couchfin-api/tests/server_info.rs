@@ -161,3 +161,30 @@ fn every_error_has_a_message() {
         assert!(!error.to_string().is_empty(), "{error:?}");
     }
 }
+
+/// Headers promising 1000 bytes of body, followed by only a few.
+const CUT_OFF_REPLY: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 1000\r\n\r\n{\"ServerName\":";
+
+#[tokio::test]
+async fn a_reply_cut_off_mid_body_is_not_reported_as_unreachable() {
+    let url = common::raw_http::start(CUT_OFF_REPLY, Duration::ZERO);
+
+    let error = client().check_server(&url).await.unwrap_err();
+
+    let ApiError::NotJellyfin { detail } = &error else {
+        panic!("expected NotJellyfin, got {error:?}");
+    };
+    assert!(detail.contains("cut off"), "{detail}");
+}
+
+#[tokio::test]
+async fn a_body_that_stops_arriving_times_out() {
+    let url = common::raw_http::start(CUT_OFF_REPLY, Duration::from_secs(5));
+
+    let error = client_with_timeout(Duration::from_millis(300))
+        .check_server(&url)
+        .await
+        .unwrap_err();
+
+    assert_eq!(error, ApiError::Timeout);
+}

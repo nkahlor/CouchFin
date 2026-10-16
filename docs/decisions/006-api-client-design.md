@@ -37,12 +37,18 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
   while the code under test owns another.
 - **Errors by what the user can do.** `ApiError` has `Unreachable` (DNS,
   refused, TLS), `Timeout`, `NotJellyfin` (404 on a Jellyfin endpoint, a web
-  page, or JSON missing required fields), `InvalidCredentials` (401 on login),
-  `TokenRejected` (401 on a logged-in call, so core sends the user back to
-  login), `Redirected` and `InsecureRedirect` (see below) and `Status` for
-  any other HTTP error. It is `Clone + PartialEq` so
-  the fake can return scripted errors, and it exposes no reqwest types.
-  Requests time out after 10 s by default (`JellyfinClient::DEFAULT_TIMEOUT`).
+  page, JSON missing required fields, or a reply cut off mid-body: the server
+  was reached, so that isn't `Unreachable`), `InvalidCredentials` (401 on
+  login), `TokenRejected` (401 on a logged-in call, so core sends the user
+  back to login), `Redirected` and `InsecureRedirect` (see below) and `Status`
+  for any other HTTP error. A timeout is `Timeout` whether it happens while
+  connecting or while reading the body. It is `Clone + PartialEq` so the fake
+  can return scripted errors, and it exposes no reqwest types. Requests time
+  out after 10 s by default (`JellyfinClient::DEFAULT_TIMEOUT`).
+- **`Display` is log text, not UI copy.** `ApiError`'s messages are for logs
+  and diagnostics, and some carry technical detail (an error chain, a URL, a
+  status code). The UI (#13) picks its own wording by matching on the
+  variant; the `ApiError` rustdoc example shows the shape of that mapping.
 - **The header needs no escaping, because nothing unsafe can reach it.**
   Jellyfin's parser
   (`Jellyfin.Server.Implementations/Security/AuthorizationContext.cs`) splits
@@ -72,13 +78,27 @@ stable device ID so the server lists Couchfin under Dashboard > Devices.
 - **TLS is rustls with the ring provider.** reqwest 0.13's `rustls` feature
   pulls in aws-lc-rs, which builds a large C library (with CMake on some
   setups) and carries the OpenSSL licence. We use `rustls-no-provider` plus
-  rustls's `ring` feature, and `JellyfinClient::new` installs ring as the
-  process default if no provider is installed yet. Certificates are checked
-  against the system's trust store through rustls-platform-verifier, so a
-  certificate the system trusts (such as a home CA added to Bazzite) works.
-  `JellyfinClient::builder(..).add_root_certificates_pem(..)` trusts extra
-  CAs on top, for a home CA that isn't in the system store; the redirect
-  tests use it to run a real HTTPS server. No OpenSSL is linked.
+  rustls's `ring` feature.
+- **No process-wide TLS state.** With `rustls-no-provider`, reqwest's own TLS
+  setup needs rustls's process-wide default crypto provider, so a library
+  would have to install one. That is global state the app doesn't expect,
+  and if anything else installed a different provider first, ours would
+  silently lose. Instead, `JellyfinClientBuilder::build` makes its own
+  `rustls::ClientConfig` with ring passed in explicitly
+  (`ClientConfig::builder_with_provider`, safe default protocol versions) and
+  hands it to reqwest with `tls_backend_preconfigured`. Building a client
+  leaves `CryptoProvider::get_default()` unset, and `tests/tls_provider.rs`
+  checks that in its own test binary.
+- **Certificates are verified as reqwest would.** The config uses
+  rustls-platform-verifier (a direct dependency, the version reqwest uses),
+  as reqwest does by default: the system's trust store, so a certificate
+  the system trusts (such as a home CA added to Bazzite) works, plus any CAs
+  from `JellyfinClient::builder(..).add_root_certificates_pem(..)`, for a home
+  CA that isn't in the system store. The HTTPS tests use that to trust a
+  throwaway CA, and check that an untrusted certificate is `Unreachable`.
+  `Verifier::new_with_extra_roots` isn't available on every platform
+  rustls-platform-verifier supports (Android, for one), but it is on Linux,
+  Couchfin's only target. No OpenSSL is linked.
 
 ## Redirects and canonical addresses
 

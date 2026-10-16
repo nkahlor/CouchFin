@@ -4,15 +4,21 @@ use crate::server_url::ServerUrl;
 
 /// Why a request to the server failed.
 ///
-/// Each variant needs a different message or a different next step, so the
-/// UI can match on it: re-type the address, re-type the password, or go back
-/// to the login screen. The messages from `Display` are short and plain;
-/// none of them contain a token or password.
+/// Each variant calls for a different next step, so callers match on it:
+/// re-type the address, re-type the password, or go back to the login screen.
+///
+/// `Display` is **for logs and diagnostics, not for the UI**. Some messages
+/// carry technical detail (an error chain, a URL, a status code), and none
+/// contain a token or password. The UI picks its own wording by matching on
+/// the variant, as below.
 ///
 /// It is `Clone` and `PartialEq` so fakes can return scripted errors and
 /// tests can compare them.
 ///
 /// # Examples
+///
+/// How a caller maps each variant to a next step. The strings stand in for
+/// whatever wording the UI chooses:
 ///
 /// ```
 /// use couchfin_api::ApiError;
@@ -51,7 +57,8 @@ pub enum ApiError {
     #[error("the server took too long to answer")]
     Timeout,
     /// Something answered, but not the way Jellyfin does: a missing
-    /// endpoint, a web page, or JSON without the fields Couchfin needs.
+    /// endpoint, a web page, JSON without the fields Couchfin needs, or a
+    /// reply cut off before its end.
     #[error("this doesn't look like a Jellyfin server: {detail}")]
     NotJellyfin {
         /// What was wrong with the reply, for the log.
@@ -98,24 +105,42 @@ fn redirected_message(server: Option<&ServerUrl>) -> String {
     }
 }
 
+// The mappings from reqwest errors stay crate-private (no `From` impl), so
+// callers never depend on reqwest.
 impl ApiError {
-    /// Maps a failure to send a request or read its reply. Kept out of the
-    /// public API (no `From` impl) so callers never depend on reqwest.
+    /// Maps a failure to send a request and get the reply's headers.
     pub(crate) fn transport(error: &reqwest::Error) -> Self {
         if error.is_timeout() {
             return Self::Timeout;
         }
-        // reqwest's own message names only the URL; the cause ("Connection
-        // refused", "dns error", a certificate problem) is in the source
-        // chain. URLs never carry credentials (see `ServerUrl`), and tokens
-        // and passwords travel in headers and bodies, so this is safe to log.
-        let mut detail = error.to_string();
-        let mut source = std::error::Error::source(error);
-        while let Some(cause) = source {
-            detail.push_str(": ");
-            detail.push_str(&cause.to_string());
-            source = cause.source();
+        Self::Unreachable {
+            detail: error_chain(error),
         }
-        Self::Unreachable { detail }
     }
+
+    /// Maps a failure while reading the reply's body. The server was reached
+    /// and started answering, so this isn't `Unreachable`.
+    pub(crate) fn body(error: &reqwest::Error) -> Self {
+        if error.is_timeout() {
+            return Self::Timeout;
+        }
+        Self::NotJellyfin {
+            detail: format!("the reply was cut off: {}", error_chain(error)),
+        }
+    }
+}
+
+/// reqwest's own message names only the URL; the cause ("Connection
+/// refused", "dns error", a certificate problem) is in the source chain.
+/// URLs never carry credentials (see `ServerUrl`), and tokens and passwords
+/// travel in headers and bodies, so this is safe to log.
+fn error_chain(error: &reqwest::Error) -> String {
+    let mut detail = error.to_string();
+    let mut source = std::error::Error::source(error);
+    while let Some(cause) = source {
+        detail.push_str(": ");
+        detail.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    detail
 }

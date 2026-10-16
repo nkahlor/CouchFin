@@ -22,12 +22,10 @@ const MAX_LEN: usize = 256;
 /// use couchfin_api::DeviceId;
 ///
 /// let error = "has space".parse::<DeviceId>().unwrap_err();
-/// assert!(error.to_string().contains("device ID"));
+/// assert!(error.to_string().starts_with("Device ID must be"));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error(
-    "a {what} must be 1 to {MAX_LEN} characters of ASCII letters, digits, '.', '_', '~' or '-'"
-)]
+#[error("{what} must be 1 to {MAX_LEN} characters of ASCII letters, digits, '.', '_', '~' or '-'")]
 pub struct InvalidValueError {
     what: &'static str,
 }
@@ -105,7 +103,7 @@ id_type!(
     /// # Ok::<(), couchfin_api::InvalidValueError>(())
     /// ```
     DeviceId,
-    "device ID"
+    "Device ID"
 );
 
 id_type!(
@@ -121,7 +119,7 @@ id_type!(
     /// # Ok::<(), couchfin_api::InvalidValueError>(())
     /// ```
     UserId,
-    "user ID"
+    "User ID"
 );
 
 id_type!(
@@ -138,7 +136,7 @@ id_type!(
     /// # Ok::<(), couchfin_api::InvalidValueError>(())
     /// ```
     ServerId,
-    "server ID"
+    "Server ID"
 );
 
 impl DeviceId {
