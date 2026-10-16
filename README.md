@@ -81,6 +81,25 @@ new device ID unless `COUCHFIN_DEVICE_ID` is set to one it printed before. See
 [decision 006](docs/decisions/006-api-client-design.md) for how the client is
 built.
 
+### Where Couchfin keeps its data
+
+`couchfin-core` stores the session, so a restart skips the login while the
+token still works:
+
+- `~/.config/couchfin/settings.toml` (or under `$XDG_CONFIG_HOME`) holds the
+  device ID, the server's address and the last username. It holds no
+  secrets. The device ID is created on the first run and kept, so the
+  server's Dashboard > Devices lists one "Couchfin".
+- The access token goes in the system keyring (the Secret Service: KWallet
+  or GNOME Keyring). If there is no keyring, which is common in Game Mode or
+  in a container, or it doesn't answer within 3 seconds, the token goes in
+  `~/.config/couchfin/tokens.toml` instead. Only you can read that file
+  (mode 0600).
+
+To log out by hand, delete the keyring entry for the service "Couchfin" and
+`tokens.toml`. See
+[decision 007](docs/decisions/007-session-persistence.md).
+
 ## Checks
 
 CI runs these on every pull request and on `main`, in the dev container image,

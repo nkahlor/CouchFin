@@ -10,6 +10,19 @@ repository.workspace = true
 
 [dependencies]
 couchfin-api.workspace = true
+directories.workspace = true
+keyring-core.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+zbus-secret-service-keyring-store.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+wiremock.workspace = true
 
 [lints]
 workspace = true
