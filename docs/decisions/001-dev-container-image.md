@@ -40,3 +40,9 @@ CI, so both see the same toolchain and libraries.
   can't install extra toolchains into the read-only `/usr/local/rustup`.
 - This only covers development and CI. The Phase 6 Flatpak bundles its own
   libraries and must choose its own codec source.
+
+## Update (2026-10-16)
+
+The repo and the `couchfin-dev` package are now public, so Distrobox pulls the
+image without logging in to GHCR. The consequence above about logging in no
+longer applies.

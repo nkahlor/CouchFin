@@ -20,14 +20,8 @@ The image contains:
 ## Using the published image
 
 CI pushes the image to `ghcr.io/nkahlor/couchfin-dev` whenever `.devcontainer/`
-changes on `main`. While the repo is private, log in once with a GitHub token
-that has the `read:packages` scope:
-
-```sh
-podman login ghcr.io -u <github-user>
-```
-
-Then create and enter the box:
+changes on `main`. The image is public, so create and enter the box without
+logging in:
 
 ```sh
 distrobox create --name couchfin-dev --image ghcr.io/nkahlor/couchfin-dev:latest
@@ -59,9 +53,10 @@ vainfo   # should list H264 and HEVC profiles on the TV PC's GPU
 `ghcr.io/nkahlor/couchfin-dev:latest`: `fmt` (rustfmt and taplo), `clippy`,
 `test`, `doc`, `deny` and `coverage`. Nothing is installed at runtime, so a
 tool CI needs must be added to the Containerfile first, and reaches CI only
-once that change is merged and the image is pushed. The image is private while
-the repo is, so each job pulls it with the workflow's `GITHUB_TOKEN`
-(`packages: read`). See [decision 004](decisions/004-release-notes.md).
+once that change is merged and the image is pushed. Each job pulls the image
+with the workflow's `GITHUB_TOKEN` (`packages: read`), which keeps CI working
+even if the package is made private again. See
+[decision 004](decisions/004-release-notes.md).
 
 ## Coverage
 

@@ -65,12 +65,12 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 ### Phase 0: Skeleton
 
 - [x] Confirm the Couchfin name is free on GitHub and Flathub, then create a GitHub repo named couchfin
-- [ ] Repo settings: protected main (PRs only, CI must pass), PR and issue templates, Dependabot for Cargo, and one GitHub issue per task in this plan
-- [ ] Dev environment as a container image: a Containerfile (Fedora base, Rust toolchain, mpv-devel, SDL2-devel, Mesa) in `.devcontainer/`. Use it on Bazzite through Distrobox (Podman, preinstalled) so the app can reach the GPU, display and controllers; CI builds and tests in the same image on GitHub Actions
-- [ ] Set up the Cargo workspace with the six crates, CI (fmt, clippy, test), and a README covering the Distrobox setup
-- [ ] Linting and formatting: a `rustfmt.toml`; workspace-wide Clippy settings in `[workspace.lints]` in the root Cargo.toml (`clippy::pedantic` on as warnings, `unwrap_used` denied, `unsafe_code` forbidden except in couchfin-player); cargo-deny for licences and advisories; taplo for TOML formatting; `.editorconfig`; a pre-commit hook (via cargo-husky or pre-commit) that runs fmt and clippy; CI runs the same checks with `-D warnings`. Slint files are formatted with `slint-lsp format`.
-- [ ] app opens a fullscreen Slint window that says "Hello" and quits on Back/Escape
-- [ ] CI/CD: GitHub Actions runs every check on each PR in the dev container image. Pushing a `v*` tag builds a release binary and publishes it to a GitHub Release with auto-generated notes from the Conventional Commits
+- [x] Repo settings: protected main (PRs only, CI must pass), PR and issue templates, Dependabot for Cargo, and one GitHub issue per task in this plan
+- [x] Dev environment as a container image: a Containerfile (Fedora base, Rust toolchain, mpv-devel, SDL2-devel, Mesa) in `.devcontainer/`. Use it on Bazzite through Distrobox (Podman, preinstalled) so the app can reach the GPU, display and controllers; CI builds and tests in the same image on GitHub Actions
+- [x] Set up the Cargo workspace with the six crates, CI (fmt, clippy, test), and a README covering the Distrobox setup
+- [x] Linting and formatting: a `rustfmt.toml`; workspace-wide Clippy settings in `[workspace.lints]` in the root Cargo.toml (`clippy::pedantic` on as warnings, `unwrap_used` denied, `unsafe_code` forbidden except in couchfin-player, and in couchfin-ui only for Slint's generated code); cargo-deny for licences and advisories; taplo for TOML formatting; `.editorconfig`; a pre-commit hook (via cargo-husky or pre-commit) that runs fmt and clippy; CI runs the same checks with `-D warnings`. Slint files are formatted with `slint-lsp format`.
+- [x] app opens a fullscreen Slint window that says "Hello" and quits on Back/Escape
+- [x] CI/CD: GitHub Actions runs every check on each PR in the dev container image. Pushing a `v*` tag builds a release binary and publishes it to a GitHub Release with auto-generated notes from the Conventional Commits
 
 **Done when:** `cargo run` shows the window and CI passes; a deliberately badly formatted or Clippy-failing change is rejected by both the pre-commit hook and CI
 
@@ -149,5 +149,5 @@ Use one agent per task, each on its own git worktree and branch. You review and 
 - Prefer docs that are checked by machines: public APIs carry runnable rustdoc examples, which `cargo test` runs as doctests, so a wrong example fails CI. README setup commands are run by a CI job, so broken instructions fail too
 - Comments explain why, not what; the code and tests say what. Delete stale comments rather than leave them
 - **Reviewer pass:** a separate agent reviews each PR specifically for doc/code mismatches before you review it
-- Run rustfmt and `clippy -D warnings` (pedantic where sensible); no unsafe outside couchfin-player
+- Run rustfmt and `clippy -D warnings` (pedantic where sensible); no unsafe outside couchfin-player, except Slint's generated code in couchfin-ui (decision 005)
 - Use small PRs with Conventional Commits messages; every PR includes tests for what it changes
