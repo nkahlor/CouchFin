@@ -1,0 +1,51 @@
+name: Dev container
+
+# Builds the dev image and runs its smoke test. On main the image is pushed to
+# GHCR, where Distrobox and the other CI jobs pull it from.
+on:
+  pull_request:
+    paths:
+      - .devcontainer/**
+      - .github/workflows/devcontainer.yml
+  push:
+    branches: [main]
+    paths:
+      - .devcontainer/**
+      - .github/workflows/devcontainer.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/couchfin-dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -f .devcontainer/Containerfile -t "$IMAGE:${{ github.sha }}" .devcontainer
+
+      - name: Smoke test
+        run: docker run --rm "$IMAGE:${{ github.sha }}" check-devenv
+
+      # Distrobox runs as the host user, not root, so the toolchain must work
+      # for an unprivileged user through a login shell too.
+      - name: Smoke test as non-root login shell
+        run: docker run --rm --user 1000:1000 -e HOME=/tmp "$IMAGE:${{ github.sha }}" bash -lc check-devenv
+
+      - name: Push to GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"

@@ -1,0 +1,79 @@
+# Couchfin dev environment. Used on Bazzite through Distrobox and by CI, so
+# local builds and CI see the same toolchain and libraries.
+# See docs/dev-environment.md and docs/decisions/001-dev-container-image.md.
+FROM registry.fedoraproject.org/fedora:44
+
+LABEL org.opencontainers.image.source="https://github.com/nkahlor/CouchFin" \
+      org.opencontainers.image.description="Couchfin dev environment: Rust, libmpv, SDL2, Mesa"
+
+ARG RUST_VERSION=1.99.1
+ARG CARGO_BINSTALL_VERSION=1.25.3
+ARG CARGO_DENY_VERSION=0.20.2
+ARG CARGO_LLVM_COV_VERSION=0.9.1
+ARG TAPLO_VERSION=0.10.0
+ARG SLINT_VERSION=1.18.1
+
+# Fedora's own ffmpeg-free and mesa-va-drivers ship without H.264/HEVC. The
+# RPM Fusion builds go in first so mpv-devel links against them.
+RUN dnf -y install \
+        "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+    && dnf -y install --setopt=install_weak_deps=False \
+        ffmpeg-libs \
+        mesa-va-drivers-freeworld \
+    && dnf clean all
+
+RUN dnf -y install --setopt=install_weak_deps=False \
+        # build tools
+        gcc gcc-c++ clang clang-devel make cmake git pkgconf-pkg-config \
+        # playback
+        'pkgconfig(mpv)' \
+        # input
+        'pkgconfig(sdl2)' \
+        # graphics: GL/EGL headers plus drivers so the app can reach the GPU
+        mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers mesa-vulkan-drivers \
+        libva-utils \
+        # Slint/winit windowing and text
+        fontconfig-devel freetype-devel libxkbcommon-devel libxkbcommon-x11-devel \
+        wayland-devel libX11-devel libXcursor-devel libXi-devel libXrandr-devel \
+        libinput \
+        # keyring (Secret Service over D-Bus) and TLS
+        dbus-devel openssl-devel \
+        # used by the install steps below
+        curl tar gzip \
+    && dnf clean all
+
+# The toolchain lives outside $HOME because Distrobox shares the host's home
+# directory. CARGO_HOME is only set while installing: at runtime cargo keeps its
+# registry cache in the user's own ~/.cargo, which is writable.
+ENV RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | CARGO_HOME=/usr/local/cargo sh -s -- -y --no-modify-path --profile minimal \
+            --default-toolchain "${RUST_VERSION}" \
+            --component rustfmt,clippy,llvm-tools-preview \
+    && chmod -R a+rX /usr/local/rustup /usr/local/cargo
+
+# Prebuilt binaries only: compiling these from source would add many minutes
+# to every image build.
+RUN arch="$(uname -m)" \
+    && curl -sSfL "https://github.com/cargo-bins/cargo-binstall/releases/download/v${CARGO_BINSTALL_VERSION}/cargo-binstall-${arch}-unknown-linux-gnu.tgz" \
+        | tar xz -C /usr/local/cargo/bin \
+    && CARGO_HOME=/usr/local/cargo cargo binstall --no-confirm --disable-strategies compile \
+        "cargo-deny@${CARGO_DENY_VERSION}" \
+        "cargo-llvm-cov@${CARGO_LLVM_COV_VERSION}" \
+    && curl -sSfL "https://github.com/tamasfe/taplo/releases/download/${TAPLO_VERSION}/taplo-linux-${arch}.gz" \
+        | gunzip > /usr/local/bin/taplo \
+    && chmod 755 /usr/local/bin/taplo \
+    && curl -sSfL "https://github.com/slint-ui/slint/releases/download/v${SLINT_VERSION}/slint-lsp-${arch}-unknown-linux-gnu.tar.gz" \
+        | tar xz -C /usr/local/bin --strip-components=1 slint-lsp/slint-lsp \
+    && rm -rf /usr/local/cargo/registry \
+    && chmod -R a+rX /usr/local/cargo
+
+# Distrobox starts login shells, which reset PATH from /etc/profile.
+RUN printf '%s\n' \
+        'export RUSTUP_HOME=/usr/local/rustup' \
+        'case ":$PATH:" in *:/usr/local/cargo/bin:*) ;; *) export PATH="/usr/local/cargo/bin:$PATH" ;; esac' \
+        > /etc/profile.d/couchfin-rust.sh
+
+COPY check-devenv.sh /usr/local/bin/check-devenv
