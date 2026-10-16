@@ -8,13 +8,16 @@ mod config;
 mod direction;
 mod event;
 pub mod fake;
+mod hints;
 mod input;
 mod mapper;
 mod runner;
+mod sdl;
 mod source;
 
 pub use config::{ConfigError, Deadzone, MapperConfig, Repeat};
 pub use event::{Axis, Button, ButtonState, PadEvent, PadId};
+pub use hints::{HintError, SdlHints};
 pub use input::Input;
 pub use mapper::Mapper;
 pub use runner::{Gamepads, StartError};
