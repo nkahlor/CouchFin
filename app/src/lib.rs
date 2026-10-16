@@ -5,12 +5,16 @@
 //! the keyring) and calls [`connect`]. `tests/` calls it with the same
 //! client against wiremock.
 
+mod gamepad;
+
 use std::sync::Arc;
 
 use couchfin_core::{JellyfinApi, LoginFlow, SettingsStore, TokenStore};
 use couchfin_ui::{Command, MainWindow, bind, render};
 use slint::ComponentHandle;
 use tokio::runtime::Handle;
+
+pub use gamepad::connect_gamepads;
 
 /// Connects `flow` to `window` and starts it.
 ///

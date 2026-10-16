@@ -40,13 +40,13 @@ and how to update it.
    placeholder title cards. Next time it skips straight to Home while the
    sign-in still works.
 
-   Everything works from the keyboard: Tab or the Up and Down arrows move
-   between controls, Left and Right slide the carousel one card at a time
-   (and move the cursor in a text field), Enter presses or selects, and
-   Escape goes back.
-   Escape on the address screen or on Home quits. A controller's D-pad, A
-   and B do the same as the arrows, Enter and Escape, through the same
-   code ([decision 011](docs/decisions/011-home-row.md)). Logs go to
+   Tab or the Up and Down arrows move between controls, Left and Right
+   slide the carousel one card at a time (and move the cursor in a text
+   field), Enter presses or selects, and Escape goes back.
+   Escape on the address screen or on Home quits. A controller works too:
+   the D-pad and left stick act as the arrows, A as Enter and B as Escape,
+   through the same code ([decision 011](docs/decisions/011-home-row.md)),
+   and the app falls back to the keyboard alone if SDL can't start. Logs go to
    stderr; set `RUST_LOG=debug` for more. They never include passwords or
    tokens.
 
@@ -93,6 +93,23 @@ Afterwards, the server's Dashboard > Devices lists "Couchfin". Each run uses a
 new device ID unless `COUCHFIN_DEVICE_ID` is set to one it printed before. See
 [decision 006](docs/decisions/006-api-client-design.md) for how the client is
 built.
+
+### Checking a controller
+
+`couchfin-gamepad` has an example that prints every input from every
+connected controller (Up, Down, Left, Right, Select, Back, Menu) and logs
+each connect and disconnect with the pad's name and type, so you can check a
+pad without the app. Ctrl+C quits:
+
+```sh
+cargo run -p couchfin-gamepad --example gamepads
+```
+
+The D-pad and left stick repeat while held (after 400 ms, then every 60 ms).
+Buttons go by position: the bottom face button selects and the right one goes
+back, on every pad. Under Steam Input only Steam's virtual pad should show
+up, not the physical one as well. See
+[decision 012](docs/decisions/012-gamepad-mapping-and-thread.md).
 
 ### Where Couchfin keeps its data
 

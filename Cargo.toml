@@ -50,6 +50,10 @@ rustls = { version = "0.23.4", default-features = false, features = [
 ] }
 # The same verifier reqwest uses: the system trust store, plus extra roots.
 rustls-platform-verifier = "0.7"
+# Game controllers only (decision 010). Pinned exactly: a new release is a
+# deliberate upgrade, tested on the TV. Links the system SDL3, found through
+# pkg-config.
+sdl3 = "=0.20.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tempfile = "3"

@@ -3,6 +3,7 @@
 use anyhow::Context as _;
 use couchfin_api::JellyfinClient;
 use couchfin_core::{ConfigDir, FileSettings, LoginFlow, Settings, SystemTokens};
+use couchfin_gamepad::{Gamepads, MapperConfig, SdlHints};
 use couchfin_ui::MainWindow;
 use slint::ComponentHandle as _;
 use tracing_subscriber::EnvFilter;
@@ -29,5 +30,9 @@ fn main() -> anyhow::Result<()> {
     // Couchfin runs on a TV from Steam, so it always covers the whole screen.
     window.window().set_fullscreen(true);
     let _flow = app::connect(&window, flow, runtime.handle());
+    // Held until the event loop ends; dropping it stops the gamepad thread.
+    let _gamepads = app::connect_gamepads(&window, |deliver| {
+        Gamepads::start_sdl(MapperConfig::default(), SdlHints::default(), deliver)
+    });
     window.run().context("running the event loop")
 }
