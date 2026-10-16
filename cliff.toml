@@ -1,0 +1,53 @@
+# git-cliff configuration: turns the Conventional Commits since the previous
+# release tag into the notes for a GitHub Release. Used by
+# .github/workflows/release.yml; see docs/decisions/004-release-notes.md.
+#
+# git-cliff isn't in the dev image. With it installed, preview the notes for
+# the next release:
+#   git cliff --unreleased --strip all
+
+[changelog]
+# GitHub shows the tag as the release title, so the body starts at the groups.
+# The HTML comments in group names only set the order and are stripped here.
+body = """
+{%- for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
+{% if commit.breaking %}**breaking:** {% endif %}\
+{{ commit.message | upper_first }} ({{ commit.id | truncate(length=7, end="") }})
+{%- endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+# PRs are merged with merge commits ("Merge pull request #N ..."), which aren't
+# Conventional Commits; dropping every non-conventional commit removes them
+# while keeping the commits from the PR branches.
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9]*"
+# Pre-release tags (v1.2.0-rc.1) get their own notes, but a final release
+# lists everything since the previous final release.
+ignore_tags = "v[0-9]+\\.[0-9]+\\.[0-9]+-.*"
+topo_order = false
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^Merge ", skip = true },
+  { message = "^feat", group = "<!-- 00 -->Features" },
+  { message = "^fix", group = "<!-- 01 -->Bug fixes" },
+  { message = "^perf", group = "<!-- 02 -->Performance" },
+  { message = "^refactor", group = "<!-- 03 -->Refactoring" },
+  { message = "^docs", group = "<!-- 04 -->Documentation" },
+  { message = "^test", group = "<!-- 05 -->Tests" },
+  { message = "^build", group = "<!-- 06 -->Build" },
+  { message = "^ci", group = "<!-- 07 -->CI" },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^chore", group = "<!-- 08 -->Chores" },
+  { message = "^style", group = "<!-- 09 -->Style" },
+  { message = "^revert", group = "<!-- 10 -->Reverts" },
+]

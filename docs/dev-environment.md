@@ -53,6 +53,38 @@ check-devenv
 vainfo   # should list H264 and HEVC profiles on the TV PC's GPU
 ```
 
+## CI
+
+`.github/workflows/ci.yml` runs each check from `CLAUDE.md` as its own job in
+`ghcr.io/nkahlor/couchfin-dev:latest`: `fmt` (rustfmt and taplo), `clippy`,
+`test`, `doc`, `deny` and `coverage`. Nothing is installed at runtime, so a
+tool CI needs must be added to the Containerfile first, and reaches CI only
+once that change is merged and the image is pushed. The image is private while
+the repo is, so each job pulls it with the workflow's `GITHUB_TOKEN`
+(`packages: read`). See [decision 004](decisions/004-release-notes.md).
+
+## Coverage
+
+The `coverage` job runs `cargo llvm-cov --workspace`, then
+`.github/scripts/coverage_gate.py` checks the line coverage of each of
+`couchfin-api` and `couchfin-core` separately (the files under the crate's
+`src/`, covered by any test in the workspace). Each must be at or above 80%.
+
+- A crate with no executable lines yet, such as an empty library, is skipped
+  and the job shows a warning saying so. The gate applies from its first
+  executable line.
+- A crate name the gate doesn't find fails the job, so renaming a crate can't
+  silently turn the gate off.
+
+To see the same numbers locally:
+
+```sh
+cargo llvm-cov --workspace --summary-only
+```
+
+The gate's own tests run in the same job:
+`python3 -m unittest discover -s .github/scripts`.
+
 ## Updating the toolchain
 
 Tool versions are `ARG`s at the top of the Containerfile. The Rust toolchain is
