@@ -4,7 +4,7 @@
 //! Sending the key, rather than calling into the screens, keeps one path
 //! for both kinds of input: `ui/widgets/keys.slint` decides what every key
 //! means, and each control handles it, so focus logic exists once
-//! (`docs/decisions/010-gamepad-input.md`).
+//! (`docs/decisions/010-gamepad-input.md` and `011-home-row.md`).
 
 use slint::ComponentHandle;
 use slint::SharedString;

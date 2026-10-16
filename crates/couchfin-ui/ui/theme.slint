@@ -20,6 +20,8 @@ export global Theme {
     out property <length> label-size: 32px;
     // Titles and button labels.
     out property <int> strong-weight: 700;
+    // Body text, and a card's title while it isn't focused.
+    out property <int> regular-weight: 400;
 
     out property <length> focus-ring: 6px;
     // The outline of an unfocused field or button.
@@ -44,6 +46,29 @@ export global Theme {
     // Room kept for the busy line and one error line, so buttons above it
     // never jump when either appears.
     out property <length> status-height: 120px;
+
+    // Home: the space between the screen's edge and the header, row and
+    // Sign out.
+    out property <length> page-margin: 40px;
+
+    // Title cards: poster-shaped (2:3), sized to the room the screen leaves
+    // for the row, between these heights.
+    out property <length> poster-min-height: 200px;
+    out property <length> poster-max-height: 420px;
+    out property <float> poster-aspect: 2 / 3;
+    out property <length> card-gap: 32px;
+    // The title under a poster: one line at label size.
+    out property <length> card-title-height: 44px;
+    out property <length> card-title-gap: 12px;
+    // The focused card grows and gets a ring, thicker than a field's so it
+    // reads on a poster from across the room.
+    out property <percent> card-focus-scale: 108%;
+    out property <length> card-focus-ring: 8px;
+    // Kept free around the row so a grown card isn't cut off.
+    out property <length> card-focus-room: 24px;
+    // Short, so focus never feels behind the D-pad.
+    out property <duration> focus-duration: 120ms;
+    out property <duration> scroll-duration: 150ms;
 
     // Wide enough for a long https:// address at body size.
     out property <length> form-width: 1200px;

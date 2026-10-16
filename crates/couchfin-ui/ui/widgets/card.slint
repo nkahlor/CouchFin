@@ -1,0 +1,79 @@
+import { Theme } from "../theme.slint";
+
+// A poster-shaped title card with its title underneath. It takes no focus
+// itself: the row it sits in holds focus and says which card is current, so
+// moving along a row is one property change, and the row remembers its place
+// while focus is elsewhere.
+export component Card inherits Rectangle {
+    in property <string> title;
+    // The poster's height; the width follows at 2:3.
+    in property <length> poster-height;
+    // The row's current card, whether or not the row has focus.
+    in property <bool> current;
+    // Current in a focused row: grown and ringed.
+    in property <bool> highlighted;
+    // Its place in the row, and the row's length, for screen readers.
+    in property <int> index;
+    in property <int> count;
+
+    // Enter while highlighted, a click, or a screen reader's default action.
+    callback activated();
+
+    // The height is left to the row: the parts are placed by y, and a fixed
+    // height here would feed back into the row's size (a binding loop).
+    width: root.poster-height * Theme.poster-aspect;
+
+    accessible-role: list-item;
+    accessible-label: root.title;
+    accessible-item-index: root.index;
+    accessible-item-count: root.count;
+    accessible-item-selectable: true;
+    accessible-item-selected: root.current;
+    accessible-action-default => {
+        root.activated();
+    }
+
+    Rectangle {
+        transform-scale: root.highlighted ? Theme.card-focus-scale : 100%;
+        animate transform-scale { duration: Theme.focus-duration; }
+
+        poster := Rectangle {
+            y: 0px;
+            height: root.poster-height;
+            background: Theme.surface;
+            border-radius: Theme.radius;
+            clip: true;
+            // Phase 3 puts the poster image here, filling this rectangle.
+        }
+
+        // Over the poster, so an image never covers the ring.
+        Rectangle {
+            y: 0px;
+            height: root.poster-height;
+            border-radius: Theme.radius;
+            border-width: root.highlighted ? Theme.card-focus-ring : 0px;
+            border-color: Theme.focus;
+            animate border-width { duration: Theme.focus-duration; }
+        }
+
+        Text {
+            y: root.poster-height + Theme.card-title-gap;
+            height: Theme.card-title-height;
+            text: root.title;
+            color: root.highlighted ? Theme.text : Theme.muted;
+            font-size: Theme.label-size;
+            font-weight: root.highlighted ? Theme.strong-weight : Theme.regular-weight;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+            // The card itself carries the title.
+            accessible-role: none;
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            root.activated();
+        }
+    }
+}

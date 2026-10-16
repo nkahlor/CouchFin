@@ -145,15 +145,23 @@ pub use generated::AddressView;
 /// argument, which [`bind`] puts straight into a `Password`.
 pub use generated::LoginView;
 
-/// The Phase 1 home screen's data and callbacks.
+/// The home screen's data and callbacks.
 ///
-/// The page holds focus on arrival; Down or Tab moves to Sign out.
+/// Under the header is a row of ten placeholder title cards ("Title 1" to
+/// "Title 10"), until Phase 3 fills it from the library. The first card has
+/// focus on arrival, so an Enter held from signing in can't press Sign out.
+/// Left and Right walk the row and stop at its ends, and the row scrolls to
+/// keep the focused card in view. Down or Tab moves to Sign out; Up or
+/// Shift+Tab returns to the card you left.
 ///
 /// - `server-name` (in): the title.
 /// - `server-version` (in): shown as "Jellyfin {version}".
 /// - `username` (in): shown as "Signed in as {username}".
 /// - `notice` (in): a quiet note, such as a sign-in that couldn't be saved;
 ///   empty shows none.
+/// - `card-activated(index)`: Enter on a card, with its place in the row
+///   (0 is the first). The page also shows "Selected: {title}". [`bind`]
+///   only logs it, since there is no detail page yet.
 /// - `sign-out()`: the Sign out button.
 /// - `back()`: Escape or Backspace.
 pub use generated::HomeView;

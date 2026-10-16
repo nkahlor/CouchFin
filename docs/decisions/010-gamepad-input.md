@@ -56,7 +56,9 @@ Findings (October 2026):
    events; SDL only reads keyboards for a window it owns. couchfin-ui already
    maps keys to navigation intents (`ui/widgets/keys.slint`), and text fields
    need the raw keys for typing and Steam's on-screen keyboard. couchfin-ui
-   gains a public way to feed an intent into that same handler. `app` maps
+   gains a public way to feed an intent into that same handler
+   (`couchfin_ui::navigate` with an `Intent`,
+   [decision 011](011-home-row.md)). `app` maps
    each gamepad `Input` to an intent and passes it in, so both kinds of input
    meet in one place, and focus logic exists once. couchfin-gamepad and
    couchfin-ui still never depend on each other.

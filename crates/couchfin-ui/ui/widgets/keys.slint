@@ -1,6 +1,7 @@
-// One place that decides what a key means, so every control agrees. Phase 2's
-// couchfin-gamepad will send the same intents from the D-pad and the A and B
-// buttons: Up/Down for previous/next, A for activate, B for back.
+// One place that decides what a key means, so every control agrees. A
+// controller arrives here too: the app turns its D-pad and A and B buttons
+// into arrow keys, Enter and Escape (couchfin_ui::navigate, decision 010),
+// so these rules cover both.
 
 export enum KeyIntent {
     none,
@@ -8,6 +9,11 @@ export enum KeyIntent {
     next,
     // Shift+Tab, Up: the previous control.
     previous,
+    // Left arrow: the previous card in a row. A text field moves its cursor
+    // instead.
+    left,
+    // Right arrow: the next card in a row, or the cursor in a text field.
+    right,
     // Enter, Space: press the focused button.
     activate,
     // Escape: leave the screen.
@@ -29,6 +35,12 @@ export global Keys {
         }
         if event.text == Key.Tab || event.text == Key.DownArrow {
             return KeyIntent.next;
+        }
+        if event.text == Key.LeftArrow {
+            return KeyIntent.left;
+        }
+        if event.text == Key.RightArrow {
+            return KeyIntent.right;
         }
         if event.text == Key.Return || event.text == " " {
             return KeyIntent.activate;

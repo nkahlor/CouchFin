@@ -1,5 +1,6 @@
-//! The Phase 1 home screen on Slint's testing backend: it shows the server
-//! and who is signed in, and Back asks to go back.
+//! The home screen's header and Back on Slint's testing backend: it shows
+//! the server and who is signed in, and Back asks to go back. The row of
+//! cards is in `home_row.rs`.
 
 mod common;
 
