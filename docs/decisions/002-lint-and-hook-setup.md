@@ -23,6 +23,9 @@ pre-commit) that runs fmt and Clippy.
   `[workspace.lints]` with `unsafe_code = "deny"`, so each FFI block opts in
   with `#[allow(unsafe_code)]`. `app/tests/lint_config.rs` fails if the copy
   drifts, or if another crate stops inheriting the workspace lints.
+  `couchfin-ui` later got the same kind of copy, but only so Slint's generated
+  code compiles. Handwritten UI code still may not use `unsafe`
+  ([decision 005](005-slint-generated-unsafe.md)).
 - **`missing_docs` warns** (an error in CI), to enforce "every public item gets
   a doc comment" from `CLAUDE.md`.
 - **`unwrap()` is allowed in tests** through `allow-unwrap-in-tests` in

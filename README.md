@@ -1,5 +1,7 @@
 # Couchfin
 
+[![Made with Slint](https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-whitebg.png)](https://slint.dev)
+
 A controller-first [Jellyfin](https://jellyfin.org) client for Bazzite/SteamOS
 and Steam Big Picture, written in Rust with libmpv for playback and Slint for
 the UI.
@@ -37,6 +39,9 @@ and how to update it.
    check-devenv
    cargo run
    ```
+
+   For now this opens a fullscreen window that says "Hello". Escape (or
+   Backspace) quits.
 
 To try changes to the Containerfile before they're merged, build the image
 locally:
@@ -86,9 +91,12 @@ for how each crate is measured.
 
 Lint levels live in `[workspace.lints]` in the root `Cargo.toml`: Clippy's
 pedantic group warns, `unwrap()` outside tests is an error, and `unsafe` is
-forbidden everywhere except `couchfin-player`. CI turns every warning into an
-error. Formatting is set by `rustfmt.toml`, `taplo.toml` and `.editorconfig`,
-licence and advisory rules by `deny.toml`. Format Slint files with
+forbidden everywhere except `couchfin-player`. `couchfin-ui` allows it only in
+Slint's generated code; handwritten UI code may not use it, and
+`app/tests/lint_config.rs` enforces that
+([decision 005](docs/decisions/005-slint-generated-unsafe.md)). CI turns every
+warning into an error. Formatting is set by `rustfmt.toml`, `taplo.toml` and
+`.editorconfig`, licence and advisory rules by `deny.toml`. Format Slint files with
 `slint-lsp format <file.slint>`.
 
 To catch formatting and Clippy failures before CI does, install the pre-commit
@@ -115,4 +123,8 @@ how the notes are put together.
 
 ## Licence
 
-[MIT](LICENSE)
+Couchfin is [MIT](LICENSE). It uses [Slint](https://slint.dev) under the Slint
+Royalty-free Desktop, Mobile, and Web Applications License 2.0. That licence
+requires the "Made with Slint" badge on the page where Couchfin is downloaded,
+so it appears at the top of this README and in every release's notes. See
+[decision 003](docs/decisions/003-slint-licence.md).

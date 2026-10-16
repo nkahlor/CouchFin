@@ -114,6 +114,9 @@ jobs:
           if ! grep -q '[^[:space:]]' notes.md; then
             echo "No changes since ${prev:-the start of the project}." > notes.md
           fi
+          # Slint's licence requires its badge where the binaries are
+          # downloaded (docs/decisions/003-slint-licence.md).
+          cat .github/release-footer.md >> notes.md
           cat notes.md
 
       - uses: actions/download-artifact@v8

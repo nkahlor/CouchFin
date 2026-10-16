@@ -10,9 +10,9 @@ rust-version = "1.99"
 license = "MIT"
 repository = "https://github.com/nkahlor/CouchFin"
 
-# couchfin-player keeps a copy of this table with `unsafe_code = "deny"`, since
-# Cargo can't override a single inherited lint. app/tests/lint_config.rs keeps
-# the two in step.
+# couchfin-player and couchfin-ui keep copies of this table with
+# `unsafe_code = "deny"`, since Cargo can't override a single inherited lint.
+# app/tests/lint_config.rs keeps them in step.
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
@@ -28,5 +28,12 @@ couchfin-input = { path = "crates/couchfin-input" }
 couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 
+anyhow = "1"
 serde_json = "1"
 toml = "1.1"
+
+# Slint's internal crates must all be the same version, so all three are
+# pinned exactly. Licence: docs/decisions/003-slint-licence.md.
+i-slint-backend-testing = "=1.18.1"
+slint = { version = "=1.18.1", default-features = false }
+slint-build = "=1.18.1"
