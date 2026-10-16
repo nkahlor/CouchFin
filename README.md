@@ -63,6 +63,22 @@ other or on the UI, and `couchfin-core` depends only on `couchfin-api`.
 
 The Rust toolchain is pinned in [rust-toolchain.toml](rust-toolchain.toml).
 
+### Checking a real Jellyfin server
+
+`couchfin-api` has a small example that checks a server, logs in and calls
+`/Users/Me`, so you can try the client against your own server before the
+login screen exists. It asks for the password without echoing it and never
+prints it or the token:
+
+```sh
+cargo run -p couchfin-api --example probe -- http://jellyfin.lan:8096 alice
+```
+
+Afterwards, the server's Dashboard > Devices lists "Couchfin". Each run uses a
+new device ID unless `COUCHFIN_DEVICE_ID` is set to one it printed before. See
+[decision 006](docs/decisions/006-api-client-design.md) for how the client is
+built.
+
 ## Checks
 
 CI runs these on every pull request and on `main`, in the dev container image,

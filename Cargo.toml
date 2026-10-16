@@ -29,8 +29,25 @@ couchfin-player = { path = "crates/couchfin-player" }
 couchfin-ui = { path = "crates/couchfin-ui" }
 
 anyhow = "1"
+# Only the features couchfin-api uses. TLS is rustls with ring as its crypto
+# provider, not OpenSSL or aws-lc-rs: see docs/decisions/006-api-client-design.md.
+reqwest = { version = "0.13.5", default-features = false, features = [
+  "json",
+  "rustls-no-provider",
+] }
+rpassword = "7.5"
+rustls = { version = "0.23.4", default-features = false, features = [
+  "ring",
+  "std",
+  "tls12",
+] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 toml = "1.1"
+uuid = { version = "1", features = ["v4"] }
+wiremock = "0.6.5"
 
 # Slint's internal crates must all be the same version, so all three are
 # pinned exactly. Licence: docs/decisions/003-slint-licence.md.

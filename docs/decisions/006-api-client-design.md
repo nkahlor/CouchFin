@@ -1,0 +1,92 @@
+# 006: couchfin-api client design
+
+Status: accepted · 2026-10-16
+
+## Context
+
+Phase 1 needs `couchfin-api` to check a server (`GET /System/Info/Public`),
+log in (`POST /Users/AuthenticateByName`) and confirm a stored token
+(`GET /Users/Me`), sending the `Authorization: MediaBrowser ...` header with a
+stable device ID so the server lists Couchfin under Dashboard > Devices.
+`couchfin-core` (#12) and the login screens (#13) build on this API, and
+`CLAUDE.md` asks every crate to ship a fake so the others can test without it.
+
+## Decision
+
+- **A stateless client.** `JellyfinClient` holds only the HTTP client and the
+  `DeviceId`. Calls before login take a `ServerUrl`; calls after take a
+  `Session` (server plus `AccessToken`). Core owns the session, persists it,
+  and hands it back after a restart, so there is no hidden login state to
+  keep in sync.
+- **A trait with `impl Future + Send` methods.** `JellyfinApi` declares
+  `fn ... -> impl Future<Output = Result<_, ApiError>> + Send` rather than
+  `async fn`, so the futures can be spawned on tokio's multi-threaded runtime.
+  The cost is that it isn't dyn-compatible: core takes it as a generic
+  (`App<A: JellyfinApi>`). We chose generics over boxed futures (or the
+  `async-trait` crate) because there is exactly one real implementation and
+  one fake, so dynamic dispatch buys nothing and boxing costs an allocation
+  per call.
+- **The fake is always compiled** (`couchfin_api::fake::FakeJellyfin`), not
+  behind a cargo feature. It is about 250 lines of safe code with no
+  dependencies of its own. A feature would have to be turned on by every
+  crate that tests with it, and doctests in this crate would need it too.
+  The fake answers on one `ServerUrl` (others are `Unreachable`), knows users
+  and passwords, issues and revokes tokens, and can be told to fail every
+  call with a given `ApiError`. Clones share state, so a test keeps a handle
+  while the code under test owns another.
+- **Errors by what the user can do.** `ApiError` has `Unreachable` (DNS,
+  refused, TLS), `Timeout`, `NotJellyfin` (404 on a Jellyfin endpoint, a web
+  page, or JSON missing required fields), `InvalidCredentials` (401 on login),
+  `TokenRejected` (401 on a logged-in call, so core sends the user back to
+  login) and `Status` for any other HTTP error. It is `Clone + PartialEq` so
+  the fake can return scripted errors, and it exposes no reqwest types.
+  Requests time out after 10 s by default (`JellyfinClient::DEFAULT_TIMEOUT`).
+- **The header needs no escaping, because nothing unsafe can reach it.**
+  Jellyfin's parser
+  (`Jellyfin.Server.Implementations/Security/AuthorizationContext.cs`) splits
+  on commas outside quotes, strips the quotes and URL-decodes each value, and
+  matches keys case-sensitively. The header is
+  `MediaBrowser Client="Couchfin", Device="Couchfin", DeviceId="<id>",
+  Version="<crate version>"`, plus `, Token="<token>"` once logged in. The
+  names and version are constants, and `DeviceId`, `AccessToken`, `UserId`
+  and `ServerId` accept only URL-unreserved characters (`A-Z a-z 0-9 . _ ~ -`,
+  1 to 256 long), which pass through URL-decoding unchanged and can't close a
+  quote. A token from the server that breaks this rule fails the login with
+  `NotJellyfin`. The header value is marked sensitive, which keeps it out of
+  hyper's debug output.
+- **The device ID belongs to the caller.** `DeviceId::generate()` makes a
+  UUID v4, and `as_str()`/`parse()` round-trip it. Core stores it once per
+  install, because a new ID every launch would add a new Devices entry each
+  time.
+- **Secrets can't be printed by accident.** `AccessToken` and `Password` have
+  a redacting `Debug`, no `Display` and no `Serialize`; the value is read
+  through `expose_secret()`. `ServerUrl` rejects `user:password@` URLs, so
+  error details, which include the URL, carry no credentials. The crate logs
+  nothing itself.
+- **`ServerUrl` normalises what people type.** It trims, assumes `http://`
+  when there is no scheme (Jellyfin's default), allows only http and https,
+  drops a query, a fragment and a pasted web-client path (`/web/...`), keeps a
+  reverse-proxy base path, and always ends in `/`.
+- **TLS is rustls with the ring provider.** reqwest 0.13's `rustls` feature
+  pulls in aws-lc-rs, which builds a large C library (with CMake on some
+  setups) and carries the OpenSSL licence. We use `rustls-no-provider` plus
+  rustls's `ring` feature, and `JellyfinClient::new` installs ring as the
+  process default if no provider is installed yet. Certificates are checked
+  against the system's trust store through rustls-platform-verifier, so a
+  certificate the system trusts (such as a home CA added to Bazzite) works.
+  No OpenSSL is linked.
+
+## Consequences
+
+- No new licences: ring (Apache-2.0 AND ISC), rustls-webpki and untrusted
+  (ISC) and the rest are already on the `deny.toml` allow list. ring brings in
+  a third `getrandom` version, a duplicate warning only.
+- `couchfin-core` and the UI depend on `JellyfinApi` generically, and test
+  with `FakeJellyfin`; only `app` constructs `JellyfinClient`.
+- If the device name ever becomes configurable (for example the hostname),
+  it can contain spaces or other characters, and the header builder must then
+  URL-encode values.
+- Later phases add methods to `JellyfinApi` that take a `Session`. Adding a
+  method breaks other implementors, which today is only the fake.
+- `crates/couchfin-api/examples/probe.rs` checks a real server by hand
+  (public info, login, `/Users/Me`), reading the password without echo.
