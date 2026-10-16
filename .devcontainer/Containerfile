@@ -7,7 +7,6 @@ LABEL org.opencontainers.image.source="https://github.com/nkahlor/CouchFin" \
       org.opencontainers.image.description="Couchfin dev environment: Rust, libmpv, SDL3, Mesa"
 
 ARG RUST_VERSION=1.99.1
-ARG CARGO_BINSTALL_VERSION=1.25.3
 ARG CARGO_DENY_VERSION=0.20.2
 ARG CARGO_LLVM_COV_VERSION=0.9.1
 ARG TAPLO_VERSION=0.10.0
@@ -57,13 +56,15 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && chmod -R a+rX /usr/local/rustup /usr/local/cargo
 
 # Prebuilt binaries only: compiling these from source would add many minutes
-# to every image build.
+# to every image build. Each comes straight from its release URL, with no
+# GitHub API lookups: anonymous API calls from CI runners hit GitHub's rate
+# limit and fail the build at random (they did with cargo-binstall).
 RUN arch="$(uname -m)" \
-    && curl -sSfL "https://github.com/cargo-bins/cargo-binstall/releases/download/v${CARGO_BINSTALL_VERSION}/cargo-binstall-${arch}-unknown-linux-gnu.tgz" \
-        | tar xz -C /usr/local/cargo/bin \
-    && CARGO_HOME=/usr/local/cargo cargo binstall --no-confirm --disable-strategies compile \
-        "cargo-deny@${CARGO_DENY_VERSION}" \
-        "cargo-llvm-cov@${CARGO_LLVM_COV_VERSION}" \
+    && curl -sSfL "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-${arch}-unknown-linux-musl.tar.gz" \
+        | tar xz -C /usr/local/cargo/bin --strip-components=1 \
+            "cargo-deny-${CARGO_DENY_VERSION}-${arch}-unknown-linux-musl/cargo-deny" \
+    && curl -sSfL "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${CARGO_LLVM_COV_VERSION}/cargo-llvm-cov-${arch}-unknown-linux-gnu.tar.gz" \
+        | tar xz -C /usr/local/cargo/bin cargo-llvm-cov \
     && curl -sSfL "https://github.com/tamasfe/taplo/releases/download/${TAPLO_VERSION}/taplo-linux-${arch}.gz" \
         | gunzip > /usr/local/bin/taplo \
     && chmod 755 /usr/local/bin/taplo \
