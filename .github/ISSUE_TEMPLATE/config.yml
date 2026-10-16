@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Milestone 1 plan
+    url: https://github.com/nkahlor/CouchFin/blob/main/docs/PLAN.md
+    about: The roadmap, phases and "Done when" checks. Plan tasks are tracked as issues.
