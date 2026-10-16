@@ -1,0 +1,5 @@
+# Stable rustfmt options only: the toolchain is pinned stable, and nightly-only
+# options would just print warnings.
+newline_style = "Unix"
+use_field_init_shorthand = true
+use_try_shorthand = true

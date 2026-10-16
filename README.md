@@ -70,9 +70,29 @@ CI runs these on every pull request:
 
 ```sh
 cargo fmt --all --check
+taplo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+cargo doc --workspace --no-deps
+cargo deny check
 ```
+
+Lint levels live in `[workspace.lints]` in the root `Cargo.toml`: Clippy's
+pedantic group warns, `unwrap()` outside tests is an error, and `unsafe` is
+forbidden everywhere except `couchfin-player`. CI turns every warning into an
+error. Formatting is set by `rustfmt.toml`, `taplo.toml` and `.editorconfig`,
+licence and advisory rules by `deny.toml`. Format Slint files with
+`slint-lsp format <file.slint>`.
+
+To catch formatting and Clippy failures before CI does, install the pre-commit
+hook once per clone, inside the dev container:
+
+```sh
+pre-commit install
+```
+
+The hook runs `cargo fmt --check`, `cargo clippy -D warnings` and
+`taplo fmt --check`, and rejects the commit if any fails.
 
 ## Licence
 

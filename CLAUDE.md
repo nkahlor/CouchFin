@@ -25,7 +25,7 @@ Each session works on exactly one task from `docs/PLAN.md`, on its own git workt
 
 ## Commands
 
-Run everything inside the Distrobox dev container (see README). CI runs the same checks with the same image.
+Run everything inside the Distrobox dev container (see README). CI runs the same checks with the same image. Run `pre-commit install` once per clone so fmt, clippy and taplo run on every commit.
 
 ```sh
 cargo fmt --all

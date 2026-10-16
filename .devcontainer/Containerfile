@@ -25,6 +25,8 @@ RUN dnf -y install \
 RUN dnf -y install --setopt=install_weak_deps=False \
         # build tools
         gcc gcc-c++ clang clang-devel make cmake git pkgconf-pkg-config \
+        # git hooks (.pre-commit-config.yaml)
+        pre-commit \
         # playback
         'pkgconfig(mpv)' \
         # input

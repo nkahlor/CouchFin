@@ -1,0 +1,26 @@
+# Rejects a commit that CI would reject. Install once per clone, inside the dev
+# container:  pre-commit install
+# The hooks call the tools already in the dev image, so nothing is downloaded.
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --workspace --all-targets -- -D warnings
+        language: system
+        types_or: [rust, toml]
+        pass_filenames: false
+
+      - id: taplo-fmt
+        name: taplo fmt
+        entry: taplo fmt --check
+        language: system
+        types: [toml]
+        pass_filenames: false
