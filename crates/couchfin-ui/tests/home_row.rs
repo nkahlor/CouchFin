@@ -6,7 +6,7 @@
 
 mod common;
 
-use common::home::{cards, current, fully_on_screen, home, home_at, presses};
+use common::home::{cards, current, fully_on_screen, home, home_at, presses, settle};
 use common::{labelled, press, shows, the};
 use couchfin_ui::HomeView;
 use slint::ComponentHandle;
@@ -83,8 +83,6 @@ fn nothing_is_cut_off_on_a_720p_screen() {
         "Living Room",
         "Jellyfin 10.11.2",
         "Signed in as alice",
-        "Title 1",
-        "Sign out",
         NOTICE,
     ] {
         let element = the(&home.window, label);
@@ -93,6 +91,14 @@ fn nothing_is_cut_off_on_a_720p_screen() {
             "{label:?} is cut off"
         );
     }
+    assert!(fully_on_screen(&home.window, &cards(&home.window)[0]));
+    // Sign out is reached by Down after the last row, and is whole there.
+    presses(&home.window, Key::DownArrow, ROWS);
+    settle();
+    assert!(fully_on_screen(
+        &home.window,
+        &the(&home.window, "Sign out")
+    ));
 }
 
 /// Down from the bottom row (Libraries, the fifth).

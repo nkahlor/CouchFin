@@ -140,6 +140,10 @@ pub struct Card {
     /// A tiny blurred version of the picture, from the server's BlurHash,
     /// ready to show scaled up the moment the card appears.
     pub placeholder: Option<Pixels>,
+    /// The production year, for the details line; none for a library tile.
+    pub year: Option<u32>,
+    /// How long it runs, for the details line; none for a library tile.
+    pub runtime: Option<Duration>,
 }
 
 /// Which row it is; also what identifies a row across reloads.

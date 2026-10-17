@@ -16,10 +16,11 @@ export global CarouselMetrics {
         image-height(shape, poster-height) * (shape == CardShape.poster ? Theme.poster-aspect : Theme.thumb-aspect) + Theme.card-gap
     }
 
-    // A whole row: its title, the room a grown card needs, the card with its
-    // lines of text, and a gap before the next row.
+    // A whole row: its title, the room a grown card needs, the card (its
+    // title is in the details strip, not under it) and a gap before the next
+    // row.
     public pure function height(shape: CardShape, poster-height: length) -> length {
-        Theme.row-title-height + Theme.row-title-gap + 2 * Theme.card-focus-room + image-height(shape, poster-height) + Theme.card-title-gap + Theme.card-title-height + (shape == CardShape.thumb ? Theme.card-subtitle-height : 0) + Theme.row-gap
+        Theme.row-title-height + Theme.row-title-gap + 2 * Theme.carousel-focus-room + image-height(shape, poster-height) + Theme.row-gap
     }
 }
 
@@ -57,8 +58,15 @@ export component CarouselRow inherits Rectangle {
     accessible-role: list;
     accessible-label: root.title;
 
-    Text {
+    // Above the cards and level with the anchor slot, outside the Flickable
+    // below, so a grown card never covers it.
+    //
+    // `y` is explicit: an element with a size but no position is centred in
+    // its parent, which is what once put this behind the focused card.
+    heading := Text {
         x: Theme.carousel-inset;
+        y: 0px;
+        width: parent.width - Theme.carousel-inset - Theme.page-margin;
         height: Theme.row-title-height;
         text: root.title;
         color: Theme.text;
@@ -86,9 +94,10 @@ export component CarouselRow inherits Rectangle {
 
         for card[index] in root.cards: Card {
             x: Theme.carousel-inset + index * root.slot;
-            y: Theme.card-focus-room;
+            y: Theme.carousel-focus-room;
             title: card.title;
             subtitle: card.subtitle;
+            titled: false;
             progress: card.progress;
             image: card.image;
             placeholder: card.placeholder;

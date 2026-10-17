@@ -31,14 +31,17 @@ const LATENCY: Duration = Duration::from_millis(100);
 /// The blurred placeholders are in the cards this long after Home appears:
 /// they need no network.
 const PLACEHOLDERS_BY: Duration = Duration::from_millis(50);
-/// Every picture on screen has arrived this long after Home appears: two
-/// waves of requests (8 in flight, 12 cards), each a 100 ms round trip, and
-/// the decoding. The old code needed about 520 ms.
-const PICTURES_BY: Duration = Duration::from_millis(450);
-/// The same on CI's shared two-core runners, where requests and decodes
-/// compete for CPU (560 ms measured there with 12 in flight, against 260 ms
-/// on a desktop).
-const PICTURES_BY_ON_CI: Duration = Duration::from_millis(1000);
+/// Every picture on screen has arrived within this long, per wave of
+/// requests (8 in flight), plus [`SLACK`]: a 100 ms round trip and the
+/// decoding. The screen holds about 30 cards since the Home layout fitted
+/// three rows (#63), so five waves.
+const PER_WAVE: Duration = Duration::from_millis(150);
+const SLACK: Duration = Duration::from_millis(250);
+/// CI's shared two-core runners, where requests and decodes compete for CPU,
+/// get twice as long.
+const CI_FACTOR: u32 = 2;
+/// Requests in flight at once: `ImageCacheConfig::default().max_in_flight`.
+const IN_FLIGHT: usize = 8;
 const ROWS: usize = 6;
 
 struct AbortOnDrop(JoinHandle<()>);
@@ -222,11 +225,11 @@ fn the_first_screenful_of_home_fills_within_the_budget() {
     );
 
     let filled_at = filled_at.expect("every card on screen gets its picture");
-    let budget = if std::env::var_os("CI").is_some() {
-        PICTURES_BY_ON_CI
-    } else {
-        PICTURES_BY
-    };
+    let waves = u32::try_from(visible.len().div_ceil(IN_FLIGHT)).expect("a few waves");
+    let mut budget = PER_WAVE * waves + SLACK;
+    if std::env::var_os("CI").is_some() {
+        budget *= CI_FACTOR;
+    }
     assert!(
         filled_at <= budget,
         "pictures took {filled_at:?}, budget {budget:?}"

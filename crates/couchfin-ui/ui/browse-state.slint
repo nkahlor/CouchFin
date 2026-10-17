@@ -35,6 +35,9 @@ export struct CardData {
     // loads; empty if the server has no BlurHash for it.
     placeholder: image,
     image-state: ImageState,
+    // The details strip's line under the title: "2016 · 1 h 56 min" for a
+    // movie, "S2 · E4" for an episode, "Library" for a library tile.
+    meta: string,
 }
 
 // One row of cards on Home.

@@ -7,7 +7,7 @@ use common::home::presses;
 use common::library::{Shell, World, picture};
 use common::press;
 use couchfin_core::{ApiError, ImageLoad, LibraryState, ScreenState};
-use couchfin_ui::{HomeView, Screen};
+use couchfin_ui::{HomeView, ImageState, Screen};
 use slint::platform::Key;
 use slint::{ComponentHandle, Model};
 
@@ -93,6 +93,55 @@ fn the_rows_come_from_core_in_order_with_their_cards() {
     assert!(resumed[0].progress > 0.0, "a resume row shows progress");
     assert!(cards_of(&shell, 1).len() > 5);
     assert_eq!(cards_of(&shell, 2)[0].title, "Big");
+}
+
+#[test]
+fn cards_carry_the_line_the_details_strip_shows() {
+    let shell = Shell::new();
+    shell.show(World::new(40).state());
+    // A movie: year and runtime, formatted here, not in core.
+    assert_eq!(cards_of(&shell, 0)[0].meta, "2000 · 1 h 40 min");
+    // A library tile: just what it is.
+    assert_eq!(cards_of(&shell, 2)[0].meta, "Library");
+}
+
+#[test]
+fn a_card_without_a_picture_says_so_and_one_still_loading_does_not() {
+    let shell = Shell::new();
+    let mut state = World::new(40).state();
+    let ScreenState::Home(home) = &mut state.screens[0] else {
+        panic!("Home is first");
+    };
+    home.rows[1].cards[2].image = None;
+    let first = home.rows[1].cards[0]
+        .image
+        .as_ref()
+        .expect("a picture")
+        .item
+        .to_string();
+    shell.show(state);
+    let cards = cards_of(&shell, 1);
+    assert_eq!(
+        cards[2].image_state,
+        ImageState::Missing,
+        "no image ref: nothing will come"
+    );
+    assert_eq!(
+        cards[0].image_state,
+        ImageState::Loading,
+        "a picture still loading is not missing"
+    );
+
+    // The server answers that it has none: the title moves inside.
+    shell.loader.finish(&first, ImageLoad::NoImage);
+    shell.feed.pump();
+    let cards = cards_of(&shell, 1);
+    assert_eq!(
+        cards[0].image_state,
+        ImageState::Missing,
+        "NoImage means missing"
+    );
+    assert_eq!(cards[1].image_state, ImageState::Loading);
 }
 
 #[test]
@@ -231,8 +280,9 @@ fn only_cards_near_the_focus_get_pictures() {
         .iter()
         .filter_map(|(item, ..)| item.chars().nth(1))
         .collect();
-    // The focused row and the two below it; nothing further down.
-    assert_eq!(rows_asked, ['0', '1', '2'].into());
+    // The three rows on screen under the details strip and one more below
+    // the fold; nothing further down.
+    assert_eq!(rows_asked, ['0', '1', '2', '3'].into());
     let first_row: Vec<_> = started
         .iter()
         .filter(|(item, ..)| item.starts_with("r0c"))

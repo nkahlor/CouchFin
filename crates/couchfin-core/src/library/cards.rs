@@ -112,6 +112,8 @@ pub(super) fn card(item: &Item, shape: CardShape, with_progress: bool) -> Option
         progress: if with_progress { progress(item) } else { None },
         placeholder: blurred(item, image.as_ref(), shape),
         image,
+        year: item.production_year,
+        runtime: item.runtime,
     })
 }
 
@@ -134,6 +136,8 @@ pub(super) fn library_card(library: &Library) -> Card {
             .primary_blur_hash
             .as_ref()
             .and_then(|hash| placeholder(hash, ImageShape::Thumb)),
+        year: None,
+        runtime: None,
     }
 }
 

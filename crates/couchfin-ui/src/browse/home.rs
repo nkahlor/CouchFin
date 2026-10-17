@@ -6,6 +6,7 @@ use std::rc::Rc;
 use couchfin_core::{Card, CardShape as CoreShape, HomeState};
 use slint::{Model, ModelRc, VecModel};
 
+use super::format;
 use super::geometry::Geometry;
 use super::loader::{Picture, Slot, Wish, placeholder_image, row_key};
 use crate::generated::{CardData, CardShape, RowData};
@@ -45,6 +46,7 @@ fn card_data(card: &Card, keep: Option<&CardData>) -> CardData {
         subtitle: card.subtitle.clone().unwrap_or_default().into(),
         progress: card.progress.unwrap_or(0.0),
         placeholder: placeholder_image(card),
+        meta: format::card_meta(card).into(),
         ..CardData::default()
     };
     match keep {

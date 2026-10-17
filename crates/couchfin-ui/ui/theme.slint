@@ -54,7 +54,7 @@ export global Theme {
     // Title cards: poster-shaped (2:3), sized to the room the screen leaves
     // for the row, between these heights.
     out property <length> poster-min-height: 200px;
-    out property <length> poster-max-height: 420px;
+    out property <length> poster-max-height: 320px;
     out property <float> poster-aspect: 2 / 3;
     out property <length> card-gap: 32px;
     // The title under a poster: one line at label size.
@@ -96,13 +96,40 @@ export global Theme {
 
     // Home's rows: the title above each row, and the fixed height from the
     // top of the rows' viewport at which the focused row always sits.
-    out property <length> row-title-height: 48px;
+    out property <length> row-title-height: 40px;
     out property <length> row-title-gap: 4px;
     out property <length> row-gap: 12px;
     out property <length> home-row-anchor: 8px;
-    // Floor for the poster height on a small screen, where the focused row
-    // must still fit between the header and Sign out.
-    out property <length> home-poster-min-height: 160px;
+    // Room a grown card needs above and below inside a Home row. Less than
+    // `card-focus-room` (the library grid's) because Home's posters are
+    // shorter and every pixel buys rows.
+    out property <length> carousel-focus-room: 16px;
+    // Floor for the poster height on a small screen, so a card stays
+    // recognisable.
+    out property <length> home-poster-min-height: 100px;
+    // How many rows (as tall as a poster row) Home's viewport is sized to
+    // show: a half row peeks in below the last whole one. Three from
+    // `home-tall-screen` up, where there is room.
+    out property <float> home-rows-fit: 2.5;
+    out property <float> home-rows-fit-tall: 3;
+    out property <length> home-tall-screen: 1000px;
+    // Home's compact header (server, version, who) and the gaps around it.
+    out property <length> home-header-height: 48px;
+    out property <length> home-gap: 8px;
+    out property <length> home-pad: 16px;
+    // The details strip above the rows: the focused item's title, and one
+    // line of metadata under it.
+    out property <length> home-details-title-height: 48px;
+    out property <length> home-details-meta-height: 40px;
+    // One line of a notice under the rows.
+    out property <length> home-notice-height: 40px;
+    // Where the rows would be while there are none: the status, two lines.
+    out property <length> home-status-height: 96px;
+    // A title shown inside a card that has no picture: smaller than a
+    // card title, three lines at most, with this much room round it.
+    out property <length> card-inner-title-size: 24px;
+    out property <length> card-inner-title-height: 90px;
+    out property <length> card-inner-padding: 8px;
 
     // Library grid: the poster height of a cell, and the room around it
     // (title, focus growth, gaps) that makes up a grid row.

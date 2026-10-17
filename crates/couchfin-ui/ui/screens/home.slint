@@ -2,13 +2,16 @@ import { Theme } from "../theme.slint";
 import { HomeView } from "../state.slint";
 import { CardShape } from "../browse-state.slint";
 import { Button } from "../widgets/button.slint";
+import { DetailsStrip } from "../widgets/details.slint";
 import { CarouselRow, CarouselMetrics } from "../widgets/carousel.slint";
 import { Keys, KeyIntent } from "../widgets/keys.slint";
 
-// Home: which server and who is signed in, a vertical stack of carousel
-// rows, and Sign out. The rows take focus on arrival, on the first card of
-// the first row, so an Enter still held from signing in selects a card
-// rather than signing out (decisions 011 and 015).
+// Home, top to bottom: a compact header (which server, who is signed in), the
+// details strip naming the focused card, the rows, which scroll in their own
+// clipped area with Sign out after the last of them, and a line each for any
+// notices. Nothing is drawn over anything else. The rows take focus on
+// arrival, on the first card of the first row, so an Enter still held from
+// signing in selects a card rather than signing out (decisions 011 and 015).
 //
 // Focus map: Left and Right step through the focused row and stop at its
 // ends. Down (or Tab) moves to the row below, which keeps its own card;
@@ -20,13 +23,20 @@ export component HomePage inherits Rectangle {
     // The last card selected. Only shown, as feedback while a page loads.
     property <string> selected;
 
-    // The height a poster has: what the viewport leaves after a poster row's
-    // fixed parts, between its limits.
+    // How many poster rows the viewport is sized to show, half of the last
+    // one peeking in.
+    property <float> rows-fit: root.height >= Theme.home-tall-screen ? Theme.home-rows-fit-tall : Theme.home-rows-fit;
+    // The height a poster has: the viewport shared among the rows it should
+    // show, less a row's fixed parts, between its limits.
     property <length> poster-height: clamp(
-        viewport.height - CarouselMetrics.height(CardShape.poster, 0px),
+        viewport.height / root.rows-fit - CarouselMetrics.height(CardShape.poster, 0px),
         Theme.home-poster-min-height,
         Theme.poster-max-height);
     property <length> scroll: HomeView.posters-above * CarouselMetrics.height(CardShape.poster, root.poster-height) + HomeView.thumbs-above * CarouselMetrics.height(CardShape.thumb, root.poster-height);
+
+    // What the details strip shows: the focused card, nothing while Sign out
+    // has focus.
+    property <bool> card-shown: !sign-out.has-focus && HomeView.focused-row >= 0 && HomeView.focused-row < HomeView.rows.length && HomeView.rows[HomeView.focused-row].current >= 0 && HomeView.rows[HomeView.focused-row].current < HomeView.rows[HomeView.focused-row].cards.length;
 
     init => {
         HomeView.poster-height = root.poster-height;
@@ -91,60 +101,70 @@ export component HomePage inherits Rectangle {
     }
 
     VerticalLayout {
-        padding-top: Theme.page-margin;
-        padding-bottom: Theme.page-margin;
-        spacing: Theme.spacing;
+        padding-top: Theme.home-pad;
+        padding-bottom: Theme.home-pad;
+        spacing: Theme.home-gap;
 
+        // One line: the server and version on the left, who is signed in on
+        // the right (with the last selected card while a page loads).
         HorizontalLayout {
+            height: Theme.home-header-height;
             padding-left: Theme.page-margin;
             padding-right: Theme.page-margin;
             spacing: Theme.spacing;
 
-            VerticalLayout {
-                alignment: end;
-
-                Text {
-                    text: HomeView.server-name;
-                    color: Theme.text;
-                    font-size: Theme.title-size;
-                    font-weight: Theme.strong-weight;
-                    overflow: elide;
-                }
-
-                Text {
-                    text: "Jellyfin " + HomeView.server-version;
-                    color: Theme.muted;
-                    font-size: Theme.label-size;
-                }
+            Text {
+                text: HomeView.server-name;
+                color: Theme.text;
+                font-size: Theme.body-size;
+                font-weight: Theme.strong-weight;
+                vertical-alignment: center;
+                overflow: elide;
             }
 
-            VerticalLayout {
-                alignment: end;
-
-                Text {
-                    text: "Signed in as " + HomeView.username;
-                    color: Theme.text;
-                    font-size: Theme.body-size;
-                    horizontal-alignment: right;
-                }
-
-                // Always takes its line, so the rows never jump when it
-                // appears.
-                Text {
-                    text: root.selected == "" ? "" : "Selected: " + root.selected;
-                    color: Theme.muted;
-                    font-size: Theme.label-size;
-                    horizontal-alignment: right;
-                }
+            Text {
+                text: "Jellyfin " + HomeView.server-version;
+                color: Theme.muted;
+                font-size: Theme.label-size;
+                vertical-alignment: center;
+                overflow: elide;
             }
+
+            // Takes the slack, so the right-hand texts sit at the edge.
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            Text {
+                text: root.selected == "" ? "" : "Selected: " + root.selected;
+                color: Theme.muted;
+                font-size: Theme.label-size;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            Text {
+                text: "Signed in as " + HomeView.username;
+                color: Theme.text;
+                font-size: Theme.label-size;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        details := DetailsStrip {
+            title: root.card-shown ? HomeView.rows[HomeView.focused-row].cards[HomeView.rows[HomeView.focused-row].current].title : "";
+            meta: root.card-shown ? HomeView.rows[HomeView.focused-row].cards[HomeView.rows[HomeView.focused-row].current].meta : "";
         }
 
         // The rows' window onto the page: full width, so a row runs to the
         // screen's edge, and clipped above and below so scrolled rows vanish
-        // here instead of over the header.
+        // here instead of over the header or the strip.
         viewport := Rectangle {
             vertical-stretch: 1;
-            min-height: Theme.poster-min-height;
+            min-height: CarouselMetrics.height(CardShape.poster, Theme.home-poster-min-height);
             clip: true;
 
             scope := FocusScope {
@@ -181,20 +201,10 @@ export component HomePage inherits Rectangle {
                 }
             }
 
-            // In place of the rows while there are none: loading, a failure
-            // or an empty library.
-            if HomeView.rows.length == 0: Text {
-                x: Theme.carousel-inset;
-                y: Theme.home-row-anchor;
-                width: parent.width - Theme.carousel-inset - Theme.page-margin;
-                text: HomeView.status;
-                color: Theme.muted;
-                font-size: Theme.body-size;
-                wrap: word-wrap;
-            }
-
             // Moved, not scrolled by a Flickable, so the anchor is exact and
-            // a held D-pad retargets the slide mid-way.
+            // a held D-pad retargets the slide mid-way. After the rows, in
+            // the same flow, comes what stands in for them while there are
+            // none, and Sign out.
             strip := VerticalLayout {
                 y: Theme.home-row-anchor - root.scroll;
                 width: parent.width;
@@ -204,7 +214,7 @@ export component HomePage inherits Rectangle {
                     easing: ease-out;
                 }
 
-                                for row[r] in HomeView.rows: CarouselRow {
+                for row[r] in HomeView.rows: CarouselRow {
                     title: row.title;
                     cards: row.cards;
                     shape: row.shape;
@@ -220,43 +230,68 @@ export component HomePage inherits Rectangle {
                         root.activate(r, index);
                     }
                 }
+
+                // Loading, a failure or an empty library.
+                if HomeView.rows.length == 0: Rectangle {
+                    height: Theme.home-status-height;
+
+                    Text {
+                        x: Theme.carousel-inset;
+                        y: 0px;
+                        width: parent.width - Theme.carousel-inset - Theme.page-margin;
+                        height: parent.height;
+                        text: HomeView.status;
+                        color: Theme.muted;
+                        font-size: Theme.body-size;
+                        wrap: word-wrap;
+                        overflow: elide;
+                    }
+                }
+
+                Rectangle {
+                    height: Theme.control-height;
+
+                    sign-out := Button {
+                        x: Theme.carousel-inset;
+                        y: 0px;
+                        width: Theme.button-width;
+                        height: Theme.control-height;
+                        text: "Sign out";
+                        clicked => {
+                            HomeView.sign-out();
+                        }
+                        move-previous => {
+                            scope.focus();
+                        }
+                        back => {
+                            HomeView.back();
+                        }
+                    }
+                }
             }
         }
 
-        HorizontalLayout {
-            padding-left: Theme.page-margin;
-            padding-right: Theme.page-margin;
-            spacing: Theme.spacing;
+        // Notices get the full width, a line each, under the rows.
+        if HomeView.error != "": Text {
+            height: Theme.home-notice-height;
+            x: Theme.page-margin;
+            width: parent.width - 2 * Theme.page-margin;
+            text: HomeView.error;
+            color: Theme.error;
+            font-size: Theme.label-size;
+            vertical-alignment: center;
+            overflow: elide;
+        }
 
-            sign-out := Button {
-                width: Theme.button-width;
-                text: "Sign out";
-                clicked => {
-                    HomeView.sign-out();
-                }
-                move-previous => {
-                    scope.focus();
-                }
-                back => {
-                    HomeView.back();
-                }
-            }
-
-            if HomeView.error != "": Text {
-                text: HomeView.error;
-                color: Theme.error;
-                font-size: Theme.label-size;
-                vertical-alignment: center;
-                wrap: word-wrap;
-            }
-
-            if HomeView.notice != "": Text {
-                text: HomeView.notice;
-                color: Theme.muted;
-                font-size: Theme.label-size;
-                vertical-alignment: center;
-                wrap: word-wrap;
-            }
+        if HomeView.notice != "": Text {
+            height: Theme.home-notice-height;
+            x: Theme.page-margin;
+            width: parent.width - 2 * Theme.page-margin;
+            text: HomeView.notice;
+            color: Theme.muted;
+            font-size: Theme.label-size;
+            vertical-alignment: center;
+            overflow: elide;
         }
     }
 }

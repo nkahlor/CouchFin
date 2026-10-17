@@ -30,11 +30,11 @@ const SHEETS: [(&str, [&str; 6]); 4] = [
         "sheet-home",
         [
             "home-1080-focus-row1-card1",
-            "home-1080-focus-row1-card8-last",
             "home-1080-focus-row3-card5",
-            "home-1080-focus-row6-card25-last",
             "home-1080-missing-images-row3-card2",
+            "home-1080-focus-signout",
             "home-720-focus-row3-card5",
+            "home-720-notice-and-row-error",
         ],
     ),
     (

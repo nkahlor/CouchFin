@@ -9,7 +9,7 @@ use common::home::{
     SCREENS, all_cards, current, current_card, fully_on_screen, home, home_at, part, presses,
     row_cards, settle,
 };
-use common::{labelled, press, the};
+use common::{labelled, press};
 use couchfin_ui::{CardData, CardShape, HomeView, RowData};
 use slint::platform::Key;
 use slint::{ComponentHandle, ModelRc, VecModel};
@@ -218,5 +218,9 @@ fn cards_without_pictures_show_the_placeholder() {
     for card in all_cards(&home.window) {
         assert!(part(&card, "poster").size().width > 0.0);
     }
-    assert!(the(&home.window, "Title 1").accessible_label().is_some());
+    assert!(
+        all_cards(&home.window)
+            .iter()
+            .any(|card| card.accessible_label().as_deref() == Some("Title 1"))
+    );
 }
