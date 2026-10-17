@@ -79,6 +79,7 @@ pub fn describe(command: Command) -> String {
         Command::Login(LoginAction::Retry) => "Retry".into(),
         Command::Login(LoginAction::ChangeServer) => "ChangeServer".into(),
         Command::Login(LoginAction::LogOut) => "LogOut".into(),
+        Command::Login(LoginAction::SessionExpired) => "SessionExpired".into(),
     }
 }
 
