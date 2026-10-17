@@ -6,7 +6,7 @@ mod common;
 use common::home::presses;
 use common::library::{Shell, World, picture};
 use common::press;
-use couchfin_core::{ApiError, ImageLoad, LibraryState, ScreenState, Variant};
+use couchfin_core::{ApiError, ImageLoad, LibraryState, ScreenState};
 use couchfin_ui::{HomeView, Screen};
 use slint::platform::Key;
 use slint::{ComponentHandle, Model};
@@ -235,7 +235,7 @@ fn only_cards_near_the_focus_get_pictures() {
     assert_eq!(rows_asked, ['0', '1', '2'].into());
     let first_row: Vec<_> = started
         .iter()
-        .filter(|(item, variant, ..)| item.starts_with("r0c") && *variant == Variant::Sharp)
+        .filter(|(item, ..)| item.starts_with("r0c"))
         .collect();
     assert!(first_row.len() >= 4, "the cards on screen: {first_row:?}");
     assert!(
@@ -251,7 +251,7 @@ fn only_cards_near_the_focus_get_pictures() {
     assert!(
         started
             .iter()
-            .all(|(_, _, width, _)| *width <= 320 && *width >= 32)
+            .all(|(_, width, _)| *width <= 320 && *width >= 32)
     );
 }
 
@@ -264,12 +264,12 @@ fn moving_down_cancels_what_scrolled_away_and_starts_the_rows_coming_in() {
             .loader
             .pending()
             .iter()
-            .any(|(item, _)| item.starts_with("r0c"))
+            .any(|item| item.starts_with("r0c"))
     );
     presses(&shell.window, Key::DownArrow, 5);
     let pending = shell.loader.pending();
     assert!(
-        pending.iter().all(|(item, _)| !item.starts_with("r0c")),
+        pending.iter().all(|item| !item.starts_with("r0c")),
         "row 0 is far behind now: {pending:?}"
     );
     assert!(
@@ -277,13 +277,13 @@ fn moving_down_cancels_what_scrolled_away_and_starts_the_rows_coming_in() {
             .loader
             .cancelled()
             .iter()
-            .any(|(item, _)| item.starts_with("r0c")),
+            .any(|item| item.starts_with("r0c")),
         "its loads were cancelled"
     );
     assert!(
         pending
             .iter()
-            .any(|(item, _)| item.starts_with("r6c") || item.starts_with("r7c"))
+            .any(|item| item.starts_with("r6c") || item.starts_with("r7c"))
     );
 }
 
@@ -291,10 +291,8 @@ fn moving_down_cancels_what_scrolled_away_and_starts_the_rows_coming_in() {
 fn a_finished_load_fills_the_card_and_no_image_keeps_the_placeholder() {
     let shell = Shell::new();
     shell.show(many_rows(3));
-    shell.loader.finish(&id_of(0, 0), Variant::Sharp, picture());
-    shell
-        .loader
-        .finish(&id_of(0, 1), Variant::Sharp, ImageLoad::NoImage);
+    shell.loader.finish(&id_of(0, 0), picture());
+    shell.loader.finish(&id_of(0, 1), ImageLoad::NoImage);
     shell.feed.pump();
     let cards = cards_of(&shell, 0);
     assert_eq!(cards[0].image.size().width, 2);
@@ -312,44 +310,9 @@ fn a_finished_load_fills_the_card_and_no_image_keeps_the_placeholder() {
         .started()
         .iter()
         .skip(before)
-        .filter(|(item, variant, ..)| *item == id_of(0, 1) && *variant == Variant::Sharp)
+        .filter(|(item, ..)| *item == id_of(0, 1))
         .count();
     assert_eq!(again, 0);
-}
-
-#[test]
-fn cards_the_row_has_passed_fetch_the_blurred_copy() {
-    let shell = Shell::new();
-    shell.show(many_rows(3));
-    assert!(
-        shell
-            .loader
-            .started()
-            .iter()
-            .all(|(item, variant, ..)| *variant == Variant::Sharp || item.ends_with("c0")),
-        "at the start only each row's first card, the one next to be passed, may be blurred"
-    );
-    presses(&shell.window, Key::RightArrow, 3);
-    let blurred: Vec<_> = shell
-        .loader
-        .pending()
-        .into_iter()
-        .filter(|(item, variant)| item.starts_with("r0c") && *variant == Variant::Blurred)
-        .map(|(item, _)| item)
-        .collect();
-    for passed in [id_of(0, 1), id_of(0, 2), id_of(0, 3)] {
-        assert!(
-            blurred.contains(&passed),
-            "{passed} wants a blur: {blurred:?}"
-        );
-    }
-    shell
-        .loader
-        .finish(&id_of(0, 2), Variant::Blurred, picture());
-    shell.feed.pump();
-    let card = &cards_of(&shell, 0)[2];
-    assert_eq!(card.blurred_image.size().width, 2);
-    assert_eq!(card.image.size().width, 0, "the sharp one is separate");
 }
 
 #[test]
@@ -360,12 +323,12 @@ fn a_result_for_a_slot_that_moved_on_is_dropped() {
         .loader
         .pending()
         .into_iter()
-        .find(|(item, _)| item.starts_with("r0c"))
+        .find(|item| item.starts_with("r0c"))
         .expect("a row 0 load");
     presses(&shell.window, Key::DownArrow, 5);
     // The load was cancelled; if its answer still arrives it changes nothing.
     assert!(shell.loader.cancelled().contains(&stale));
-    shell.loader.finish_cancelled(&stale.0, stale.1, picture());
+    shell.loader.finish_cancelled(&stale, picture());
     shell.feed.pump();
     assert!(
         cards_of(&shell, 0)

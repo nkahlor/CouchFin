@@ -4,9 +4,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use couchfin_core::{
-    CardShape, HomeState, ImageLoad, ImageRef, LibraryState, ScreenState, Variant,
-};
+use couchfin_core::{CardShape, HomeState, ImageLoad, ImageRef, LibraryState, ScreenState};
 use slint::{ComponentHandle, Image, ModelRc};
 
 use super::detail::Detail;
@@ -249,7 +247,6 @@ impl Browser {
                         Wish {
                             image: image.clone(),
                             width: geometry.backdrop_width(),
-                            variant: Variant::Sharp,
                         },
                     )
                 })
@@ -286,7 +283,7 @@ impl Browser {
     /// Shows `image` in `slot`, or the placeholder for `None`.
     fn put(&self, window: &MainWindow, slot: &Slot, image: Option<Image>) {
         match slot {
-            Slot::Card(key, index, variant) => self.home.set_image(key, *index, *variant, image),
+            Slot::Card(key, index) => self.home.set_image(key, *index, image),
             Slot::Grid(place) => {
                 if let Some((_, model)) = &self.grid {
                     model.set_image(*place, image);

@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use super::cache::Variant;
 use super::key::Key;
 use super::pixels::Pixels;
 
@@ -13,7 +12,7 @@ pub(super) struct Memory {
     limit: usize,
     used: usize,
     clock: u64,
-    entries: HashMap<(Key, Variant), (Pixels, u64)>,
+    entries: HashMap<Key, (Pixels, u64)>,
 }
 
 impl Memory {
@@ -26,22 +25,22 @@ impl Memory {
         }
     }
 
-    pub(super) fn get(&mut self, key: &Key, variant: Variant) -> Option<Pixels> {
+    pub(super) fn get(&mut self, key: &Key) -> Option<Pixels> {
         self.clock += 1;
         let clock = self.clock;
-        let (pixels, used_at) = self.entries.get_mut(&(key.clone(), variant))?;
+        let (pixels, used_at) = self.entries.get_mut(key)?;
         *used_at = clock;
         Some(pixels.clone())
     }
 
-    pub(super) fn insert(&mut self, key: Key, variant: Variant, pixels: Pixels) {
+    pub(super) fn insert(&mut self, key: Key, pixels: Pixels) {
         let size = pixels.rgba().len();
         // An image bigger than the whole budget would only flush the rest.
         if size > self.limit {
             return;
         }
         self.clock += 1;
-        if let Some((old, _)) = self.entries.insert((key, variant), (pixels, self.clock)) {
+        if let Some((old, _)) = self.entries.insert(key, (pixels, self.clock)) {
             self.used -= old.rgba().len();
         }
         self.used += size;

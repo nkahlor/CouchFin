@@ -9,7 +9,7 @@ use std::time::Duration;
 use couchfin_core::fake::{FakeJellyfin, MemorySettings, MemoryTokens};
 use couchfin_core::{
     ImageLoad, ImageRef, LibraryAction, LibraryFlow, LibraryState, LoginAction, LoginFlow,
-    Password, Pixels, Settings, Variant,
+    Password, Pixels, Settings,
 };
 use couchfin_ui::{Feed, Guard, ImageLoader, MainWindow, bind, install, render};
 use slint::ComponentHandle;
@@ -88,7 +88,6 @@ impl World {
 pub struct Load {
     pub image: ImageRef,
     pub width: u32,
-    pub variant: Variant,
     alive: Arc<AtomicBool>,
     done: Option<Box<dyn FnOnce(ImageLoad) + Send>>,
 }
@@ -120,14 +119,12 @@ impl ImageLoader for FakeLoader {
         &self,
         image: &ImageRef,
         max_width: u32,
-        variant: Variant,
         done: Box<dyn FnOnce(ImageLoad) + Send>,
     ) -> Guard {
         let alive = Arc::new(AtomicBool::new(true));
         self.lock().push(Load {
             image: image.clone(),
             width: max_width,
-            variant,
             alive: Arc::clone(&alive),
             done: Some(done),
         });
@@ -140,36 +137,29 @@ impl FakeLoader {
         self.loads.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Every load started so far, as (item, variant, width, still wanted).
-    pub fn started(&self) -> Vec<(String, Variant, u32, bool)> {
+    /// Every load started so far, as (item, width, still wanted).
+    pub fn started(&self) -> Vec<(String, u32, bool)> {
         self.lock()
             .iter()
-            .map(|l| {
-                (
-                    l.image.item.as_str().to_owned(),
-                    l.variant,
-                    l.width,
-                    l.wanted(),
-                )
-            })
+            .map(|l| (l.image.item.as_str().to_owned(), l.width, l.wanted()))
             .collect()
     }
 
-    /// The loads still wanted and not finished, as (item, variant).
-    pub fn pending(&self) -> Vec<(String, Variant)> {
+    /// The loads still wanted and not finished, by item.
+    pub fn pending(&self) -> Vec<String> {
         self.lock()
             .iter()
             .filter(|l| l.wanted() && l.done.is_some())
-            .map(|l| (l.image.item.as_str().to_owned(), l.variant))
+            .map(|l| l.image.item.as_str().to_owned())
             .collect()
     }
 
     /// The loads that were cancelled before they finished.
-    pub fn cancelled(&self) -> Vec<(String, Variant)> {
+    pub fn cancelled(&self) -> Vec<String> {
         self.lock()
             .iter()
             .filter(|l| !l.wanted() && l.done.is_some())
-            .map(|l| (l.image.item.as_str().to_owned(), l.variant))
+            .map(|l| l.image.item.as_str().to_owned())
             .collect()
     }
 
@@ -179,24 +169,24 @@ impl FakeLoader {
     }
 
     /// Finishes a load that was cancelled, as a racing answer would.
-    pub fn finish_cancelled(&self, item: &str, variant: Variant, result: ImageLoad) {
+    pub fn finish_cancelled(&self, item: &str, result: ImageLoad) {
         let done = self
             .lock()
             .iter_mut()
-            .find(|l| !l.wanted() && l.image.item.as_str() == item && l.variant == variant)
+            .find(|l| !l.wanted() && l.image.item.as_str() == item)
             .and_then(|l| l.done.take())
-            .unwrap_or_else(|| panic!("no cancelled {variant:?} load for {item}"));
+            .unwrap_or_else(|| panic!("no cancelled load for {item}"));
         done(result);
     }
 
-    /// Finishes the load for `item` and `variant` that is still wanted.
-    pub fn finish(&self, item: &str, variant: Variant, result: ImageLoad) {
+    /// Finishes the load for `item` that is still wanted.
+    pub fn finish(&self, item: &str, result: ImageLoad) {
         let done = self
             .lock()
             .iter_mut()
-            .find(|l| l.wanted() && l.image.item.as_str() == item && l.variant == variant)
+            .find(|l| l.wanted() && l.image.item.as_str() == item)
             .and_then(|l| l.done.take())
-            .unwrap_or_else(|| panic!("no pending {variant:?} load for {item}"));
+            .unwrap_or_else(|| panic!("no pending load for {item}"));
         done(result);
     }
 }

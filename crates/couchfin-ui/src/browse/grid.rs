@@ -4,7 +4,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use couchfin_core::{Card, GridState, Variant};
+use couchfin_core::{Card, GridState};
 use slint::{Image, Model, ModelNotify, ModelTracker};
 
 use super::geometry::Geometry;
@@ -85,14 +85,7 @@ impl GridModel {
         order
             .filter_map(|place| {
                 let image = items.get(place)?.as_ref()?.image.clone()?;
-                Some((
-                    Slot::Grid(place),
-                    Wish {
-                        image,
-                        width,
-                        variant: Variant::Sharp,
-                    },
-                ))
+                Some((Slot::Grid(place), Wish { image, width }))
             })
             .collect()
     }
@@ -133,7 +126,6 @@ impl Model for GridModel {
                 .get(&place)
                 .cloned()
                 .unwrap_or_default(),
-            blurred_image: Image::default(),
         })
     }
 

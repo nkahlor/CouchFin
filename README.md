@@ -38,7 +38,7 @@ and how to update it.
    address (for example `jellyfin.lan:8096`), then sign in. Home shows the
    server's name and version, who is signed in, and your library as rows
    of posters (Continue Watching, Next Up, Recently Added in each library,
-   Libraries), with the cards the row has passed blurred. Enter opens a
+   Libraries), with the cards the row has passed dimmed. Enter opens a
    library's grid, a movie or a series, and Escape goes back one level. Next time it skips straight to Home while the
    sign-in still works.
 

@@ -8,7 +8,6 @@ use common::library::{Shell, World, picture};
 use common::press;
 use couchfin_core::{
     ApiError, Episode, Header, LibraryAction, LibraryState, ScreenState, Season, SeriesState,
-    Variant,
 };
 use couchfin_ui::{MovieView, Screen, SeriesView};
 use slint::platform::Key;
@@ -104,11 +103,11 @@ fn the_movie_backdrop_is_fetched_wide_and_cleared_on_leaving() {
         .loader
         .started()
         .into_iter()
-        .find(|(item, variant, ..)| *variant == Variant::Sharp && item.len() > 3)
+        .find(|(item, ..)| item.len() > 3)
         .expect("a backdrop load");
     // The window is 1920 wide: ask for about that, not a poster's size.
-    assert!(backdrop.2 >= 1_920, "{}", backdrop.2);
-    shell.loader.finish(&backdrop.0, Variant::Sharp, picture());
+    assert!(backdrop.1 >= 1_920, "{}", backdrop.1);
+    shell.loader.finish(&backdrop.0, picture());
     shell.feed.pump();
     let view = shell.window.global::<MovieView>();
     assert_eq!(view.get_backdrop().size().width, 2);

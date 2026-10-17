@@ -104,9 +104,3 @@ pub fn thumb(seed: u32) -> Image {
 pub fn backdrop(seed: u32) -> Image {
     picture(seed, 1280, 720)
 }
-
-/// The tiny copy the image cache makes for cards a row has passed, which
-/// Slint scales up smoothly (decision 016).
-pub fn blurred(seed: u32) -> Image {
-    picture(seed, 6, 9)
-}

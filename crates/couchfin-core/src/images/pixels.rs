@@ -1,10 +1,8 @@
 //! Decoded images, and the codec that makes them.
 
-use std::io::Cursor;
 use std::sync::Arc;
 
-use image::imageops::fast_blur;
-use image::{ImageFormat, RgbaImage};
+use image::RgbaImage;
 
 use super::ImageError;
 
@@ -82,20 +80,6 @@ pub(super) fn decode(bytes: &[u8]) -> Result<RgbaImage, ImageError> {
     image::load_from_memory(bytes)
         .map(image::DynamicImage::into_rgba8)
         .map_err(|error| decode_error(&error))
-}
-
-/// Blurs `image`, keeping its size.
-pub(super) fn blur(image: &RgbaImage, sigma: f32) -> RgbaImage {
-    fast_blur(image, sigma)
-}
-
-/// Encodes `image` as a PNG, the lossless format the blurred copy is stored in.
-pub(super) fn encode_png(image: &RgbaImage) -> Result<Vec<u8>, ImageError> {
-    let mut out = Cursor::new(Vec::new());
-    image
-        .write_to(&mut out, ImageFormat::Png)
-        .map_err(|error| decode_error(&error))?;
-    Ok(out.into_inner())
 }
 
 /// Moves a decoded image into [`Pixels`].
