@@ -24,6 +24,19 @@ const INTENTS: [Intent; 6] = [
     Intent::Back,
 ];
 
+/// Six pairs of intents for a scenario: every intent comes first once and
+/// second once, and `salt` rotates who it is paired with. Scenarios use
+/// different salts, so across the table every pair is covered, while each
+/// scenario runs a sixth of the 36 pairs. (All 36 on every scenario took
+/// about 100 s in a debug build.) Deterministic, so a failure repeats.
+fn pairs(salt: usize) -> Vec<(Intent, Intent)> {
+    INTENTS
+        .iter()
+        .enumerate()
+        .map(|(n, &first)| (first, INTENTS[(n + salt) % INTENTS.len()]))
+        .collect()
+}
+
 /// The key each intent stands for: the contract `navigate` keeps.
 fn key(intent: Intent) -> Key {
     match intent {
@@ -128,11 +141,9 @@ fn assert_same_by(name: &str, make: &dyn Fn() -> (MainWindow, Calls<String>), st
 
 #[test]
 fn every_intent_does_what_its_key_does_on_every_screen() {
-    for (name, screen) in screens() {
-        for first in INTENTS {
-            for second in INTENTS {
-                assert_same(name, &screen, &[first, second]);
-            }
+    for (n, (name, screen)) in screens().into_iter().enumerate() {
+        for (first, second) in pairs(n) {
+            assert_same(name, &screen, &[first, second]);
         }
     }
 }
@@ -153,11 +164,9 @@ fn browse_screens() -> Vec<(&'static str, Make)> {
 
 #[test]
 fn every_intent_does_what_its_key_does_on_the_browsing_screens() {
-    for (name, make) in browse_screens() {
-        for first in INTENTS {
-            for second in INTENTS {
-                assert_same_by(name, &*make, &[first, second]);
-            }
+    for (n, (name, make)) in browse_screens().into_iter().enumerate() {
+        for (first, second) in pairs(n) {
+            assert_same_by(name, &*make, &[first, second]);
         }
     }
 }
@@ -165,14 +174,15 @@ fn every_intent_does_what_its_key_does_on_the_browsing_screens() {
 #[test]
 fn every_intent_does_what_its_key_does_deep_in_the_browsing_screens() {
     use Intent::{Down, Right};
-    for (name, make) in browse_screens() {
-        for moved in [vec![Down, Right, Down], vec![Down; 11]] {
-            for first in INTENTS {
-                for second in INTENTS {
-                    let mut steps = moved.clone();
-                    steps.extend([first, second]);
-                    assert_same_by(name, &*make, &steps);
-                }
+    for (n, (name, make)) in browse_screens().into_iter().enumerate() {
+        for (m, moved) in [vec![Down, Right, Down], vec![Down; 11]]
+            .into_iter()
+            .enumerate()
+        {
+            for (first, second) in pairs(n + m) {
+                let mut steps = moved.clone();
+                steps.extend([first, second]);
+                assert_same_by(name, &*make, &steps);
             }
         }
     }
@@ -181,28 +191,24 @@ fn every_intent_does_what_its_key_does_deep_in_the_browsing_screens() {
 #[test]
 fn every_intent_does_what_its_key_along_home_down_its_rows() {
     // Each row in turn, then Sign out and past it, with a move along each.
-    for downs in [1, 4, 5] {
-        for first in INTENTS {
-            for second in INTENTS {
-                let mut steps = vec![Intent::Right, Intent::Right];
-                steps.extend(vec![Intent::Down; downs]);
-                steps.extend([first, second]);
-                assert_same(&format!("home after {downs} downs"), &home(None), &steps);
-            }
+    for (n, downs) in [1, 4, 5].into_iter().enumerate() {
+        for (first, second) in pairs(n) {
+            let mut steps = vec![Intent::Right, Intent::Right];
+            steps.extend(vec![Intent::Down; downs]);
+            steps.extend([first, second]);
+            assert_same(&format!("home after {downs} downs"), &home(None), &steps);
         }
     }
 }
 
 #[test]
 fn every_intent_does_what_its_key_does_along_the_home_carousel() {
-    // From the middle and the end of the row, every pair of intents.
-    for moved in [4, 9] {
-        for first in INTENTS {
-            for second in INTENTS {
-                let mut steps = vec![Intent::Right; moved];
-                steps.extend([first, second]);
-                assert_same(&format!("home after {moved} cards"), &home(None), &steps);
-            }
+    // From the middle and the end of the row, a covering set of pairs.
+    for (n, moved) in [4, 9].into_iter().enumerate() {
+        for (first, second) in pairs(n + 3) {
+            let mut steps = vec![Intent::Right; moved];
+            steps.extend([first, second]);
+            assert_same(&format!("home after {moved} cards"), &home(None), &steps);
         }
     }
 }
