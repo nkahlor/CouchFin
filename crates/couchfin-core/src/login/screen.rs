@@ -156,4 +156,9 @@ pub enum LoginAction {
     ChangeServer,
     /// Forget the token and show the login form. On [`LoginScreen::Home`].
     LogOut,
+    /// The server rejected the token mid-browse (the app saw
+    /// `LibraryState::session_expired`). Forgets the token and shows the
+    /// login form with [`ApiError::TokenRejected`], like an expired token at
+    /// startup, so the UI can say why. On [`LoginScreen::Home`].
+    SessionExpired,
 }

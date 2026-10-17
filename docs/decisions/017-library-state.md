@@ -68,18 +68,17 @@ selected.
 Errors are typed (`ApiError`) in the failed screen's `error` field; no text.
 `ApiError::TokenRejected` is different: it sets `LibraryState::session_expired`,
 publishes, and the flow stops navigating. The app's `on_change` observer sees
-the flag, drops the `LibraryFlow` and sends `LoginAction::LogOut` to the
-`LoginFlow`, which forgets the token and shows the login form. `LoginFlow` is
-unchanged.
+the flag, drops the `LibraryFlow` and sends `LoginAction::SessionExpired` (not `LogOut`)
+to the `LoginFlow`, which forgets the token and shows the login form with
+`ApiError::TokenRejected`, so the UI says why it is asking again.
 
 ## Consequences
 
 - Images are not loaded here. Cards carry an `ImageRef` (item, kind, tag)
   and `ImageRef::request(max_width)` builds the request for the image cache.
-- A `LibraryFlow` needs an api `Session`, which `LoginScreen::Home` does not
-  expose (it has the server and user only). The app wiring (#18 stage B) has
-  to keep the token that `LoginFlow` stores, or `LoginFlow` has to expose the
-  session; neither is decided here.
+- A `LibraryFlow` needs an api `Session`. `LoginFlow::session()` returns it
+  while the screen is Home (the token stays out of `LoginScreen`), so the app
+  builds the library flow from it.
 - A grid of 2,000 items clones its slots on every publish. That is cheap
   next to the requests; if the Phase 3 performance check shows otherwise,
   publish a grid delta instead.

@@ -82,7 +82,7 @@ pub enum LibraryAction {
 /// [`LibraryState::session_expired`] becomes true, is published, and the
 /// flow ignores further navigation. The app watches for it in its
 /// `on_change` observer, drops this flow, and sends
-/// [`LoginAction::LogOut`](crate::LoginAction::LogOut) to its
+/// [`LoginAction::SessionExpired`](crate::LoginAction::SessionExpired) to its
 /// [`LoginFlow`](crate::LoginFlow), which forgets the token and shows the
 /// login form. No other error ends the session; they are typed `error`
 /// fields on the screen that failed.
