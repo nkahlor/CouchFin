@@ -138,3 +138,62 @@ fn no_wording_carries_technical_detail() {
         }
     }
 }
+
+/// Each API error as the browsing screens word it: no talk of addresses or
+/// sign-in forms, and no technical detail.
+fn browse_cases() -> Vec<(ApiError, &'static str)> {
+    vec![
+        (
+            ApiError::Unreachable {
+                detail: DETAIL.into(),
+            },
+            "Couldn't reach the server. Is it on?",
+        ),
+        (
+            ApiError::Timeout,
+            "The server took too long to answer. Try again in a moment.",
+        ),
+        (
+            ApiError::NotJellyfin {
+                detail: DETAIL.into(),
+            },
+            "The server didn't answer the way Jellyfin does. Check that it's still running.",
+        ),
+        (
+            ApiError::Redirected { server: None },
+            "The server didn't answer the way Jellyfin does. Check that it's still running.",
+        ),
+        (
+            ApiError::InsecureRedirect,
+            "The server tried to switch to an unencrypted connection, so Couchfin stopped.",
+        ),
+        (
+            ApiError::TokenRejected,
+            "You've been signed out. Please sign in again.",
+        ),
+        (
+            ApiError::InvalidCredentials,
+            "You've been signed out. Please sign in again.",
+        ),
+        (ApiError::ItemNotFound, "That's no longer in your library."),
+        (
+            ApiError::Status { status: 503 },
+            "The server had a problem. Try again in a moment.",
+        ),
+    ]
+}
+
+#[test]
+fn browsing_errors_have_plain_wording() {
+    for (error, wording) in browse_cases() {
+        let shown = wording::browse_error(&error);
+        assert_eq!(shown, wording, "{error:?}");
+        assert!(!shown.contains(DETAIL) && !shown.contains("503"));
+    }
+}
+
+#[test]
+fn home_has_wording_for_loading_and_for_nothing() {
+    assert_eq!(wording::LOADING, "Loading your library…");
+    assert!(wording::EMPTY_LIBRARY.contains("nothing here"));
+}

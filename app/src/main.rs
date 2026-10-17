@@ -24,12 +24,12 @@ fn main() -> anyhow::Result<()> {
     let settings = Settings::load_or_create(&settings_file);
     let api = JellyfinClient::new(settings.device_id.clone()).context("setting up HTTPS")?;
     let tokens = SystemTokens::system(&dir);
-    let flow = LoginFlow::new(api, settings, settings_file, tokens);
+    let flow = LoginFlow::new(api.clone(), settings, settings_file, tokens);
 
     let window = MainWindow::new().context("creating the main window")?;
     // Couchfin runs on a TV from Steam, so it always covers the whole screen.
     window.window().set_fullscreen(true);
-    let _flow = app::connect(&window, flow, runtime.handle());
+    let _flow = app::connect(&window, flow, api, runtime.handle());
     // Held until the event loop ends; dropping it stops the gamepad thread.
     let _gamepads = app::connect_gamepads(&window, |deliver| {
         Gamepads::start_sdl(MapperConfig::default(), SdlHints::default(), deliver)

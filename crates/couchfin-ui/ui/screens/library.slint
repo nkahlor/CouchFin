@@ -1,0 +1,144 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { LibraryView } from "../browse-state.slint";
+import { Card } from "../widgets/card.slint";
+import { Keys, KeyIntent } from "../widgets/keys.slint";
+import { Scroll } from "../widgets/scroll.slint";
+
+// A library as a grid of 2:3 posters under its name. Built for thousands of
+// items (decision 015): the grid is a ListView of rows, a ListView creates
+// only the rows in view, and each row creates only the cards it holds, which
+// read their data from `LibraryView.items` one place at a time. A library of
+// 2,000 is about three rows of cards, not 2,000 cards.
+//
+// Focus map: one focus target for the whole grid, on the first item on
+// arrival. Left and Right step through the items and stop at the first and
+// last. Up and Down (or Shift+Tab and Tab) move a row; Down from a row above
+// a shorter last row lands on the last item. Moving scrolls the grid just
+// enough to keep the focused card in view. Enter fires item-activated(index)
+// and Escape or Backspace fires back().
+export component LibraryPage inherits Rectangle {
+    property <int> current: 0;
+    property <int> count: LibraryView.item-count;
+    // As many posters as fit across, so the grid fills the screen's width.
+    property <length> cell: Theme.grid-poster-height * Theme.poster-aspect + Theme.card-gap;
+    property <int> columns: max(1, Math.floor((root.width - 2 * Theme.page-margin + Theme.card-gap) / root.cell));
+    property <int> row-count: Math.ceil(root.count / root.columns);
+    property <length> row-height: Theme.grid-poster-height + Theme.card-title-gap + Theme.card-title-height + 2 * Theme.card-focus-room + Theme.grid-row-gap;
+
+    init => {
+        scope.focus();
+    }
+
+    // Tell core which places are on screen, whenever that changes.
+    function report() {
+        let first-row = Math.max(0, Math.floor(-list.content-y / root.row-height));
+        let last-row = Math.ceil((-list.content-y + list.visible-height) / root.row-height);
+        LibraryView.items-needed(first-row * root.columns, Math.min(root.count, last-row * root.columns));
+    }
+
+    function move-to(index: int) {
+        root.current = clamp(index, 0, root.count - 1);
+        list.content-y = Scroll.reveal(list.content-y, Math.floor(root.current / root.columns) * root.row-height, root.row-height, list.visible-height);
+    }
+
+    VerticalLayout {
+        padding: Theme.page-margin;
+        spacing: Theme.spacing;
+
+        Text {
+            text: LibraryView.title;
+            color: Theme.text;
+            font-size: Theme.title-size;
+            font-weight: Theme.strong-weight;
+            overflow: elide;
+        }
+
+        // Always takes its line, so the grid never jumps when it appears.
+        Text {
+            text: LibraryView.error;
+            color: Theme.error;
+            font-size: Theme.label-size;
+            overflow: elide;
+        }
+
+        // The grid reaches the screen's edge, so a scrolled row is cut off by
+        // it rather than by the page margin.
+        list := ListView {
+            vertical-stretch: 1;
+            min-height: root.row-height;
+            animate content-y {
+                duration: Theme.scroll-duration;
+                easing: ease-out;
+            }
+            changed content-y => {
+                root.report();
+            }
+            changed visible-height => {
+                root.report();
+            }
+            changed height => {
+                root.report();
+            }
+
+            for r in root.row-count: Rectangle {
+                height: root.row-height;
+
+                for c in Math.min(root.columns, root.count - r * root.columns): Card {
+                    property <int> place: r * root.columns + c;
+                    x: c * root.cell;
+                    y: Theme.card-focus-room;
+                    title: LibraryView.items[self.place].title;
+                    image: LibraryView.items[self.place].image;
+                    image-height: Theme.grid-poster-height;
+                    current: self.place == root.current;
+                    highlighted: self.place == root.current && scope.has-focus;
+                    index: self.place;
+                    count: root.count;
+                    activated => {
+                        root.move-to(self.place);
+                        scope.focus();
+                        LibraryView.item-activated(self.place);
+                    }
+                }
+            }
+        }
+    }
+
+    scope := FocusScope {
+        key-pressed(event) => {
+            if Keys.intent(event) == KeyIntent.left {
+                root.move-to(root.current - 1);
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.right {
+                root.move-to(root.current + 1);
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.next {
+                // Down from a row above a short last row ends on its last item.
+                if Math.floor(root.current / root.columns) < root.row-count - 1 {
+                    root.move-to(min(root.current + root.columns, root.count - 1));
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.previous {
+                if root.current >= root.columns {
+                    root.move-to(root.current - root.columns);
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.activate {
+                if root.count > 0 {
+                    LibraryView.item-activated(root.current);
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+                LibraryView.back();
+                return accept;
+            }
+            return reject;
+        }
+    }
+}

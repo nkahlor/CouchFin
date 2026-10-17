@@ -97,7 +97,7 @@ There are six phases, and each ends with something runnable. Tasks within a phas
 ### Phase 3: Real library
 
 - [ ] couchfin-api: `GET /UserViews`, `GET /Items` (paged), `GET /Items/{id}`, `GET /UserItems/Resume`, `GET /Shows/NextUp`, `GET /Items/Latest` (per library), seasons and episodes (`/Shows/{id}/Seasons`, `/Shows/{id}/Episodes`), and images (`Primary`, `Backdrop`, `Thumb`), with an `ItemId` newtype (decision 014)
-- [ ] couchfin-core: async image loading with a disk cache. For each poster it also produces a blurred variant, which Home's carousel shows for the cards already passed (Slint can't blur content; decision 011)
+- [ ] couchfin-core: async image loading with a disk cache.
 - [ ] couchfin-core: library state and the navigation stack: which Home rows exist (empty ones hidden), the paged library grid, detail loading (movie, series, season), and Back going up one level with Home keeping its row positions (decision 014)
 - [ ] couchfin-ui: Home as a stack of carousel rows (Continue Watching, Next Up, Recently Added per library, Libraries) with Up/Down between rows and per-row focus, a paged poster grid per library, and movie and series detail pages (decision 014)
 - [ ] couchfin-ui / app: hide the mouse cursor after ~3 s idle, and show it again only on real pointer activity (mouse, or a Steam Deck/Controller trackpad in mouse mode), never on controller or keyboard input. Low priority, after the UI task ([#40](https://github.com/nkahlor/CouchFin/issues/40))

@@ -1,0 +1,123 @@
+// What the browsing screens render and the requests they send back: Home's
+// rows, the library grid and the detail pages. Like state.slint, plain
+// properties and callbacks; couchfin-core's library state fills them (src/browse)
+// and the screens hold no logic beyond focus and key handling.
+
+// The shape of a card's picture.
+export enum CardShape {
+    // 2:3, for movies and series.
+    poster,
+    // 16:9, for episodes and library tiles.
+    thumb,
+}
+
+// One card in a row or a grid.
+export struct CardData {
+    title: string,
+    // A thumbnail's second line, such as "S2 · E4"; empty shows none.
+    subtitle: string,
+    // Resume progress from 0 to 1, drawn along a thumbnail's bottom edge.
+    // 0 (or less) shows no bar.
+    progress: float,
+    // The picture; empty draws the placeholder.
+    image: image,
+    // The picture will never come, so the card draws its title inside it
+    // instead of the placeholder; a picture still loading shows plain.
+    image-missing: bool,
+    // The details strip's line under the title: "2016 · 1 h 56 min" for a
+    // movie, "S2 · E4" for an episode, "Library" for a library tile.
+    meta: string,
+}
+
+// One row of cards on Home.
+export struct RowData {
+    title: string,
+    shape: CardShape,
+    cards: [CardData],
+    // The row's focused card. The row remembers it while focus is on another
+    // row, and the screen writes it as the user moves along the row, so core
+    // can keep it when Home is left and reopened.
+    current: int,
+}
+
+// One episode in a season.
+export struct EpisodeData {
+    number: int,
+    title: string,
+    // Shown as is, such as "42 min".
+    runtime: string,
+    watched: bool,
+}
+
+// A page of a library: a grid of posters.
+export global LibraryView {
+    // The library's name.
+    in property <string> title;
+    // How many items the whole library has. The grid is this long even
+    // while few items are loaded.
+    in property <int> item-count;
+    // Why a page of the library couldn't load; empty shows none.
+    in property <string> error;
+    // The items by place in the library, 0 to item-count - 1. The grid reads
+    // only the places it draws, so this may be a model that loads lazily;
+    // a place with no data shows an empty card.
+    in property <[CardData]> items;
+    // The places now on screen, first to last (exclusive), whenever the
+    // visible range changes. Core pages in what is missing.
+    callback items-needed(first: int, last: int);
+    // Enter on a card, with its place in the library.
+    callback item-activated(index: int);
+    // Back (Escape or Backspace).
+    callback back();
+}
+
+// A movie's detail page.
+export global MovieView {
+    in property <string> title;
+    in property <string> year;
+    // Shown as is, such as "1 h 52 min".
+    in property <string> runtime;
+    // Shown as is, such as "PG-13".
+    in property <string> rating;
+    in property <string> overview;
+    // The backdrop picture; empty shows the placeholder.
+    in property <image> backdrop;
+    // True when there is a position to resume: the button says Resume, not
+    // Play.
+    in property <bool> resumable;
+    // Why the movie couldn't load; empty shows none.
+    in property <string> error;
+    // The Play or Resume button. Until playback exists (Phase 4) the page
+    // also says "Playback arrives soon".
+    callback play();
+    // Back (Escape or Backspace).
+    callback back();
+}
+
+// A series' detail page: the same header, its seasons, and the selected
+// season's episodes.
+export global SeriesView {
+    in property <string> title;
+    in property <string> year;
+    in property <string> runtime;
+    in property <string> rating;
+    in property <string> overview;
+    in property <image> backdrop;
+    // The seasons' names, such as "Season 2".
+    in property <[string]> seasons;
+    // Which season is selected. The screen moves it as Left and Right step
+    // through the seasons; core may set it.
+    in-out property <int> selected-season;
+    // The selected season's episodes.
+    in property <[EpisodeData]> episodes;
+    // Why the series couldn't load; empty shows none.
+    in property <string> error;
+    // The selected season changed (Left or Right on the seasons), so core
+    // loads its episodes.
+    callback season-selected(index: int);
+    // Enter on an episode, with its place in the season. Until playback
+    // exists the page says "Playback arrives soon".
+    callback episode-activated(index: int);
+    // Back (Escape or Backspace).
+    callback back();
+}

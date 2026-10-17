@@ -76,6 +76,50 @@ fn invalid_address(error: &ServerUrlError) -> &'static str {
     }
 }
 
+/// Home's note while the first rows are on their way.
+pub const LOADING: &str = "Loading your library…";
+
+/// Home's note when the server has nothing to show.
+pub const EMPTY_LIBRARY: &str =
+    "There's nothing here yet. Add movies or shows to a library on your Jellyfin server.";
+
+/// The message for a failed request while browsing: a row on Home, a page
+/// of the grid, or a detail page. Unlike [`api_error`] it doesn't talk about
+/// addresses or sign-in, which the user isn't looking at. Every variant is
+/// listed, so a new one fails the build until it has wording here.
+///
+/// # Examples
+///
+/// ```
+/// use couchfin_core::ApiError;
+/// use couchfin_ui::wording;
+///
+/// assert_eq!(
+///     wording::browse_error(&ApiError::ItemNotFound),
+///     "That's no longer in your library."
+/// );
+/// ```
+#[must_use]
+pub fn browse_error(error: &ApiError) -> String {
+    match error {
+        ApiError::Unreachable { .. } => "Couldn't reach the server. Is it on?".into(),
+        ApiError::Timeout => "The server took too long to answer. Try again in a moment.".into(),
+        ApiError::NotJellyfin { .. } | ApiError::Redirected { .. } => {
+            "The server didn't answer the way Jellyfin does. Check that it's still running.".into()
+        }
+        ApiError::InsecureRedirect => {
+            "The server tried to switch to an unencrypted connection, so Couchfin stopped.".into()
+        }
+        // The app returns to sign-in when the token is rejected, so this
+        // shows for a moment at most.
+        ApiError::TokenRejected | ApiError::InvalidCredentials => {
+            "You've been signed out. Please sign in again.".into()
+        }
+        ApiError::ItemNotFound => "That's no longer in your library.".into(),
+        ApiError::Status { .. } => "The server had a problem. Try again in a moment.".into(),
+    }
+}
+
 /// The note on Home when this sign-in couldn't be stored, so the next start
 /// will ask again. Every cause reads the same: the user can't fix a keyring
 /// from the sofa, and the log has the detail.

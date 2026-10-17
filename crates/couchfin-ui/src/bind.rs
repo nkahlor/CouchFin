@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use couchfin_core::{LoginAction, LoginScreen, Password, Request, RestoreStatus};
+use couchfin_core::{LibraryAction, LoginAction, LoginScreen, Password, Request, RestoreStatus};
 use slint::ComponentHandle;
 
 use crate::generated::{AddressView, ConnectView, HomeView, LoginView, MainWindow, Screen};
@@ -15,6 +15,9 @@ use crate::wording;
 pub enum Command {
     /// Send this action to the login flow (`LoginFlow::dispatch`).
     Login(LoginAction),
+    /// Send this action to the library flow (`LibraryFlow::dispatch`). Made
+    /// by the browsing screens, see [`install`](crate::install).
+    Library(LibraryAction),
     /// Quit the app: Back on a screen with nothing to go back to.
     Quit,
 }
@@ -156,8 +159,5 @@ pub fn bind(window: &MainWindow, on_command: impl Fn(Command) + 'static) {
 
     let home = window.global::<HomeView>();
     home.on_sign_out(login(|| LoginAction::LogOut));
-    // The cards are placeholders with nothing to open until Phase 3, so a
-    // selection is only logged.
-    home.on_card_activated(|index| tracing::info!(index, "selected a placeholder card"));
     home.on_back(back);
 }

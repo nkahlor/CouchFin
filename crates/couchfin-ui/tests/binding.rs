@@ -88,7 +88,10 @@ fn home_signs_out_with_its_button_and_back_quits() {
     // Arriving on Home must not put a press of Enter on Sign out.
     press(&window, Key::Return);
     assert_eq!(commands.taken().len(), 0);
-    press(&window, Key::DownArrow);
+    // Down from the bottom of Home's five rows reaches Sign out.
+    for _ in 0..5 {
+        press(&window, Key::DownArrow);
+    }
     press(&window, Key::Return);
     press(&window, Key::Escape);
     the(&window, "Sign out").invoke_accessible_default_action();

@@ -25,10 +25,4 @@ impl Key {
     pub(super) fn original_file(&self) -> String {
         format!("{}.orig", self.0)
     }
-
-    /// The file holding the blurred copy as a PNG. The sigma is in the name,
-    /// so changing it never serves a copy blurred differently.
-    pub(super) fn blurred_file(&self, sigma: f32) -> String {
-        format!("{}.blur{}.png", self.0, sigma.to_bits())
-    }
 }

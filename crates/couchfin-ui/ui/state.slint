@@ -1,3 +1,6 @@
+import { RowData } from "browse-state.slint";
+import { Placeholders } from "placeholder.slint";
+
 // The data each screen renders and the requests it sends back. The binding
 // in src/bind.rs sets these from couchfin-core's LoginScreen and turns the
 // callbacks into core's actions; the screens hold no logic beyond focus and
@@ -14,8 +17,14 @@ export enum Screen {
     address,
     // Sign in to the server that the address check found.
     login,
-    // Signed in.
+    // Signed in: rows of cards.
     home,
+    // A library's grid of posters.
+    library,
+    // A movie's detail page.
+    movie,
+    // A series' detail page.
+    series,
 }
 
 // The startup screens: connecting, and why connecting failed.
@@ -71,8 +80,7 @@ export global LoginView {
     callback back();
 }
 
-// The home screen: the server, who is signed in, a row of placeholder
-// title cards and Sign out.
+// The home screen: the server, who is signed in, rows of cards and Sign out.
 export global HomeView {
     // The server's name, from /System/Info/Public.
     in property <string> server-name;
@@ -83,9 +91,33 @@ export global HomeView {
     // A quiet note under the details, such as a sign-in that couldn't be
     // saved; empty shows none.
     in property <string> notice;
-    // Enter on a placeholder card, with its place in the row (0 is the
-    // first). There is nothing to open until Phase 3.
-    callback card-activated(index: int);
+    // The rows, top to bottom. Core never sends a row without cards, so every
+    // row here is drawn. In-out because each row's `current` is written as the
+    // user moves. Placeholders until the app binds the library.
+    in-out property <[RowData]> rows: Placeholders.home-rows;
+    // The row with focus, and also the row last focused while Sign out has
+    // it. These three live here, not in the page, so Home comes back where
+    // it was after a detail page, and the app can keep them right when rows
+    // arrive above the focused one.
+    in-out property <int> focused-row: 0;
+    // How many rows of each shape are scrolled out above the focused one.
+    // Counted, not measured, so a resize keeps the anchor.
+    in-out property <int> posters-above: 0;
+    in-out property <int> thumbs-above: 0;
+    // The height a poster has in a row, as the page lays it out, so the app
+    // can ask for pictures of the right size. 0 before the first layout.
+    in-out property <length> poster-height;
+    // Shown in place of the rows while there are none: loading, the reason a
+    // load failed, or that the library is empty.
+    in property <string> status;
+    // A row failed to load; shown beside the notice. Empty shows none.
+    in property <string> error;
+    // Enter on a card, with its row and its place in the row (0 is the
+    // first of each).
+    callback card-activated(row: int, index: int);
+    // Focus moved: it is now on this card of this row. Fires for moves along
+    // a row and between rows, so core can remember each row's card.
+    callback focus-changed(row: int, index: int);
     // The Sign out button.
     callback sign-out();
     // Back (Escape or Backspace).

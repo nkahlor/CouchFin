@@ -61,6 +61,10 @@ exceptions = [
   { crate = "i-slint-renderer-femtovg", allow = [
     "LicenseRef-Slint-Royalty-free-2.0",
   ] },
+  # Only the screenshots example links it (decision 018).
+  { crate = "i-slint-renderer-software", allow = [
+    "LicenseRef-Slint-Royalty-free-2.0",
+  ] },
   { crate = "slint", allow = [
     "LicenseRef-Slint-Royalty-free-2.0",
   ] },

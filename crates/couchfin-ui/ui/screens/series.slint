@@ -1,0 +1,247 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { SeriesView } from "../browse-state.slint";
+import { Backdrop, DetailHeader } from "../widgets/detail-header.slint";
+import { Keys, KeyIntent } from "../widgets/keys.slint";
+import { Scroll } from "../widgets/scroll.slint";
+
+enum SeriesFocus {
+    seasons,
+    episodes,
+}
+
+// A series: the movie page's header, a row of seasons, and the selected
+// season's episodes as a list (number, title, runtime, watched).
+//
+// Focus map: one focus target, on the seasons on arrival. On the seasons,
+// Left and Right choose a season (stopping at the ends) and fire
+// season-selected(index) at once so core loads its episodes; Down (or Tab,
+// or Enter) enters the episodes. On the episodes, Up and Down step through
+// them and the list scrolls to keep the focused one in view; Up from the
+// first goes back to the seasons; Enter fires episode-activated(index) and
+// says "Playback arrives soon". Escape or Backspace (B) fires back().
+export component SeriesPage inherits Rectangle {
+    property <SeriesFocus> zone: SeriesFocus.seasons;
+    property <int> episode: 0;
+    property <bool> pressed;
+    property <length> row-size: Theme.episode-height;
+
+    init => {
+        scope.focus();
+    }
+
+    function pick-season(index: int) {
+        let next = clamp(index, 0, SeriesView.seasons.length - 1);
+        if next != SeriesView.selected-season {
+            SeriesView.selected-season = next;
+            root.episode = 0;
+            episode-list.content-y = 0px;
+            SeriesView.season-selected(next);
+        }
+    }
+
+    function pick-episode(index: int) {
+        root.episode = clamp(index, 0, SeriesView.episodes.length - 1);
+        episode-list.content-y = Scroll.reveal(episode-list.content-y, root.episode * root.row-size, root.row-size, episode-list.visible-height);
+    }
+
+    function enter-episodes() {
+        if SeriesView.episodes.length > 0 {
+            root.zone = SeriesFocus.episodes;
+        }
+    }
+
+    function press(index: int) {
+        root.pressed = true;
+        SeriesView.episode-activated(index);
+    }
+
+    Backdrop {
+        source: SeriesView.backdrop;
+    }
+
+    scope := FocusScope {
+        key-pressed(event) => {
+            if Keys.intent(event) == KeyIntent.left && root.zone == SeriesFocus.seasons {
+                root.pick-season(SeriesView.selected-season - 1);
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.right && root.zone == SeriesFocus.seasons {
+                root.pick-season(SeriesView.selected-season + 1);
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.next {
+                if root.zone == SeriesFocus.seasons {
+                    root.enter-episodes();
+                } else {
+                    root.pick-episode(root.episode + 1);
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.previous {
+                if root.zone == SeriesFocus.episodes {
+                    if root.episode == 0 {
+                        root.zone = SeriesFocus.seasons;
+                    } else {
+                        root.pick-episode(root.episode - 1);
+                    }
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.activate {
+                if root.zone == SeriesFocus.seasons {
+                    root.enter-episodes();
+                } else {
+                    root.press(root.episode);
+                }
+                return accept;
+            }
+            if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+                SeriesView.back();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    VerticalLayout {
+        padding: Theme.page-margin;
+        spacing: Theme.spacing;
+
+        DetailHeader {
+            title: SeriesView.title;
+            year: SeriesView.year;
+            runtime: SeriesView.runtime;
+            rating: SeriesView.rating;
+            overview: SeriesView.overview;
+            overview-height: Theme.series-overview-height;
+        }
+
+        HorizontalLayout {
+            spacing: Theme.spacing;
+            alignment: start;
+            accessible-role: list;
+            accessible-label: "Seasons";
+
+            for name[index] in SeriesView.seasons: chip := Rectangle {
+                property <bool> selected: index == SeriesView.selected-season;
+                property <bool> lit: self.selected && scope.has-focus && root.zone == SeriesFocus.seasons;
+                height: Theme.control-height;
+                min-width: label.preferred-width + 2 * Theme.chip-padding;
+                background: self.lit ? Theme.focus : self.selected ? Theme.surface : transparent;
+                border-radius: Theme.radius;
+                border-width: self.selected ? Theme.border : 0px;
+                border-color: self.lit ? Theme.text : Theme.muted;
+                accessible-role: list-item;
+                accessible-label: name;
+                accessible-item-index: index;
+                accessible-item-count: SeriesView.seasons.length;
+                accessible-item-selectable: true;
+                accessible-item-selected: self.selected;
+
+                label := Text {
+                    text: name;
+                    color: chip.lit ? Theme.on-focus : Theme.text;
+                    font-size: Theme.body-size;
+                    font-weight: chip.selected ? Theme.strong-weight : Theme.regular-weight;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    accessible-role: none;
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.zone = SeriesFocus.seasons;
+                        scope.focus();
+                        root.pick-season(index);
+                    }
+                }
+            }
+        }
+
+        episode-list := ListView {
+            vertical-stretch: 1;
+            min-height: root.row-size;
+            accessible-role: list;
+            accessible-label: "Episodes";
+            animate content-y {
+                duration: Theme.scroll-duration;
+                easing: ease-out;
+            }
+
+            for episode[index] in SeriesView.episodes: entry := Rectangle {
+                property <bool> lit: index == root.episode && scope.has-focus && root.zone == SeriesFocus.episodes;
+                height: root.row-size;
+                background: self.lit ? Theme.focus : transparent;
+                border-radius: Theme.radius;
+                accessible-role: list-item;
+                accessible-label: episode.title;
+                accessible-item-index: index;
+                accessible-item-count: SeriesView.episodes.length;
+                accessible-item-selectable: true;
+                accessible-item-selected: index == root.episode;
+                accessible-action-default => {
+                    root.press(index);
+                }
+
+                HorizontalLayout {
+                    padding-left: Theme.spacing;
+                    padding-right: Theme.spacing;
+                    spacing: Theme.spacing;
+
+                    Text {
+                        width: Theme.episode-number-width;
+                        text: "" + episode.number;
+                        color: entry.lit ? Theme.on-focus : Theme.muted;
+                        font-size: Theme.body-size;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        horizontal-stretch: 1;
+                        text: episode.title;
+                        color: entry.lit ? Theme.on-focus : Theme.text;
+                        font-size: Theme.body-size;
+                        font-weight: episode.watched ? Theme.regular-weight : Theme.strong-weight;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        // The row itself carries the title.
+                        accessible-role: none;
+                    }
+
+                    Text {
+                        width: Theme.episode-runtime-width;
+                        text: episode.runtime;
+                        color: entry.lit ? Theme.on-focus : Theme.muted;
+                        font-size: Theme.label-size;
+                        horizontal-alignment: right;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        width: Theme.episode-runtime-width;
+                        text: episode.watched ? "Watched" : "";
+                        color: entry.lit ? Theme.on-focus : Theme.muted;
+                        font-size: Theme.label-size;
+                        vertical-alignment: center;
+                    }
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.zone = SeriesFocus.episodes;
+                        scope.focus();
+                        root.pick-episode(index);
+                        root.press(index);
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: SeriesView.error != "" ? SeriesView.error : root.pressed ? "Playback arrives soon" : "";
+            color: SeriesView.error != "" ? Theme.error : Theme.muted;
+            font-size: Theme.label-size;
+        }
+    }
+}

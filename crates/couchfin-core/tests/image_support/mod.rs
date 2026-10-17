@@ -17,7 +17,7 @@ use couchfin_core::{CacheDir, ImageCache, ImageCacheConfig};
 use image::{ImageFormat, Rgba, RgbaImage};
 use tempfile::TempDir;
 
-/// A 64x96 image (a 2:3 poster) with hard edges, so blurring visibly changes it.
+/// A 64x96 image (a 2:3 poster) with hard edges.
 pub fn checkerboard() -> RgbaImage {
     RgbaImage::from_fn(64, 96, |x, y| {
         if (x / 8 + y / 8) % 2 == 0 {

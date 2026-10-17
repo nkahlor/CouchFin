@@ -54,7 +54,7 @@ export global Theme {
     // Title cards: poster-shaped (2:3), sized to the room the screen leaves
     // for the row, between these heights.
     out property <length> poster-min-height: 200px;
-    out property <length> poster-max-height: 420px;
+    out property <length> poster-max-height: 320px;
     out property <float> poster-aspect: 2 / 3;
     out property <length> card-gap: 32px;
     // The title under a poster: one line at label size.
@@ -75,12 +75,77 @@ export global Theme {
     out property <length> carousel-inset: 160px;
     // Cards already passed: a shade of the background over the poster and a
     // dimmer title, rather than opacity, which would cost a layer per card.
-    // Phase 3 also cross-fades them to a pre-blurred poster.
     out property <color> passed-card-shade: #101418a0;
     out property <color> passed-title: #a9b4bf80;
     // Short, so focus never feels behind the D-pad.
     out property <duration> focus-duration: 120ms;
     out property <duration> scroll-duration: 150ms;
+
+    // Thumbnails (Continue Watching, Next Up, library tiles): 16:9, shorter
+    // than a poster in the same row block, as a fraction of the poster height.
+    out property <float> thumb-aspect: 16 / 9;
+    out property <float> thumb-height-ratio: 0.6;
+    // A thumbnail's second line under its title, such as "S2 · E4".
+    out property <length> card-subtitle-height: 36px;
+    // Resume progress along the bottom of a thumbnail.
+    out property <length> progress-height: 8px;
+    out property <color> progress-track: #00000099;
+
+    // Home's rows: the title above each row, and the fixed height from the
+    // top of the rows' viewport at which the focused row always sits.
+    out property <length> row-title-height: 40px;
+    out property <length> row-title-gap: 4px;
+    out property <length> row-gap: 12px;
+    out property <length> home-row-anchor: 8px;
+    // Room a grown card needs above and below inside a Home row. Less than
+    // `card-focus-room` (the library grid's) because Home's posters are
+    // shorter and every pixel buys rows.
+    out property <length> carousel-focus-room: 16px;
+    // Floor for the poster height on a small screen, so a card stays
+    // recognisable.
+    out property <length> home-poster-min-height: 100px;
+    // How many rows (as tall as a poster row) Home's viewport is sized to
+    // show: a half row peeks in below the last whole one. Three from
+    // `home-tall-screen` up, where there is room.
+    out property <float> home-rows-fit: 2.5;
+    out property <float> home-rows-fit-tall: 3;
+    out property <length> home-tall-screen: 1000px;
+    // Home's compact header (server, version, who) and the gaps around it.
+    out property <length> home-header-height: 48px;
+    out property <length> home-gap: 8px;
+    out property <length> home-pad: 16px;
+    // The details strip above the rows: the focused item's title, and one
+    // line of metadata under it.
+    out property <length> home-details-title-height: 48px;
+    out property <length> home-details-meta-height: 40px;
+    // One line of a notice under the rows.
+    out property <length> home-notice-height: 40px;
+    // Where the rows would be while there are none: the status, two lines.
+    out property <length> home-status-height: 96px;
+    // A title shown inside a card that has no picture: smaller than a
+    // card title, three lines at most, with this much room round it.
+    out property <length> card-inner-title-size: 24px;
+    out property <length> card-inner-title-height: 90px;
+    out property <length> card-inner-padding: 8px;
+
+    // Library grid: the poster height of a cell, and the room around it
+    // (title, focus growth, gaps) that makes up a grid row.
+    out property <length> grid-poster-height: 300px;
+    out property <length> grid-row-gap: 16px;
+
+    // Detail pages: the backdrop is dimmed so text stays readable on any
+    // image, and the overview keeps to a few lines.
+    out property <color> backdrop-scrim: #101418d0;
+    out property <length> overview-height: 150px;
+    // The series page keeps its overview short to leave room for episodes.
+    out property <length> series-overview-height: 84px;
+    out property <length> detail-width: 1400px;
+    out property <length> meta-spacing: 32px;
+    // Series: season chips and episode rows.
+    out property <length> chip-padding: 32px;
+    out property <length> episode-height: 88px;
+    out property <length> episode-number-width: 96px;
+    out property <length> episode-runtime-width: 200px;
 
     // Wide enough for a long https:// address at body size.
     out property <length> form-width: 1200px;

@@ -43,9 +43,9 @@ fn launch(dir: &TempDir, runtime: &Handle) {
             KeyringTokens::unavailable("no Secret Service in tests"),
             FileTokens::new(&config),
         );
-        let flow = LoginFlow::new(api, settings, settings_file, tokens);
+        let flow = LoginFlow::new(api.clone(), settings, settings_file, tokens);
         let window = MainWindow::new().expect("window is created");
-        app::connect(&window, flow, &runtime);
+        app::connect_with(&window, flow, api, None, &runtime);
         window.show().expect("window is shown");
         WINDOW.with(|slot| *slot.borrow_mut() = Some(window));
     });

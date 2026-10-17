@@ -22,6 +22,16 @@ slint = { workspace = true, features = [
 
 [dev-dependencies]
 i-slint-backend-testing.workspace = true
+# The screenshots example (docs/decisions/018-visual-review.md): Slint's
+# software renderer draws into a buffer with no GPU or display, and `image`
+# saves it as PNG. Dev-only, so the app never links the software renderer.
+anyhow.workspace = true
+image.workspace = true
+slint = { workspace = true, features = [
+  "renderer-software",
+  "software-renderer-systemfonts",
+] }
+tokio.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true
