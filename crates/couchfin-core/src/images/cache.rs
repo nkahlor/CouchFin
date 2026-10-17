@@ -95,7 +95,9 @@ impl<A: JellyfinApi> ImageCache<A> {
     ///
     /// [`ImageError::Api`] if the server could not be asked (a missing image
     /// is [`ImageLoad::NoImage`] instead), [`ImageError::Decode`] if the
-    /// server sent something that is not a JPEG, PNG or WebP image, and
+    /// server sent something that is not a whole JPEG, PNG or WebP image (a
+    /// cut-off file counts: it is never decoded or cached, and the next call
+    /// fetches again), and
     /// [`ImageError::Cache`] if a decoding task died.
     pub async fn load(
         &self,
@@ -117,7 +119,10 @@ impl<A: JellyfinApi> ImageCache<A> {
                 Ok(ImageLoad::Ready(pixels))
             }
             Err(ImageError::Api(ApiError::ItemNotFound)) => Ok(ImageLoad::NoImage),
-            Err(error) => Err(error),
+            Err(error) => {
+                tracing::debug!(target: "couchfin::images", %error, item = %request.item, "image load failed, not cached");
+                Err(error)
+            }
         }
     }
 
@@ -151,7 +156,7 @@ impl<A: JellyfinApi> ImageCache<A> {
         request: &ImageRequest,
         key: &Key,
     ) -> Result<Pixels, ImageError> {
-        let job = Job::new(Arc::clone(&self.disk), key);
+        let job = Job::new(Arc::clone(&self.disk), key, request.max_width);
         let cached = job.clone();
         if let Some(pixels) = blocking(move || cached.cached()).await? {
             return Ok(pixels);

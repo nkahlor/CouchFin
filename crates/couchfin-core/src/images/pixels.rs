@@ -5,6 +5,7 @@ use std::sync::Arc;
 use image::RgbaImage;
 
 use super::ImageError;
+use super::complete::incomplete;
 
 /// A decoded image: straight (non-premultiplied) RGBA, 8 bits per channel,
 /// row by row from the top left.
@@ -75,11 +76,29 @@ fn decode_error(error: &image::ImageError) -> ImageError {
     }
 }
 
-/// Decodes a JPEG, PNG or WebP file.
-pub(super) fn decode(bytes: &[u8]) -> Result<RgbaImage, ImageError> {
-    image::load_from_memory(bytes)
+/// Decodes a whole JPEG, PNG or WebP file that is at most `max_width` wide.
+///
+/// Anything else is an error, never an image with holes in it: a partial
+/// file, or a width the server was not asked for (the server scales down,
+/// never up, so a wider image is not the one requested).
+pub(super) fn decode(bytes: &[u8], max_width: u32) -> Result<RgbaImage, ImageError> {
+    if let Some(reason) = incomplete(bytes) {
+        return Err(ImageError::Decode {
+            detail: reason.to_owned(),
+        });
+    }
+    let image = image::load_from_memory(bytes)
         .map(image::DynamicImage::into_rgba8)
-        .map_err(|error| decode_error(&error))
+        .map_err(|error| decode_error(&error))?;
+    if image.width() > max_width {
+        return Err(ImageError::Decode {
+            detail: format!(
+                "the image is {} px wide, but at most {max_width} were requested",
+                image.width()
+            ),
+        });
+    }
+    Ok(image)
 }
 
 /// Moves a decoded image into [`Pixels`].

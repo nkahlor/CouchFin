@@ -5,6 +5,7 @@
 
 mod cache;
 mod cache_dir;
+mod complete;
 mod config;
 mod disk;
 mod error;
