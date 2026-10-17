@@ -137,3 +137,34 @@ jobs:
           cargo llvm-cov report --json --summary-only --output-path target/llvm-cov.json
       - name: Enforce 80% for couchfin-api and couchfin-core
         run: python3 .github/scripts/coverage_gate.py target/llvm-cov.json --min 80 couchfin-api couchfin-core
+
+  # Renders every screen to PNG with Slint's software renderer (no GPU or
+  # display), so a UI change can be looked at without the TV. Not a required
+  # check: it only makes the artifact (decision 018). It runs on every PR
+  # rather than filtering on paths, which this workflow shares with all the
+  # other jobs.
+  screenshots:
+    name: screenshots
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container: *dev-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The software renderer draws text with system fonts; without any, the
+      # pictures would have no words.
+      - name: Check that fonts are installed
+        run: fc-list : family | grep -q .
+      - name: Render screenshots
+        run: cargo run -p couchfin-ui --example screenshots --locked -- target/screenshots
+      - uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ github.sha }}
+          path: target/screenshots/*.png
+          retention-days: 14
+          if-no-files-found: error
