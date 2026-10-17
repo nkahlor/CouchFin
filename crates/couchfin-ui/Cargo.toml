@@ -21,6 +21,7 @@ slint = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+couchfin-api.workspace = true
 i-slint-backend-testing.workspace = true
 # The screenshots example (docs/decisions/018-visual-review.md): Slint's
 # software renderer draws into a buffer with no GPU or display, and `image`
@@ -32,6 +33,9 @@ slint = { workspace = true, features = [
   "software-renderer-systemfonts",
 ] }
 tokio.workspace = true
+# The image time-budget test serves posters from a slow fake server.
+tempfile.workspace = true
+wiremock.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true

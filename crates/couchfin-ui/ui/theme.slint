@@ -80,6 +80,9 @@ export global Theme {
     // Short, so focus never feels behind the D-pad.
     out property <duration> focus-duration: 120ms;
     out property <duration> scroll-duration: 150ms;
+    // A loaded picture fading in over its blurred placeholder: quick enough
+    // that it never looks like waiting.
+    out property <duration> image-fade-duration: 150ms;
 
     // Thumbnails (Continue Watching, Next Up, library tiles): 16:9, shorter
     // than a poster in the same row block, as a fraction of the poster height.

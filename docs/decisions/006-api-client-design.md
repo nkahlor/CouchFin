@@ -165,7 +165,7 @@ the 10.9+ forms without `/Users/{id}`.
   (`/Items`), `item` (`/Items/{id}`), `resume` (`/UserItems/Resume`, video
   only), `next_up` (`/Shows/NextUp`), `latest` (`/Items/Latest`), `seasons`
   and `episodes` (`/Shows/{id}/Seasons`, `/Episodes?seasonId=`) and `image`
-  (`/Items/{id}/Images/{Primary|Backdrop|Thumb}?maxWidth=&tag=`). They go
+  (`/Items/{id}/Images/{Primary|Backdrop|Thumb}?quality=96&tag=` plus `maxWidth=`, or `fillWidth=&fillHeight=` for a box). They go
   through the same `send_once` as `current_user`: redirects are never
   followed, a 401 is `TokenRejected`.
 - **No `userId` is sent.** Every one of these endpoints takes `userId` as an
@@ -199,9 +199,22 @@ the 10.9+ forms without `/Users/{id}`.
 - **Images** return the bytes and `Content-Type` as `Image`; a reply without
   a content type is `NotJellyfin`, since the cache could not decode it.
   `ImageRequest` carries the image tag, so a cache keyed on
-  `(item, kind, max_width, tag)` never serves a stale image. `ItemId` and
+  `(item, kind, size, tag)` never serves a stale image. `ItemId` and
   `ImageTag` use the same validation as the other IDs, so they are safe in
   the URL path.
+- **Image parameters (#49).** Every request sends `quality=96`, as
+  jellyfin-web does (the server's default is 90). `ImageRequest::max_width`
+  alone sends `maxWidth`; with `with_fill_height` it sends `fillWidth` and
+  `fillHeight` (names checked against Jellyfin's OpenAPI spec: "width/height
+  of box to fill"). The app only uses boxes, with a fixed size per card shape
+  (decision 016), so the same URLs repeat and the server's resize cache hits.
+- **BlurHash (#49).** `Item::blur_hashes` and `Library::primary_blur_hash`
+  parse `ImageBlurHashes` (`{ "Primary": { "<tag>": "<hash>" } }`). A
+  `BlurHash` is checked for the base 83 alphabet and for the length its own
+  header promises; a bad one is dropped, since a placeholder is optional.
+  Look one up with `ImageBlurHashes::get(kind, &tag)`: the tag is part of
+  the key, so a replaced image never gets the old image's blur. Only
+  Primary, Thumb and the first Backdrop are read.
 - **The fake** serves the same calls from a catalog built with `with_library`,
   `with_movie`, `with_series`, `with_resume`, `with_next_up` and
   `with_generated_library(name, 2_000)` (movies named `"{name} 00000"` and up,

@@ -57,7 +57,14 @@ pub struct ImageRequest {
     /// Which image.
     pub kind: ImageKind,
     /// The server scales the image down to at most this many pixels wide.
+    /// With [`fill_height`](Self::fill_height) it is instead the width of the
+    /// box to fill.
     pub max_width: u32,
+    /// The height of the box the image should fill, together with
+    /// [`max_width`](Self::max_width). A fixed box per card shape keeps the
+    /// URLs the same, so the server's resize cache and the HTTP cache hit
+    /// (decision 006).
+    pub fill_height: Option<u32>,
     /// The tag from the item's `image_tags`, for cache-busting.
     pub tag: Option<ImageTag>,
 }
@@ -70,8 +77,17 @@ impl ImageRequest {
             item,
             kind,
             max_width,
+            fill_height: None,
             tag: None,
         }
+    }
+
+    /// Asks for the image to fill a box `max_width` wide and `height` high,
+    /// as jellyfin-web does, instead of capping its width.
+    #[must_use]
+    pub fn with_fill_height(mut self, height: u32) -> Self {
+        self.fill_height = Some(height);
+        self
     }
 
     /// Adds the image's tag.

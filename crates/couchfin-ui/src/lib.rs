@@ -252,8 +252,14 @@ pub use generated::SeriesView;
 
 /// One card of a row or the library grid: `title`, a thumbnail's `subtitle`
 /// (such as "S2 · E4"), `progress` from 0 to 1 (0 shows no bar), and the
-/// `image`, which is empty for the placeholder look.
+/// `image`, which is empty until it has loaded. `placeholder` is a tiny
+/// blurred stand-in shown at once, and `image_state` says whether the picture
+/// is loading, ready or missing.
 pub use generated::CardData;
+
+/// Where a card's picture is: `Loading` (the blurred `placeholder` shows),
+/// `Ready` or `Missing` (the item has no picture, so the card shows its title).
+pub use generated::ImageState;
 
 /// The shape of a card's picture: `Poster` is 2:3 and `Thumb` is 16:9.
 pub use generated::CardShape;

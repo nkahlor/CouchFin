@@ -5,15 +5,16 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use couchfin_core::{ImageLoad, ImageRef, Pixels, RowKind};
+use couchfin_core::{ImageLoad, ImageRef, ImageSize, Pixels, RowKind};
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
 
 use super::feed::Feed;
+use crate::generated::{CardData, ImageState};
 
 /// Loads one image. The app implements it over couchfin-core's
 /// `ImageCache`, so this crate needs no async runtime and tests use a fake.
 pub trait ImageLoader: Send + Sync {
-    /// Starts fetching `image` at `max_width` pixels and calls `done` with the
+    /// Starts fetching `image` as a box of `size` to fill and calls `done` with the
     /// result from any thread. Dropping the returned [`Guard`] cancels the
     /// load: `done` must not be called afterwards, or may be and is ignored.
     /// A failed load should be logged by the loader and reported as
@@ -21,7 +22,7 @@ pub trait ImageLoader: Send + Sync {
     fn load(
         &self,
         image: &ImageRef,
-        max_width: u32,
+        size: ImageSize,
         done: Box<dyn FnOnce(ImageLoad) + Send>,
     ) -> Guard;
 }
@@ -58,7 +59,7 @@ pub(crate) fn row_key(kind: &RowKind) -> String {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Wish {
     pub image: ImageRef,
-    pub width: u32,
+    pub size: ImageSize,
 }
 
 enum Load {
@@ -121,7 +122,7 @@ impl Loads {
             let to = slot.clone();
             let guard = self.loader.load(
                 &wish.image,
-                wish.width,
+                wish.size,
                 Box::new(move |loaded| feed.image(to, ticket, loaded)),
             );
             self.entries.insert(
@@ -157,6 +158,36 @@ impl Loads {
     pub(crate) fn forget(&mut self, gone: impl Fn(&Slot) -> bool) {
         self.entries.retain(|slot, _| !gone(slot));
     }
+}
+
+/// What a place on screen shows of its picture.
+#[derive(Debug, Clone)]
+pub(crate) enum Picture {
+    /// Not loaded (or not wanted): the blurred placeholder, if any.
+    Loading,
+    /// Loaded.
+    Ready(Image),
+    /// The item has no such picture.
+    Missing,
+}
+
+impl Picture {
+    /// The `CardData` fields for this picture. `has_image` is whether the
+    /// card names a picture at all: if not, it is missing from the start.
+    pub(crate) fn fill(&self, data: &mut CardData, has_image: bool) {
+        let (image, state) = match self {
+            Self::Ready(image) => (image.clone(), ImageState::Ready),
+            Self::Loading if has_image => (Image::default(), ImageState::Loading),
+            Self::Missing | Self::Loading => (Image::default(), ImageState::Missing),
+        };
+        data.image = image;
+        data.image_state = state;
+    }
+}
+
+/// A card's blurred placeholder as a Slint image; empty if it has none.
+pub(crate) fn placeholder_image(card: &couchfin_core::Card) -> Image {
+    card.placeholder.as_ref().map(to_image).unwrap_or_default()
 }
 
 /// Copies decoded pixels into a Slint image. The copy is a memcpy; the

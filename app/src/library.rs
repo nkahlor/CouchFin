@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use couchfin_api::Session;
 use couchfin_core::{
-    CacheDir, ImageCache, ImageCacheConfig, ImageLoad, ImageRef, JellyfinApi, LibraryAction,
-    LibraryFlow,
+    CacheDir, ImageCache, ImageCacheConfig, ImageLoad, ImageRef, ImageSize, JellyfinApi,
+    LibraryAction, LibraryFlow,
 };
 use couchfin_ui::{Command, Feed, Guard, ImageLoader, MainWindow, install};
 use tokio::runtime::Handle;
@@ -51,7 +51,7 @@ impl<A: JellyfinApi + 'static> ImageLoader for CacheLoader<A> {
     fn load(
         &self,
         image: &ImageRef,
-        max_width: u32,
+        size: ImageSize,
         done: Box<dyn FnOnce(ImageLoad) + Send>,
     ) -> Guard {
         let cache = self
@@ -63,7 +63,7 @@ impl<A: JellyfinApi + 'static> ImageLoader for CacheLoader<A> {
             done(ImageLoad::NoImage);
             return Guard::new(());
         };
-        let request = image.request(max_width);
+        let request = image.request(size);
         let task = self.0.runtime.spawn(async move {
             match cache.load(&session, &request).await {
                 Ok(loaded) => done(loaded),

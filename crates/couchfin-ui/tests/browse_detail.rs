@@ -105,8 +105,8 @@ fn the_movie_backdrop_is_fetched_wide_and_cleared_on_leaving() {
         .into_iter()
         .find(|(item, ..)| item.len() > 3)
         .expect("a backdrop load");
-    // The window is 1920 wide: ask for about that, not a poster's size.
-    assert!(backdrop.1 >= 1_920, "{}", backdrop.1);
+    // A wide fixed box (1280x720 at scale 1), not a poster's size.
+    assert_eq!(backdrop.1, 1_280, "{}", backdrop.1);
     shell.loader.finish(&backdrop.0, picture());
     shell.feed.pump();
     let view = shell.window.global::<MovieView>();

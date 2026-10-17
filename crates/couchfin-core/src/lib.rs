@@ -60,7 +60,10 @@ mod settings;
 mod tokens;
 
 pub use config_dir::ConfigDir;
-pub use images::{CacheDir, ImageCache, ImageCacheConfig, ImageError, ImageLoad, Pixels};
+pub use images::{
+    CacheDir, ImageCache, ImageCacheConfig, ImageError, ImageLoad, ImageShape, ImageSize, Pixels,
+    placeholder,
+};
 pub use library::{
     Card, CardShape, Episode, GridState, Header, HomeState, ImageRef, LibraryAction, LibraryFlow,
     LibraryState, MovieState, Row, RowKind, ScreenState, Season, SeriesState, Target,

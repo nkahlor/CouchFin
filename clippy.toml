@@ -1,2 +1,5 @@
 # unwrap_used is denied everywhere except tests, where a panic is the failure.
 allow-unwrap-in-tests = true
+
+# Proper nouns in docs that are not code.
+doc-valid-idents = ["BlurHash", "BlurHashes", "..",]

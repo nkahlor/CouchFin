@@ -75,7 +75,7 @@ to the `LoginFlow`, which forgets the token and shows the login form with
 ## Consequences
 
 - Images are not loaded here. Cards carry an `ImageRef` (item, kind, tag)
-  and `ImageRef::request(max_width)` builds the request for the image cache.
+  and `ImageRef::request(size)` builds the request for the image cache.
 - A `LibraryFlow` needs an api `Session`. `LoginFlow::session()` returns it
   while the screen is Home (the token stays out of `LoginScreen`), so the app
   builds the library flow from it.

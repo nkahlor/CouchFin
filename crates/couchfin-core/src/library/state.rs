@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use couchfin_api::{ApiError, ImageKind, ImageRequest, ImageTag, ItemId};
 
+use crate::images::{ImageSize, Pixels};
+
 /// What the navigation stack holds, bottom to top. The first screen is always
 /// [`ScreenState::Home`].
 ///
@@ -103,10 +105,12 @@ pub struct ImageRef {
 }
 
 impl ImageRef {
-    /// The request that fetches this image, scaled to at most `max_width`.
+    /// The request that fetches this image as a box of `size` to fill.
     #[must_use]
-    pub fn request(&self, max_width: u32) -> ImageRequest {
-        ImageRequest::new(self.item.clone(), self.kind, max_width).with_tag(self.tag.clone())
+    pub fn request(&self, size: ImageSize) -> ImageRequest {
+        ImageRequest::new(self.item.clone(), self.kind, size.width)
+            .with_fill_height(size.height)
+            .with_tag(self.tag.clone())
     }
 }
 
@@ -130,8 +134,12 @@ pub struct Card {
     pub subtitle: Option<String>,
     /// How far through it the user is, 0 to 1; only when started.
     pub progress: Option<f32>,
-    /// The picture, if it has one.
+    /// The picture, if it has one. A card with none shows its title instead;
+    /// a card whose picture is still loading shows [`placeholder`](Self::placeholder).
     pub image: Option<ImageRef>,
+    /// A tiny blurred version of the picture, from the server's BlurHash,
+    /// ready to show scaled up the moment the card appears.
+    pub placeholder: Option<Pixels>,
 }
 
 /// Which row it is; also what identifies a row across reloads.

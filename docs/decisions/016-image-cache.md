@@ -29,7 +29,7 @@ the cache hands out plain pixels.
 
 ### Keys and files
 
-The key is `{item}_{kind}_{max_width}_{tag|none}`. A changed image has a new
+The key is `{item}_{kind}_{width}x{height}_{tag|none}` (height 0 for a plain `maxWidth` request). A changed image has a new
 tag, so it is a new key; old files age out through eviction, with no
 invalidation logic. The server is not in the key: item IDs are GUIDs.
 
@@ -63,7 +63,7 @@ Each key has one file in one flat directory, written atomically
   memory.
   (If the first caller fails, each waiter retries by itself. That includes a
   404, which costs one cheap request per waiter.)
-- **In-flight limit:** a semaphore (default 6) around the HTTP request only.
+- **In-flight limit:** a semaphore (default 12, see the #49 update) around the HTTP request only.
 - **Cancellation:** the work is not spawned detached, so dropping the `load`
   future drops the request and releases the key for the next caller. A
   blocking task already running finishes (milliseconds) and is discarded.
@@ -120,3 +120,55 @@ do report truncation.
 - Nothing partial is cached, so the next request retries. Causes are logged
   at debug level under the target `couchfin::images`
   (`RUST_LOG=couchfin::images=debug`).
+
+## Update, 2026-10-17: near-instant posters (#49)
+
+Posters were slow and some never appeared. jellyfin-web feels instant on the
+same server because of how it asks, so Couchfin now does the same.
+
+- **Stable sizes.** `ImageSize::of(shape, scale)`: a fixed logical box per
+  shape (poster 280x420, thumb and library tile 448x252, backdrop 1280x720)
+  times the display scale snapped up to 1.0, 1.5 or 2.0. It is requested as
+  `fillWidth`/`fillHeight` with `quality=96` (decision 006). The old size
+  followed the live card width rounded to 32 px: many distinct URLs, each a
+  slow server-side resize. Grid and Home posters share one size, so a poster
+  seen on Home is already cached when its grid opens. The cache key changed
+  (`{w}x{h}`), so old `.orig` files age out through eviction.
+- **A fill box can exceed one dimension** (cover), so the "wider than
+  requested" check from #50 applies only to plain `maxWidth` requests. The
+  completeness check applies to all.
+- **Every visible row loads.** Home requests the focused row's cards
+  nearest-first, then every other row that starts on screen (computed from the
+  window height and the row heights), plus one row below the fold and the row
+  above. Per row it keeps the visible cards plus a margin. The grid already
+  loaded visible plus a margin.
+- **BlurHash placeholders.** Core decodes the hash (`blurhash` crate, MIT, no
+  default features) to 24x36 (poster) or 32x18 (thumb) RGBA when it builds the
+  `Card`, which happens on the async runtime, never the UI thread. The card
+  shows it scaled up from the first frame; the real picture fades in over it
+  in `Theme.image-fade-duration` (150 ms). `ImageState` is `loading` (the
+  placeholder shows), `ready` or `missing`. A card whose item has no
+  picture, or whose load answers `NoImage`, is `missing`, so the card can show
+  its title; a failed load stays `loading`.
+- **Dev builds optimise dependencies** (`[profile.dev.package."*"]
+  opt-level = 2`), so `cargo run` decodes at near release speed (it was about
+  20x slower). Cost: dependencies compile slower once, and again only when
+  `Cargo.lock` or the profile changes; our own crates stay at opt-level 0.
+- **HTTP/2** is on (reqwest `http2`). It is negotiated by ALPN over HTTPS
+  only, so a plain `http://` server on the LAN stays HTTP/1.1, where each
+  in-flight request uses its own connection.
+  reqwest does not add ALPN to a TLS config it is handed (ours, for the
+  platform verifier), so `couchfin-api` sets `h2` and `http/1.1` itself;
+  `tests/tls_http2.rs` checks a server is offered `h2` first.
+- **In-flight limit 12 (was 6).** The first screen is 12 to 16 pictures.
+  Six at a time made that two or three round trips; twelve is one, and the
+  waiting semaphore is FIFO, so the focused row still goes first. On HTTP/1.1
+  twelve connections to a LAN server is modest, and HTTP/2 multiplexes them
+  over one.
+- **Time budget** (`couchfin-ui/tests/image_budget.rs`): wiremock with 100 ms
+  latency per picture, 12 cards in the 2 rows a 1080p window shows. Before:
+  first screen complete after about 520 ms (6 in flight, unoptimised
+  decoding). After: about 260 ms; placeholders in the cards after under 5 ms.
+  Budget: pictures within 350 ms (one 100 ms round trip, decoding and
+  connection set-up, with slack for a busy CI machine) and placeholders
+  within 50 ms.

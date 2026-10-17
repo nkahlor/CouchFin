@@ -53,6 +53,7 @@
 
 mod api;
 mod auth_header;
+mod blur_hash;
 mod builder;
 mod client;
 mod dto;
@@ -71,6 +72,7 @@ mod server_url;
 
 pub use api::{JellyfinApi, Session};
 pub use auth_header::{CLIENT_NAME, CLIENT_VERSION, DEVICE_NAME};
+pub use blur_hash::{BlurHash, ImageBlurHashes, InvalidBlurHash};
 pub use builder::{BuildError, JellyfinClientBuilder};
 pub use client::JellyfinClient;
 pub use dto::{AuthenticationResult, PublicSystemInfo, ServerCheck, User};

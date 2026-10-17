@@ -1,5 +1,5 @@
 import { Theme } from "../theme.slint";
-import { CardShape } from "../browse-state.slint";
+import { CardShape, ImageState } from "../browse-state.slint";
 
 // A card with its title underneath: a 2:3 poster or a 16:9 thumbnail (which
 // can also carry a progress bar and a subtitle). It takes no focus itself:
@@ -18,8 +18,12 @@ export component Card inherits Rectangle {
     in property <float> progress;
     // The picture's height at rest; the width follows from the shape.
     in property <length> image-height;
-    // The picture; empty for the placeholder look.
+    // The picture; empty until it has loaded.
     in property <image> image;
+    // The blurred stand-in for it, shown from the start and faded out under
+    // the picture.
+    in property <image> placeholder;
+    in property <ImageState> image-state: ImageState.loading;
     // The card the row or grid last focused, whether or not it has focus.
     in property <bool> current;
     // Current in a focused row: larger, ringed and glowing.
@@ -69,11 +73,21 @@ export component Card inherits Rectangle {
             border-radius: Theme.radius;
             clip: true;
 
+            blurred := Image {
+                width: 100%;
+                height: 100%;
+                source: root.placeholder;
+                image-fit: fill;
+                accessible-role: none;
+            }
+
             Image {
                 width: 100%;
                 height: 100%;
                 source: root.image;
                 image-fit: cover;
+                opacity: root.image.width > 0 ? 1 : 0;
+                animate opacity { duration: Theme.image-fade-duration; }
                 accessible-role: none;
             }
 

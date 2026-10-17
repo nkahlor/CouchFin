@@ -13,11 +13,11 @@ use super::pixels::{Pixels, decode, into_pixels};
 pub(super) struct Job {
     disk: Arc<Disk>,
     original: String,
-    max_width: u32,
+    max_width: Option<u32>,
 }
 
 impl Job {
-    pub(super) fn new(disk: Arc<Disk>, key: &Key, max_width: u32) -> Self {
+    pub(super) fn new(disk: Arc<Disk>, key: &Key, max_width: Option<u32>) -> Self {
         Self {
             disk,
             original: key.original_file(),

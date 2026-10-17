@@ -504,6 +504,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "blurhash"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e79769241dcd44edf79a732545e8b5cec84c247ac060f5252cd51885d093a8fc"
+
+[[package]]
 name = "borsh"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -845,6 +851,7 @@ dependencies = [
 name = "couchfin-core"
 version = "0.1.0"
 dependencies = [
+ "blurhash",
  "couchfin-api",
  "directories",
  "futures-util",
@@ -880,13 +887,16 @@ name = "couchfin-ui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "couchfin-api",
  "couchfin-core",
  "i-slint-backend-testing",
  "image",
  "slint",
  "slint-build",
+ "tempfile",
  "tokio",
  "tracing",
+ "wiremock",
 ]
 
 [[package]]
@@ -4114,6 +4124,7 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "futures-core",
+ "h2",
  "http",
  "http-body",
  "http-body-util",
