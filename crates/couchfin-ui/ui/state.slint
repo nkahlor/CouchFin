@@ -1,3 +1,6 @@
+import { RowData } from "browse-state.slint";
+import { Placeholders } from "placeholder.slint";
+
 // The data each screen renders and the requests it sends back. The binding
 // in src/bind.rs sets these from couchfin-core's LoginScreen and turns the
 // callbacks into core's actions; the screens hold no logic beyond focus and
@@ -14,8 +17,14 @@ export enum Screen {
     address,
     // Sign in to the server that the address check found.
     login,
-    // Signed in.
+    // Signed in: rows of cards.
     home,
+    // A library's grid of posters.
+    library,
+    // A movie's detail page.
+    movie,
+    // A series' detail page.
+    series,
 }
 
 // The startup screens: connecting, and why connecting failed.
@@ -71,8 +80,7 @@ export global LoginView {
     callback back();
 }
 
-// The home screen: the server, who is signed in, a row of placeholder
-// title cards and Sign out.
+// The home screen: the server, who is signed in, rows of cards and Sign out.
 export global HomeView {
     // The server's name, from /System/Info/Public.
     in property <string> server-name;
@@ -83,9 +91,13 @@ export global HomeView {
     // A quiet note under the details, such as a sign-in that couldn't be
     // saved; empty shows none.
     in property <string> notice;
-    // Enter on a placeholder card, with its place in the row (0 is the
-    // first). There is nothing to open until Phase 3.
-    callback card-activated(index: int);
+    // The rows, top to bottom. A row with no cards is not shown, and Up and
+    // Down step over it. Placeholders until couchfin-core supplies them.
+    // In-out because each row's `current` is written as the user moves.
+    in-out property <[RowData]> rows: Placeholders.home-rows;
+    // Enter on a card, with its row and its place in the row (0 is the
+    // first of each). There is nothing to open until Stage B of #18.
+    callback card-activated(row: int, index: int);
     // The Sign out button.
     callback sign-out();
     // Back (Escape or Backspace).

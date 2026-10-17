@@ -1,0 +1,72 @@
+import { CardShape, RowData } from "browse-state.slint";
+
+// Rows to show until couchfin-core supplies the library (Stage B of #18).
+// The first row keeps the "Title 1" to "Title 10" cards of Phase 2, so the
+// app's end-to-end tests still find them.
+export global Placeholders {
+    out property <[RowData]> home-rows: [
+        {
+            title: "Continue Watching",
+            shape: CardShape.thumb,
+            cards: [
+                { title: "Title 1", subtitle: "S2 · E4", progress: 0.2 },
+                { title: "Title 2", subtitle: "S1 · E1", progress: 0.5 },
+                { title: "Title 3", subtitle: "Movie", progress: 0.8 },
+                { title: "Title 4", subtitle: "S3 · E9", progress: 0.35 },
+                { title: "Title 5", subtitle: "S1 · E7", progress: 0.65 },
+                { title: "Title 6", subtitle: "Movie", progress: 0.1 },
+                { title: "Title 7", subtitle: "S4 · E2", progress: 0.9 },
+                { title: "Title 8", subtitle: "S2 · E10", progress: 0.45 },
+                { title: "Title 9", subtitle: "Movie", progress: 0.7 },
+                { title: "Title 10", subtitle: "S5 · E3", progress: 0.3 },
+            ],
+        },
+        {
+            title: "Next Up",
+            shape: CardShape.thumb,
+            cards: [
+                { title: "Episode 1", subtitle: "S1 · E2" },
+                { title: "Episode 2", subtitle: "S2 · E5" },
+                { title: "Episode 3", subtitle: "S3 · E1" },
+                { title: "Episode 4", subtitle: "S1 · E8" },
+                { title: "Episode 5", subtitle: "S4 · E6" },
+                { title: "Episode 6", subtitle: "S2 · E2" },
+            ],
+        },
+        {
+            title: "Recently Added in Movies",
+            shape: CardShape.poster,
+            cards: [
+                { title: "Movie 1" },
+                { title: "Movie 2" },
+                { title: "Movie 3" },
+                { title: "Movie 4" },
+                { title: "Movie 5" },
+                { title: "Movie 6" },
+                { title: "Movie 7" },
+                { title: "Movie 8" },
+            ],
+        },
+        {
+            title: "Recently Added in Shows",
+            shape: CardShape.poster,
+            cards: [
+                { title: "Show 1" },
+                { title: "Show 2" },
+                { title: "Show 3" },
+                { title: "Show 4" },
+                { title: "Show 5" },
+                { title: "Show 6" },
+            ],
+        },
+        {
+            title: "Libraries",
+            shape: CardShape.thumb,
+            cards: [
+                { title: "Movies" },
+                { title: "Shows" },
+                { title: "Home Videos" },
+            ],
+        },
+    ];
+}

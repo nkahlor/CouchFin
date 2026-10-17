@@ -1,22 +1,29 @@
 import { Theme } from "../theme.slint";
+import { CardShape } from "../browse-state.slint";
 
-// A poster-shaped title card with its title underneath. It takes no focus
-// itself: the row it sits in holds focus and says which card is current and
-// which it has passed, so moving along a row is one property change, and the
-// row remembers its place while focus is elsewhere.
+// A card with its title underneath: a 2:3 poster or a 16:9 thumbnail (which
+// can also carry a progress bar and a subtitle). It takes no focus itself:
+// the row or grid it sits in holds focus and says which card is current and
+// which it has passed, so moving is one property change, and the row
+// remembers its place while focus is elsewhere.
 //
-// The card's own size is its slot in the row. The active card's poster grows
-// past the slot, about its centre, so neighbours never move.
+// The card's own size is its slot. The active card's picture grows past the
+// slot, about its centre, so neighbours never move.
 export component Card inherits Rectangle {
     in property <string> title;
-    // The poster's height at rest; the width follows at 2:3.
-    in property <length> poster-height;
-    // The poster, and a blurred copy shown once the row has passed the card.
-    // Both empty for placeholders; couchfin-core's image cache makes them in
-    // Phase 3 (Slint can't blur content itself).
+    // A thumbnail's second line, such as "S2 · E4"; empty shows none.
+    in property <string> subtitle;
+    in property <CardShape> shape: CardShape.poster;
+    // Resume progress from 0 to 1; 0 or less shows no bar.
+    in property <float> progress;
+    // The picture's height at rest; the width follows from the shape.
+    in property <length> image-height;
+    // The picture, and a blurred copy shown once the row has passed the
+    // card. Both empty for the placeholder look; couchfin-core's image cache
+    // makes them (Slint can't blur content itself).
     in property <image> image;
     in property <image> blurred-image;
-    // The row's current card, whether or not the row has focus.
+    // The card the row or grid last focused, whether or not it has focus.
     in property <bool> current;
     // Current in a focused row: larger, ringed and glowing.
     in property <bool> highlighted;
@@ -29,18 +36,19 @@ export component Card inherits Rectangle {
     // Enter while highlighted, a click, or a screen reader's default action.
     callback activated();
 
-    property <length> poster-width: root.poster-height * Theme.poster-aspect;
+    property <length> image-width: root.image-height * (root.shape == CardShape.poster ? Theme.poster-aspect : Theme.thumb-aspect);
     property <float> grow: root.highlighted ? Theme.card-active-scale : 1;
     animate grow {
         duration: Theme.focus-duration;
         easing: ease-out;
     }
 
-    width: self.poster-width;
-    height: root.poster-height + Theme.card-title-gap + Theme.card-title-height;
+    width: self.image-width;
+    height: root.image-height + Theme.card-title-gap + Theme.card-title-height + (root.shape == CardShape.thumb ? Theme.card-subtitle-height : 0);
 
     accessible-role: list-item;
     accessible-label: root.title;
+    accessible-description: root.subtitle;
     accessible-item-index: root.index;
     accessible-item-count: root.count;
     accessible-item-selectable: true;
@@ -50,10 +58,10 @@ export component Card inherits Rectangle {
     }
 
     poster := Rectangle {
-        width: root.poster-width * root.grow;
-        height: root.poster-height * root.grow;
-        x: (root.poster-width - self.width) / 2;
-        y: (root.poster-height - self.height) / 2;
+        width: root.image-width * root.grow;
+        height: root.image-height * root.grow;
+        x: (root.image-width - self.width) / 2;
+        y: (root.image-height - self.height) / 2;
         background: Theme.surface;
         border-radius: Theme.radius;
         drop-shadow-color: root.highlighted ? Theme.card-glow : Theme.card-glow.with-alpha(0);
@@ -87,9 +95,20 @@ export component Card inherits Rectangle {
                 opacity: root.passed ? 1 : 0;
                 animate opacity { duration: Theme.focus-duration; }
             }
+
+            if root.progress > 0: progress-bar := Rectangle {
+                y: parent.height - Theme.progress-height;
+                height: Theme.progress-height;
+                background: Theme.progress-track;
+
+                progress-fill := Rectangle {
+                    width: parent.width * clamp(root.progress, 0, 1);
+                    background: Theme.focus;
+                }
+            }
         }
 
-        // Over the poster, so an image never covers it.
+        // Over the picture, so an image never covers it.
         ring := Rectangle {
             border-radius: Theme.radius;
             border-width: Theme.card-active-ring;
@@ -111,6 +130,19 @@ export component Card inherits Rectangle {
         vertical-alignment: center;
         overflow: elide;
         // The card itself carries the title.
+        accessible-role: none;
+    }
+
+    if root.shape == CardShape.thumb: Text {
+        y: title.y + Theme.card-title-height;
+        height: Theme.card-subtitle-height;
+        text: root.subtitle;
+        color: root.passed ? Theme.passed-title : Theme.muted;
+        font-size: Theme.label-size;
+        font-weight: Theme.regular-weight;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
         accessible-role: none;
     }
 

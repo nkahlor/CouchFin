@@ -18,7 +18,8 @@ pub const SCREENS: [(f32, f32); 2] = [(1920.0, 1080.0), (1280.0, 720.0)];
 
 pub struct Home {
     pub window: MainWindow,
-    pub activated: Calls<i32>,
+    /// Each card activated, as (row, index).
+    pub activated: Calls<(i32, i32)>,
     pub sign_outs: Calls<()>,
 }
 
@@ -32,7 +33,7 @@ pub fn home_at(width: f32, height: f32) -> Home {
     view.set_username("alice".into());
     let activated = Calls::new();
     let recorder = activated.clone();
-    view.on_card_activated(move |index| recorder.record(index));
+    view.on_card_activated(move |row, index| recorder.record((row, index)));
     let sign_outs = Calls::new();
     let recorder = sign_outs.clone();
     view.on_sign_out(move || recorder.record(()));
@@ -52,20 +53,48 @@ pub fn settle() {
     mock_elapsed_time(SETTLE);
 }
 
-/// The cards at least partly on screen, left to right. The testing backend
+/// The first row's title: the one the Phase 2 tests walk along.
+pub const FIRST_ROW: &str = "Continue Watching";
+
+/// Every card at least partly on screen, in any row. The testing backend
 /// only finds elements on screen.
-pub fn cards(window: &MainWindow) -> Vec<ElementHandle> {
-    let mut cards = ElementQuery::from_root(window)
+pub fn all_cards(window: &MainWindow) -> Vec<ElementHandle> {
+    ElementQuery::from_root(window)
         .match_accessible_role(AccessibleRole::ListItem)
-        .find_all();
+        .find_all()
+}
+
+/// A row's list element, found by its title.
+pub fn row(window: &MainWindow, title: &str) -> Option<ElementHandle> {
+    ElementQuery::from_root(window)
+        .match_accessible_role(AccessibleRole::List)
+        .find_all()
+        .into_iter()
+        .find(|row| row.accessible_label().as_deref() == Some(title))
+}
+
+/// The cards of one row at least partly on screen, left to right.
+pub fn row_cards(window: &MainWindow, title: &str) -> Vec<ElementHandle> {
+    let mut cards = row(window, title)
+        .map(|row| {
+            row.query_descendants()
+                .match_accessible_role(AccessibleRole::ListItem)
+                .find_all()
+        })
+        .unwrap_or_default();
     cards.sort_by(|a, b| a.absolute_position().x.total_cmp(&b.absolute_position().x));
     cards
 }
 
-/// The row's current card, once the row has settled.
+/// The first row's cards on screen, left to right.
+pub fn cards(window: &MainWindow) -> Vec<ElementHandle> {
+    row_cards(window, FIRST_ROW)
+}
+
+/// The page's current card (in the row last focused), once it has settled.
 pub fn current_card(window: &MainWindow) -> Option<ElementHandle> {
     settle();
-    let mut on: Vec<_> = cards(window)
+    let mut on: Vec<_> = all_cards(window)
         .into_iter()
         .filter(|card| card.accessible_item_selected() == Some(true))
         .collect();

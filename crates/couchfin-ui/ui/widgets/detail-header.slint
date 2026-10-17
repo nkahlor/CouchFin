@@ -1,0 +1,76 @@
+import { Theme } from "../theme.slint";
+
+// The backdrop behind a detail page: the picture, or the placeholder
+// surface while it is empty, under a scrim so text reads on any image.
+export component Backdrop inherits Rectangle {
+    in property <image> source;
+
+    background: Theme.surface;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.source;
+        image-fit: cover;
+        accessible-role: none;
+    }
+
+    Rectangle {
+        background: Theme.backdrop-scrim;
+    }
+}
+
+// A detail page's title, its year, runtime and rating on one line, and its
+// overview. Shared by the movie and series pages.
+export component DetailHeader inherits VerticalLayout {
+    in property <string> title;
+    in property <string> year;
+    in property <string> runtime;
+    in property <string> rating;
+    in property <string> overview;
+    in property <length> overview-height: Theme.overview-height;
+
+    spacing: Theme.status-spacing;
+
+    Text {
+        text: root.title;
+        color: Theme.text;
+        font-size: Theme.title-size;
+        font-weight: Theme.strong-weight;
+        overflow: elide;
+    }
+
+    HorizontalLayout {
+        spacing: Theme.meta-spacing;
+        alignment: start;
+
+        Text {
+            text: root.year;
+            color: Theme.muted;
+            font-size: Theme.body-size;
+        }
+
+        Text {
+            text: root.runtime;
+            color: Theme.muted;
+            font-size: Theme.body-size;
+        }
+
+        Text {
+            text: root.rating;
+            color: Theme.muted;
+            font-size: Theme.body-size;
+        }
+    }
+
+    Text {
+        text: root.overview;
+        color: Theme.text;
+        font-size: Theme.label-size;
+        wrap: word-wrap;
+        overflow: elide;
+        max-width: Theme.detail-width;
+        height: root.overview-height;
+        vertical-alignment: top;
+    }
+}

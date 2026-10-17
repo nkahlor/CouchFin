@@ -158,6 +158,6 @@ pub fn bind(window: &MainWindow, on_command: impl Fn(Command) + 'static) {
     home.on_sign_out(login(|| LoginAction::LogOut));
     // The cards are placeholders with nothing to open until Phase 3, so a
     // selection is only logged.
-    home.on_card_activated(|index| tracing::info!(index, "selected a placeholder card"));
+    home.on_card_activated(|row, index| tracing::info!(row, index, "selected a placeholder card"));
     home.on_back(back);
 }

@@ -1,0 +1,9 @@
+// Scrolling a list to keep its focused row in view.
+export global Scroll {
+    // The viewport offset (zero or negative, as a Flickable's content-y)
+    // that shows the row at `top` with the given height in a window `visible`
+    // tall, moving as little as possible from `offset`.
+    public pure function reveal(offset: length, top: length, size: length, visible: length) -> length {
+        -offset > top ? -top : (-offset + visible < top + size ? visible - top - size : offset)
+    }
+}

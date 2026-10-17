@@ -1,6 +1,8 @@
 # 011: Controller intents and Home's row of cards
 
-Status: accepted · 2026-10-16
+Status: accepted · 2026-10-16. Home became a stack of these rows in
+[decision 015](015-browse-screens.md): the carousel is now `CarouselRow`, Down
+moves to the next row, and Sign out is reached by Down from the bottom row.
 
 ## Context
 

@@ -4,6 +4,7 @@
 
 #![allow(dead_code)] // Each test binary uses a different subset.
 
+pub mod browse;
 pub mod flow;
 pub mod home;
 

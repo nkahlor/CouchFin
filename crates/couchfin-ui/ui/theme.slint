@@ -82,6 +82,45 @@ export global Theme {
     out property <duration> focus-duration: 120ms;
     out property <duration> scroll-duration: 150ms;
 
+    // Thumbnails (Continue Watching, Next Up, library tiles): 16:9, shorter
+    // than a poster in the same row block, as a fraction of the poster height.
+    out property <float> thumb-aspect: 16 / 9;
+    out property <float> thumb-height-ratio: 0.6;
+    // A thumbnail's second line under its title, such as "S2 · E4".
+    out property <length> card-subtitle-height: 36px;
+    // Resume progress along the bottom of a thumbnail.
+    out property <length> progress-height: 8px;
+    out property <color> progress-track: #00000099;
+
+    // Home's rows: the title above each row, and the fixed height from the
+    // top of the rows' viewport at which the focused row always sits.
+    out property <length> row-title-height: 48px;
+    out property <length> row-title-gap: 4px;
+    out property <length> row-gap: 12px;
+    out property <length> home-row-anchor: 8px;
+    // Floor for the poster height on a small screen, where the focused row
+    // must still fit between the header and Sign out.
+    out property <length> home-poster-min-height: 160px;
+
+    // Library grid: the poster height of a cell, and the room around it
+    // (title, focus growth, gaps) that makes up a grid row.
+    out property <length> grid-poster-height: 300px;
+    out property <length> grid-row-gap: 16px;
+
+    // Detail pages: the backdrop is dimmed so text stays readable on any
+    // image, and the overview keeps to a few lines.
+    out property <color> backdrop-scrim: #101418d0;
+    out property <length> overview-height: 150px;
+    // The series page keeps its overview short to leave room for episodes.
+    out property <length> series-overview-height: 84px;
+    out property <length> detail-width: 1400px;
+    out property <length> meta-spacing: 32px;
+    // Series: season chips and episode rows.
+    out property <length> chip-padding: 32px;
+    out property <length> episode-height: 88px;
+    out property <length> episode-number-width: 96px;
+    out property <length> episode-runtime-width: 200px;
+
     // Wide enough for a long https:// address at body size.
     out property <length> form-width: 1200px;
     // Space kept free beside a form on a narrow window, both sides together.

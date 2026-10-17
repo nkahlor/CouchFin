@@ -7,8 +7,9 @@ mod common;
 
 use std::time::Duration;
 
+use common::browse::{library_calls, movie, series};
 use common::flow::{bound, enter_address, failed, home, log_in, restoring};
-use common::{all_elements, press, type_text};
+use common::{Calls, all_elements, press, type_text};
 use couchfin_core::{ApiError, LoginScreen, Request, RestoreStatus};
 use couchfin_ui::{Intent, MainWindow, navigate};
 use i_slint_backend_testing::mock_elapsed_time;
@@ -92,8 +93,14 @@ fn looks(window: &MainWindow) -> Vec<String> {
 /// Typing "x" at the end shows where focus and the text cursor ended up; a
 /// final Activate shows what is focused.
 fn assert_same(name: &str, screen: &LoginScreen, steps: &[Intent]) {
-    let (by_intent, intent_commands) = bound(screen);
-    let (by_key, key_commands) = bound(screen);
+    assert_same_by(name, &|| bound(screen), steps);
+}
+
+/// [`assert_same`] for any screen, made by `make` with its calls recorded as
+/// text.
+fn assert_same_by(name: &str, make: &dyn Fn() -> (MainWindow, Calls<String>), steps: &[Intent]) {
+    let (by_intent, intent_commands) = make();
+    let (by_key, key_commands) = make();
     let seen = |window: &MainWindow, commands: &common::Calls<String>, label: &str| {
         let mut seen = vec![format!("{label}: {:?}", commands.taken())];
         seen.extend(looks(window));
@@ -125,6 +132,62 @@ fn every_intent_does_what_its_key_does_on_every_screen() {
         for first in INTENTS {
             for second in INTENTS {
                 assert_same(name, &screen, &[first, second]);
+            }
+        }
+    }
+}
+
+/// The browsing screens that aren't a `LoginScreen`: the library grid and
+/// the detail pages, each at the start and part-way along.
+type Make = Box<dyn Fn() -> (MainWindow, Calls<String>)>;
+
+fn browse_screens() -> Vec<(&'static str, Make)> {
+    vec![
+        ("library grid", Box::new(|| library_calls(2000))),
+        ("library grid, empty", Box::new(|| library_calls(0))),
+        ("movie", Box::new(movie)),
+        ("series", Box::new(|| series(12))),
+        ("series without episodes", Box::new(|| series(0))),
+    ]
+}
+
+#[test]
+fn every_intent_does_what_its_key_does_on_the_browsing_screens() {
+    for (name, make) in browse_screens() {
+        for first in INTENTS {
+            for second in INTENTS {
+                assert_same_by(name, &*make, &[first, second]);
+            }
+        }
+    }
+}
+
+#[test]
+fn every_intent_does_what_its_key_does_deep_in_the_browsing_screens() {
+    use Intent::{Down, Right};
+    for (name, make) in browse_screens() {
+        for moved in [vec![Down, Right, Down], vec![Down; 11]] {
+            for first in INTENTS {
+                for second in INTENTS {
+                    let mut steps = moved.clone();
+                    steps.extend([first, second]);
+                    assert_same_by(name, &*make, &steps);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn every_intent_does_what_its_key_along_home_down_its_rows() {
+    // Each row in turn, then Sign out and past it, with a move along each.
+    for downs in [1, 4, 5] {
+        for first in INTENTS {
+            for second in INTENTS {
+                let mut steps = vec![Intent::Right, Intent::Right];
+                steps.extend(vec![Intent::Down; downs]);
+                steps.extend([first, second]);
+                assert_same(&format!("home after {downs} downs"), &home(None), &steps);
             }
         }
     }
@@ -189,7 +252,10 @@ fn up_and_down_move_between_controls() {
         commands_after(&log_in(Request::Idle), &[Down, Down, Down, Up, Activate]),
         ["SubmitLogin(alice, )"]
     );
-    assert_eq!(commands_after(&home(None), &[Down, Activate]), ["LogOut"]);
+    assert_eq!(
+        commands_after(&home(None), &[Down, Down, Down, Down, Down, Activate]),
+        ["LogOut"]
+    );
 }
 
 #[test]
