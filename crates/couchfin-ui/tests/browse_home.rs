@@ -96,6 +96,46 @@ fn the_rows_come_from_core_in_order_with_their_cards() {
 }
 
 #[test]
+fn cards_carry_the_line_the_details_strip_shows() {
+    let shell = Shell::new();
+    shell.show(World::new(40).state());
+    // A movie: year and runtime, formatted here, not in core.
+    assert_eq!(cards_of(&shell, 0)[0].meta, "2000 · 1 h 40 min");
+    // A library tile: just what it is.
+    assert_eq!(cards_of(&shell, 2)[0].meta, "Library");
+}
+
+#[test]
+fn a_card_without_a_picture_says_so_and_one_still_loading_does_not() {
+    let shell = Shell::new();
+    let mut state = World::new(40).state();
+    let ScreenState::Home(home) = &mut state.screens[0] else {
+        panic!("Home is first");
+    };
+    home.rows[1].cards[2].image = None;
+    let first = home.rows[1].cards[0]
+        .image
+        .as_ref()
+        .expect("a picture")
+        .item
+        .to_string();
+    shell.show(state);
+    let cards = cards_of(&shell, 1);
+    assert!(cards[2].image_missing, "no image ref: nothing will come");
+    assert!(
+        !cards[0].image_missing,
+        "a picture still loading is not missing"
+    );
+
+    // The server answers that it has none: the title moves inside.
+    shell.loader.finish(&first, ImageLoad::NoImage);
+    shell.feed.pump();
+    let cards = cards_of(&shell, 1);
+    assert!(cards[0].image_missing, "NoImage means missing");
+    assert!(!cards[1].image_missing);
+}
+
+#[test]
 fn the_screen_is_left_alone_until_the_library_is_shown() {
     let shell = Shell::new();
     shell.window.set_screen(Screen::Login);

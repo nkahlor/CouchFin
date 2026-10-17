@@ -132,6 +132,10 @@ pub struct Card {
     pub progress: Option<f32>,
     /// The picture, if it has one.
     pub image: Option<ImageRef>,
+    /// The production year, for the details line; none for a library tile.
+    pub year: Option<u32>,
+    /// How long it runs, for the details line; none for a library tile.
+    pub runtime: Option<Duration>,
 }
 
 /// Which row it is; also what identifies a row across reloads.

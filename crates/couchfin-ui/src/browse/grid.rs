@@ -126,6 +126,7 @@ impl Model for GridModel {
                 .get(&place)
                 .cloned()
                 .unwrap_or_default(),
+            ..CardData::default()
         })
     }
 

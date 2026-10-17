@@ -6,6 +6,7 @@ use std::rc::Rc;
 use couchfin_core::{Card, CardShape as CoreShape, HomeState};
 use slint::{Image, Model, ModelRc, VecModel};
 
+use super::format;
 use super::geometry::Geometry;
 use super::loader::{Slot, Wish, row_key};
 use crate::generated::{CardData, CardShape, RowData};
@@ -45,6 +46,10 @@ fn card_data(card: &Card, keep: Option<&CardData>) -> CardData {
         subtitle: card.subtitle.clone().unwrap_or_default().into(),
         progress: card.progress.unwrap_or(0.0),
         image: keep.map(|kept| kept.image.clone()).unwrap_or_default(),
+        // No image to ask for is missing at once; a server that has none
+        // says so later (set_missing), and that survives a refresh.
+        image_missing: card.image.is_none() || keep.is_some_and(|kept| kept.image_missing),
+        meta: format::card_meta(card).into(),
     }
 }
 
@@ -171,6 +176,18 @@ impl HomeModels {
             return;
         };
         data.image = image.unwrap_or_default();
+        slot.cards.set_row_data(index, data);
+    }
+
+    /// The server has no picture for this card: it shows its title instead.
+    pub(crate) fn set_missing(&self, key: &str, index: usize) {
+        let Some(slot) = self.slots.iter().find(|slot| slot.key == key) else {
+            return;
+        };
+        let Some(mut data) = slot.cards.row_data(index) else {
+            return;
+        };
+        data.image_missing = true;
         slot.cards.set_row_data(index, data);
     }
 

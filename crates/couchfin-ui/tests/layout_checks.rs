@@ -124,6 +124,43 @@ fn problems(window: &Window) -> Vec<String> {
         }
     }
 
+    // A button, a poster or a row's list may not lie over any text but
+    // their own (Sign out once covered the row below the focused one, and the
+    // focused poster a row's title).
+    let buttons = ElementQuery::from_root(window)
+        .match_accessible_role(AccessibleRole::Button)
+        .find_all();
+    for button in &buttons {
+        for (name, r) in &texts {
+            let own = rect(button);
+            let inside = r.inside(own);
+            if own.overlaps(*r) && !inside {
+                found.push(format!(
+                    "button {} lies over text {name} {}",
+                    own.describe(),
+                    r.describe()
+                ));
+            }
+        }
+    }
+    for poster in ElementQuery::from_root(window)
+        .match_id("Card::poster")
+        .find_all()
+    {
+        for (name, r) in texts
+            .iter()
+            .filter(|(n, _)| n.contains("CarouselRow::heading"))
+        {
+            if rect(&poster).overlaps(*r) {
+                found.push(format!(
+                    "card {} covers row title {name} {}",
+                    rect(&poster).describe(),
+                    r.describe()
+                ));
+            }
+        }
+    }
+
     // Cards peek in from the edges on purpose, so their texts may cross the
     // window's edge (a long title is caught by the spill check above).
     for (name, r) in &texts {
@@ -175,7 +212,6 @@ fn home(mode: Pictures, size: (f32, f32)) -> Window {
 }
 
 #[test]
-#[ignore = "fixed by #51: long titles are not elided and overlap their neighbours"]
 fn home_rows_and_focus_have_no_layout_problems() {
     let mut found = Vec::new();
     for size in SCREENS {
@@ -195,6 +231,36 @@ fn home_rows_and_focus_have_no_layout_problems() {
             settle();
             found.extend(check(scene, size, &window));
         }
+    }
+    fail_on(&found);
+}
+
+#[test]
+fn home_with_missing_pictures_has_no_layout_problems() {
+    let mut found = Vec::new();
+    for size in SCREENS {
+        let window = home(Pictures::SomeMissing, size);
+        found.extend(check("home missing pictures", size, &window));
+        for _ in 0..2 {
+            press(&window, Key::DownArrow);
+        }
+        settle();
+        found.extend(check("home missing pictures row 3", size, &window));
+    }
+    fail_on(&found);
+}
+
+#[test]
+fn home_notices_have_no_layout_problems() {
+    let mut found = Vec::new();
+    for size in SCREENS {
+        let window = home(Pictures::Varied, size);
+        let view = window.global::<HomeView>();
+        view.set_notice("Signed in, but the sign-in couldn't be saved on this device.".into());
+        view.set_error("Couldn't load Recently Added in Anime. The server had a problem.".into());
+        view.set_username("a_rather_long_username_indeed".into());
+        settle();
+        found.extend(check("home with notices", size, &window));
     }
     fail_on(&found);
 }
