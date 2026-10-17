@@ -274,9 +274,14 @@ impl Browser {
         if !self.loads.finish(slot, ticket) {
             return;
         }
-        // No picture keeps the placeholder.
-        if let ImageLoad::Ready(pixels) = loaded {
-            self.put(window, slot, Some(to_image(pixels)));
+        match loaded {
+            ImageLoad::Ready(pixels) => self.put(window, slot, Some(to_image(pixels))),
+            // The placeholder gives way to the title inside the card.
+            ImageLoad::NoImage => {
+                if let Slot::Card(key, index) = slot {
+                    self.home.set_missing(key, *index);
+                }
+            }
         }
     }
 

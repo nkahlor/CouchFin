@@ -29,7 +29,8 @@ const TITLES: [&str; 12] = [
 pub enum Pictures {
     /// Every picture arrives in its slot's shape, bar a few oddly shaped.
     Varied,
-    /// Some pictures never come (the server has none).
+    /// Some pictures never come (the server has none): those cards show
+    /// their title inside.
     SomeMissing,
     /// No picture has loaded yet: every card shows the placeholder.
     NoneLoaded,
@@ -43,13 +44,14 @@ fn seed(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(0)
 }
 
+/// Whether card `n` has no picture to show, for good. The long titles at
+/// 6 mod 12 are among them, to see a long title wrapped inside a card.
+fn missing(n: usize, mode: Pictures) -> bool {
+    mode == Pictures::SomeMissing && (n % 3 == 1 || n % 12 == 6)
+}
+
 fn pictures(shape: CardShape, n: usize, mode: Pictures) -> Image {
-    let missing = match mode {
-        Pictures::Varied => false,
-        Pictures::SomeMissing => n % 3 == 1,
-        Pictures::NoneLoaded => true,
-    };
-    if missing {
+    if missing(n, mode) || mode == Pictures::NoneLoaded {
         return Image::default();
     }
     let s = seed(n * 5 + 1);
@@ -70,6 +72,8 @@ fn card(shape: CardShape, n: usize, mode: Pictures) -> CardData {
     CardData {
         title: title(n).into(),
         image: pictures(shape, n, mode),
+        image_missing: missing(n, mode),
+        meta: format!("{} · {} min", 1990 + n * 3, 82 + n * 7).into(),
         ..CardData::default()
     }
 }
@@ -102,6 +106,7 @@ fn continue_watching(mode: Pictures) -> RowData {
     let cards = (0..8)
         .map(|n| CardData {
             subtitle: subtitles[n % subtitles.len()].into(),
+            meta: subtitles[n % subtitles.len()].into(),
             #[allow(clippy::cast_precision_loss)]
             progress: 0.08 + (n as f32 * 0.37) % 0.85,
             ..card(CardShape::Thumb, n, mode)
@@ -114,6 +119,7 @@ fn next_up(mode: Pictures) -> RowData {
     let cards = (0..6)
         .map(|n| CardData {
             subtitle: format!("S{} · E{}", n % 3 + 1, n * 2 + 1).into(),
+            meta: format!("S{} · E{}", n % 3 + 1, n * 2 + 1).into(),
             ..card(CardShape::Thumb, n + 3, mode)
         })
         .collect();
@@ -132,6 +138,7 @@ fn libraries(mode: Pictures) -> RowData {
         .enumerate()
         .map(|(n, name)| CardData {
             title: (*name).into(),
+            meta: "Library".into(),
             ..card(CardShape::Thumb, n + 1, mode)
         })
         .collect();

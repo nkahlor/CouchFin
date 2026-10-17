@@ -94,6 +94,8 @@ pub(super) fn card(item: &Item, shape: CardShape, with_progress: bool) -> Option
         },
         progress: if with_progress { progress(item) } else { None },
         image: image(item, shape),
+        year: item.production_year,
+        runtime: item.runtime,
     })
 }
 
@@ -112,6 +114,8 @@ pub(super) fn library_card(library: &Library) -> Card {
             kind: ImageKind::Primary,
             tag: tag.clone(),
         }),
+        year: None,
+        runtime: None,
     }
 }
 

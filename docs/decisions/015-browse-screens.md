@@ -32,7 +32,10 @@ This records how the views are built, so Stage B knows what to feed them.
   focus to the Sign out button, and Up from it returns to the bottom row, on
   the card it left. Left and Right on it do nothing. Rows then Sign out is a
   single column, so the D-pad needs no second rule, and nothing in the rows
-  changes. Sign out stays at the bottom of the screen where it was.
+  changes. Sign out is part of the page: the last item in the scrolling
+  strip, right after the last row, so it never floats over content (#54). It
+  was chosen over a compact header because a header button would sit above
+  the rows it is reached after.
   (Alternatives: Sign out in the header, reached by Up from the first row,
   would have made a held Up on a long Home end on a destructive button; a
   hidden menu button has no keyboard equivalent.)
@@ -48,9 +51,21 @@ This records how the views are built, so Stage B knows what to feed them.
   row it is given and Up and Down move one row at a time. (Stage A stepped
   over up to two empty ones; that guard is gone.) Enter on a row with no
   card does nothing.
-- **Sizes.** The poster height is what the viewport leaves after a poster
-  row's fixed parts (title, room for the grown card, title line, gap),
-  between `Theme.home-poster-min-height` and `poster-max-height`. A
+- **Vertical layout (#51, #53, #54).** Top to bottom: a one-line header
+  (server, version, who is signed in), the details strip, the clipped rows
+  viewport, then one full-width line each for the row error and the notice.
+  Cards carry no title; the strip (`DetailsStrip`) shows the focused card's
+  title and one line (`CardData.meta`: "2016 · 1 h 56 min", "S2 · E4",
+  "Library"), formatted in the UI from plain `Card.year`/`runtime` in core.
+  A card whose picture will never come (`image-missing`: no image ref, or
+  the server answered `NoImage`) draws its title inside, centred, at most
+  three lines, elided; a picture still loading draws plain. Row titles sit
+  above the cards at the carousel inset, outside the clipped card area.
+  Elements with a size but no x/y are centred by Slint, so these set `y`.
+- **Sizes.** The poster height shares the viewport among
+  `Theme.home-rows-fit` poster rows (2.5; 3 from `home-tall-screen`), less
+  a row's fixed parts, between `Theme.home-poster-min-height` and
+  `poster-max-height`. About 2.5 rows show at 720p and 3 at 1080p. A
   thumbnail is `Theme.thumb-height-ratio` of that high, so both shapes fit
   the same screen, and the whole focused row fits at 1280x720.
 
