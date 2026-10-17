@@ -33,7 +33,9 @@ anyhow = "1"
 # docs/decisions/007-session-persistence.md.
 directories = "6"
 # Joining the home rows' requests; no executor, so core stays runtime-free.
-futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+futures-util = { version = "0.3", default-features = false, features = [
+  "alloc",
+] }
 # The keyring ecosystem's core API, with its pure-Rust (zbus) Secret Service
 # store below, rather than the `keyring` wrapper crate: see decision 007.
 # Decoding and blurring posters (decision 016): only the formats Jellyfin
