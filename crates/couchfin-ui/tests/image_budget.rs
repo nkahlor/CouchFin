@@ -36,6 +36,11 @@ const LATENCY: Duration = Duration::from_millis(100);
 /// they need no network.
 const PLACEHOLDERS_BY: Duration = Duration::from_millis(50);
 const PICTURES_BY: Duration = Duration::from_millis(350);
+/// The same on CI's shared two-core runners, where the 12 parallel requests
+/// and decodes compete for CPU: it measured 560 ms there against 260 ms on a
+/// desktop, and the old code needs about 520 ms on the desktop (so over 1 s
+/// on CI), which this still catches.
+const PICTURES_BY_ON_CI: Duration = Duration::from_millis(850);
 const ROWS: usize = 6;
 
 struct AbortOnDrop(JoinHandle<()>);
@@ -219,8 +224,13 @@ fn the_first_screenful_of_home_fills_within_the_budget() {
     );
 
     let filled_at = filled_at.expect("every card on screen gets its picture");
+    let budget = if std::env::var_os("CI").is_some() {
+        PICTURES_BY_ON_CI
+    } else {
+        PICTURES_BY
+    };
     assert!(
-        filled_at <= PICTURES_BY,
-        "pictures took {filled_at:?}, budget {PICTURES_BY:?}"
+        filled_at <= budget,
+        "pictures took {filled_at:?}, budget {budget:?}"
     );
 }
