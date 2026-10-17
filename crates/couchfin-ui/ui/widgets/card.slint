@@ -18,11 +18,8 @@ export component Card inherits Rectangle {
     in property <float> progress;
     // The picture's height at rest; the width follows from the shape.
     in property <length> image-height;
-    // The picture, and a blurred copy shown once the row has passed the
-    // card. Both empty for the placeholder look; couchfin-core's image cache
-    // makes them (Slint can't blur content itself).
+    // The picture; empty for the placeholder look.
     in property <image> image;
-    in property <image> blurred-image;
     // The card the row or grid last focused, whether or not it has focus.
     in property <bool> current;
     // Current in a focused row: larger, ringed and glowing.
@@ -77,16 +74,6 @@ export component Card inherits Rectangle {
                 height: 100%;
                 source: root.image;
                 image-fit: cover;
-                accessible-role: none;
-            }
-
-            Image {
-                width: 100%;
-                height: 100%;
-                source: root.blurred-image;
-                image-fit: cover;
-                opacity: root.passed ? 1 : 0;
-                animate opacity { duration: Theme.focus-duration; }
                 accessible-role: none;
             }
 

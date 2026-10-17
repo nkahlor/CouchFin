@@ -1,5 +1,5 @@
 //! Loading item images: fetched once, decoded off the UI thread, kept on
-//! disk and in memory, with a blurred variant for the Home carousel.
+//! disk and in memory,.
 //!
 //! The design is recorded in `docs/decisions/016-image-cache.md`.
 
@@ -14,7 +14,7 @@ mod key;
 mod memory;
 mod pixels;
 
-pub use cache::{ImageCache, ImageLoad, Variant};
+pub use cache::{ImageCache, ImageLoad};
 pub use cache_dir::CacheDir;
 pub use config::ImageCacheConfig;
 pub use error::ImageError;

@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 
-use couchfin_core::{Card, CardShape as CoreShape, HomeState, Variant};
+use couchfin_core::{Card, CardShape as CoreShape, HomeState};
 use slint::{Image, Model, ModelRc, VecModel};
 
 use super::geometry::Geometry;
@@ -45,9 +45,6 @@ fn card_data(card: &Card, keep: Option<&CardData>) -> CardData {
         subtitle: card.subtitle.clone().unwrap_or_default().into(),
         progress: card.progress.unwrap_or(0.0),
         image: keep.map(|kept| kept.image.clone()).unwrap_or_default(),
-        blurred_image: keep
-            .map(|kept| kept.blurred_image.clone())
-            .unwrap_or_default(),
     }
 }
 
@@ -166,31 +163,19 @@ impl HomeModels {
     }
 
     /// Shows `image` on a card, or clears it.
-    pub(crate) fn set_image(
-        &self,
-        key: &str,
-        index: usize,
-        variant: Variant,
-        image: Option<Image>,
-    ) {
+    pub(crate) fn set_image(&self, key: &str, index: usize, image: Option<Image>) {
         let Some(slot) = self.slots.iter().find(|slot| slot.key == key) else {
             return;
         };
         let Some(mut data) = slot.cards.row_data(index) else {
             return;
         };
-        let image = image.unwrap_or_default();
-        match variant {
-            Variant::Sharp => data.image = image,
-            Variant::Blurred => data.blurred_image = image,
-        }
+        data.image = image.unwrap_or_default();
         slot.cards.set_row_data(index, data);
     }
 
     /// The pictures worth fetching, most important first: the focused row's
-    /// cards from the current one outward, then the nearby rows. Cards the
-    /// row has passed want the blurred copy too, and the current one, which
-    /// is the next to be passed.
+    /// cards from the current one outward, then the nearby rows.
     pub(crate) fn wanted(
         &self,
         home: &HomeState,
@@ -218,20 +203,7 @@ impl HomeModels {
                 let Some(image) = row.cards[place].image.clone() else {
                     continue;
                 };
-                let mut want = |variant| {
-                    wanted.push((
-                        Slot::Card(key.clone(), place, variant),
-                        Wish {
-                            image: image.clone(),
-                            width,
-                            variant,
-                        },
-                    ));
-                };
-                want(Variant::Sharp);
-                if place <= current && place + CARDS_BEHIND >= current {
-                    want(Variant::Blurred);
-                }
+                wanted.push((Slot::Card(key.clone(), place), Wish { image, width }));
             }
         }
         wanted

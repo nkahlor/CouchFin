@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use common::library::{Shell, World, picture};
 use common::press;
-use couchfin_core::{ApiError, LibraryAction, ScreenState, Variant};
+use couchfin_core::{ApiError, LibraryAction, ScreenState};
 use couchfin_ui::{LibraryView, Screen};
 use slint::platform::Key;
 use slint::{ComponentHandle, Model};
@@ -121,13 +121,8 @@ fn pictures_load_for_the_visible_places_and_a_margin_nearest_first() {
         "24 visible, 12 more"
     );
     let started = shell.loader.started();
-    let widths: BTreeSet<u32> = started.iter().map(|(_, _, width, _)| *width).collect();
+    let widths: BTreeSet<u32> = started.iter().map(|(_, width, _)| *width).collect();
     assert_eq!(widths.len(), 1, "one size for the grid: {widths:?}");
-    assert!(
-        started
-            .iter()
-            .all(|(_, variant, ..)| *variant == Variant::Sharp)
-    );
 }
 
 #[test]
@@ -135,9 +130,7 @@ fn scrolling_far_cancels_loads_and_lets_go_of_pictures_left_behind() {
     let (shell, world) = grid();
     let view = shell.window.global::<LibraryView>();
     view.invoke_items_needed(0, 24);
-    shell
-        .loader
-        .finish(&id(&world, 0), Variant::Sharp, picture());
+    shell.loader.finish(&id(&world, 0), picture());
     shell.feed.pump();
     assert_eq!(
         view.get_items()
@@ -166,11 +159,7 @@ fn scrolling_far_cancels_loads_and_lets_go_of_pictures_left_behind() {
         "nothing near the start is wanted any more"
     );
     assert!(
-        shell
-            .loader
-            .cancelled()
-            .iter()
-            .any(|(item, _)| *item == first_id),
+        shell.loader.cancelled().contains(&first_id),
         "an unfinished load far behind was cancelled"
     );
     assert_eq!(
@@ -192,9 +181,7 @@ fn a_picture_arrives_on_the_right_card_and_a_nearby_one_stays() {
     let (shell, world) = grid();
     let view = shell.window.global::<LibraryView>();
     view.invoke_items_needed(0, 24);
-    shell
-        .loader
-        .finish(&id(&world, 3), Variant::Sharp, picture());
+    shell.loader.finish(&id(&world, 3), picture());
     shell.feed.pump();
     let items = view.get_items();
     assert_eq!(items.row_data(3).expect("item").image.size().width, 2);
@@ -228,19 +215,17 @@ fn leaving_the_grid_drops_its_loads_and_a_second_visit_starts_afresh() {
     let (shell, world) = grid();
     let view = shell.window.global::<LibraryView>();
     view.invoke_items_needed(0, 24);
-    shell
-        .loader
-        .finish(&id(&world, 0), Variant::Sharp, picture());
+    shell.loader.finish(&id(&world, 0), picture());
     shell.feed.pump();
 
     // A place Home's rows don't show.
     let far = id(&world, 30);
-    assert!(shell.loader.pending().iter().any(|(item, _)| *item == far));
+    assert!(shell.loader.pending().contains(&far));
     world.send(LibraryAction::Back);
     shell.update(world.state());
     assert_eq!(shell.window.get_screen(), Screen::Home);
     assert!(
-        shell.loader.pending().iter().all(|(item, _)| *item != far),
+        !shell.loader.pending().contains(&far),
         "no grid load stays wanted"
     );
 

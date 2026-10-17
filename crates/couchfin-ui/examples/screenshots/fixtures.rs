@@ -43,17 +43,17 @@ fn seed(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(0)
 }
 
-fn pictures(shape: CardShape, n: usize, mode: Pictures) -> (Image, Image) {
+fn pictures(shape: CardShape, n: usize, mode: Pictures) -> Image {
     let missing = match mode {
         Pictures::Varied => false,
         Pictures::SomeMissing => n % 3 == 1,
         Pictures::NoneLoaded => true,
     };
     if missing {
-        return (Image::default(), Image::default());
+        return Image::default();
     }
     let s = seed(n * 5 + 1);
-    let image = match shape {
+    match shape {
         CardShape::Poster => match n % 7 {
             3 => art::square(s),
             5 => art::banner(s),
@@ -63,16 +63,13 @@ fn pictures(shape: CardShape, n: usize, mode: Pictures) -> (Image, Image) {
             4 => art::poster(s),
             _ => art::thumb(s),
         },
-    };
-    (image, art::blurred(s))
+    }
 }
 
 fn card(shape: CardShape, n: usize, mode: Pictures) -> CardData {
-    let (image, blurred_image) = pictures(shape, n, mode);
     CardData {
         title: title(n).into(),
-        image,
-        blurred_image,
+        image: pictures(shape, n, mode),
         ..CardData::default()
     }
 }

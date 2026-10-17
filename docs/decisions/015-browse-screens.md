@@ -144,8 +144,7 @@ screens and returns a `Feed`; `app` owns the `LibraryFlow` and `ImageCache`
   and let go beyond that (2,000 posters would otherwise hold about a
   gigabyte); on a detail page its backdrop (`ImageKind::Backdrop`, chosen by
   core). Widths are the on-screen size times the scale factor, rounded up to
-  32 px. The current card and the two before it also want the `Blurred`
-  variant, which the card cross-fades to once passed. `NoImage` keeps the
+  32 px. `NoImage` keeps the
   placeholder. Pixels become a `slint::Image` on the UI thread (one copy).
 - **Session.** `app` drops the `LibraryFlow` when `session_expired` is set
   and sends `LoginAction::SessionExpired`; leaving Home does the same

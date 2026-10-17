@@ -19,10 +19,8 @@ export struct CardData {
     // Resume progress from 0 to 1, drawn along a thumbnail's bottom edge.
     // 0 (or less) shows no bar.
     progress: float,
-    // The picture, and a blurred copy that couchfin-core's image cache makes
-    // for cards a row has passed. Both empty draws the placeholder.
+    // The picture; empty draws the placeholder.
     image: image,
-    blurred-image: image,
 }
 
 // One row of cards on Home.

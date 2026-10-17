@@ -252,7 +252,7 @@ pub use generated::SeriesView;
 
 /// One card of a row or the library grid: `title`, a thumbnail's `subtitle`
 /// (such as "S2 · E4"), `progress` from 0 to 1 (0 shows no bar), and the
-/// `image` and `blurred-image`, which are empty for the placeholder look.
+/// `image`, which is empty for the placeholder look.
 pub use generated::CardData;
 
 /// The shape of a card's picture: `Poster` is 2:3 and `Thumb` is 16:9.

@@ -5,7 +5,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use couchfin_core::{ImageLoad, ImageRef, Pixels, RowKind, Variant};
+use couchfin_core::{ImageLoad, ImageRef, Pixels, RowKind};
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
 
 use super::feed::Feed;
@@ -22,7 +22,6 @@ pub trait ImageLoader: Send + Sync {
         &self,
         image: &ImageRef,
         max_width: u32,
-        variant: Variant,
         done: Box<dyn FnOnce(ImageLoad) + Send>,
     ) -> Guard;
 }
@@ -43,7 +42,7 @@ impl Guard {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Slot {
     /// A Home card: its row, its place in the row and which picture.
-    Card(String, usize, Variant),
+    Card(String, usize),
     /// A place in the library grid.
     Grid(usize),
     /// The detail page's backdrop.
@@ -60,7 +59,6 @@ pub(crate) fn row_key(kind: &RowKind) -> String {
 pub(crate) struct Wish {
     pub image: ImageRef,
     pub width: u32,
-    pub variant: Variant,
 }
 
 enum Load {
@@ -124,7 +122,6 @@ impl Loads {
             let guard = self.loader.load(
                 &wish.image,
                 wish.width,
-                wish.variant,
                 Box::new(move |loaded| feed.image(to, ticket, loaded)),
             );
             self.entries.insert(

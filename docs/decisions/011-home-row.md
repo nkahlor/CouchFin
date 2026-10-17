@@ -140,7 +140,7 @@ so the entry point had to be fixed first.
 - Software-renderer snapshots show the size and ring but not the glow. The
   app's femtovg renderer draws all three.
 - Phase 3 replaces the hard-coded `titles` in `screens/home.slint` with
-  rows from the library, and fills `image` and `blurred-image`. Several rows
+  rows from the library, and fills `image`. Several rows
   will need Up and Down between rows, each remembering its own card, with
   the same one-`FocusScope`-per-row pattern.
 
@@ -150,3 +150,11 @@ In Phase 3, Home becomes a vertical stack of these carousel rows: Continue
 Watching, Next Up, Recently Added per library, and Libraries. Up and Down
 move between rows, and each row remembers its own focused card. The carousel
 behaviour above applies to every row.
+
+## Update, 2026-10-16: the blurred variant was dropped
+
+Passed cards stay dimmed (shade and dimmer title) and are not cross-faded to a
+blurred poster; the `blurred-image` slot and the image cache's blurred variant
+are gone (#48). Most of the UI is grids and rows where the blur does nothing,
+and it doubled the decode, disk and memory work for every poster. The
+"Phase 3 brings the blur" bullet above is superseded.
