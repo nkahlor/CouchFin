@@ -131,6 +131,7 @@ dependencies = [
  "couchfin-player",
  "couchfin-ui",
  "i-slint-backend-testing",
+ "image",
  "serde_json",
  "slint",
  "tempfile",

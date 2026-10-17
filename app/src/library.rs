@@ -184,6 +184,8 @@ impl<A: JellyfinApi + Clone + 'static> Library<A> {
 fn dispatch<A: JellyfinApi + 'static>(shared: &Shared<A>, action: LibraryAction) {
     let flow = shared.active().as_ref().map(|a| Arc::clone(&a.flow));
     if let Some(flow) = flow {
-        shared.runtime.spawn(async move { flow.dispatch(action).await });
+        shared
+            .runtime
+            .spawn(async move { flow.dispatch(action).await });
     }
 }

@@ -44,9 +44,10 @@ This records how the views are built, so Stage B knows what to feed them.
   shape's fixed height, not measured, so a resize keeps it. Rows after the
   focused one show below it, so the next row's title and first cards peek
   in on a TV.
-- **Empty rows.** A row with no cards is not created and takes no room;
-  Up and Down step over up to two empty rows in a row. Core is meant to
-  drop empty rows before they get here (014), so this is a guard.
+- **Empty rows.** Core drops empty rows (014), so the page draws every
+  row it is given and Up and Down move one row at a time. (Stage A stepped
+  over up to two empty ones; that guard is gone.) Enter on a row with no
+  card does nothing.
 - **Sizes.** The poster height is what the viewport leaves after a poster
   row's fixed parts (title, room for the grown card, title line, gap),
   between `Theme.home-poster-min-height` and `poster-max-height`. A
@@ -98,13 +99,58 @@ This records how the views are built, so Stage B knows what to feed them.
 
 - `card-activated` now carries the row as well as the index; `bind` logs
   both.
-- Stage B needs from core: the rows to show (empty ones dropped) with each
-  row's remembered `current`; for a library, its name, `item-count` and a
-  model that pages in the places named by `items-needed`; for a movie or
-  series, the header strings, the seasons and the selected season's
-  episodes, and to load a season on `season-selected`.
 - The parity table in `tests/navigate.rs` covers the multi-row Home, the
-  grid and both detail pages: every pair of intents, and moves deep into
-  each, run through `navigate` and through the keys.
-- `Screen` gained `Library`, `Movie` and `Series`. Nothing in `app` shows
-  them yet; Home's cards still only log.
+  grid and both detail pages. Running all 36 intent pairs on every screen
+  and state took about 100 s in a debug build, so each scenario runs six
+  pairs (every intent first once and second once, rotated by a per-scenario
+  salt, so across the table every pair is covered) plus the mid-animation
+  lockstep comparison: about 11 s.
+- `Screen` gained `Library`, `Movie` and `Series`.
+
+## Binding to core (stage B)
+
+`couchfin_ui::install(window, loader, on_command)` binds the browsing
+screens and returns a `Feed`; `app` owns the `LibraryFlow` and `ImageCache`
+(`app/src/library.rs`).
+
+- **State in.** `LibraryFlow::on_change` calls `Feed::state`, which queues
+  the state and wakes the event loop (`invoke_from_event_loop`). States
+  collapse to the latest, so a burst of page loads is one update. `show()`
+  and `reset()` tell the UI when sign-in is on Home, so the screens never
+  fight `render` over the window's `Screen`.
+- **Actions out.** Callbacks become `Command::Library(LibraryAction)`:
+  `OpenCard`, `FocusChanged` (fired for moves along and between rows),
+  `NeedItems` (the visible range plus half a screen each side, once per
+  distinct range), `OpenGridItem`, `SelectSeason`, `Back`. Back on Home is
+  still `bind`'s: it quits, since Home is always the root.
+- **Models.** Home keeps one `VecModel<RowData>` with a `VecModel<CardData>`
+  per row, matched to core's rows by `RowKind`, so rows arriving or a
+  refresh change cells in place. The page's own `current` wins over core's
+  `focused` for rows already there; a new row starts on core's. The focused
+  row and the scroll counts live in `HomeView` and are corrected when rows
+  arrive above the focused one. The grid's `items` is a lazy `Model` that
+  builds a `CardData` from `GridState::item(i)` only when Slint reads it
+  (an empty card while loading). The season the user picked is kept until
+  core confirms it.
+- **Errors.** Typed `error` fields are worded by `wording::browse_error`
+  (exhaustive); Home shows `status` instead of rows while it has none.
+- **Pictures.** An `ImageLoader` (implemented in `app` over `ImageCache`
+  on tokio) starts a load per wanted card and returns a `Guard`; dropping it
+  aborts the load. After every state, focus move or scroll the UI recomputes
+  the wanted set and cancels the rest. Wanted: on Home the focused row,
+  one behind and two ahead, from two cards behind the current one to the
+  last that fits plus two; in the grid the visible places plus half a screen
+  each side, nearest first, with finished pictures kept three margins out
+  and let go beyond that (2,000 posters would otherwise hold about a
+  gigabyte); on a detail page its backdrop (`ImageKind::Backdrop`, chosen by
+  core). Widths are the on-screen size times the scale factor, rounded up to
+  32 px. The current card and the two before it also want the `Blurred`
+  variant, which the card cross-fades to once passed. `NoImage` keeps the
+  placeholder. Pixels become a `slint::Image` on the UI thread (one copy).
+- **Session.** `app` drops the `LibraryFlow` when `session_expired` is set
+  and sends `LoginAction::SessionExpired`; leaving Home does the same
+  without that action.
+- **Checks.** `app/tests/phase3_browse.rs` (wiremock, 2,000 items) asserts
+  the first row's posters within 1 s of launch and an end-to-end scroll with
+  every page requested once; `app/examples/perf_grid.rs` measures frame
+  times on the TV.

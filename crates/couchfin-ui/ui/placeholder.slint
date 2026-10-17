@@ -1,6 +1,7 @@
 import { CardShape, RowData } from "browse-state.slint";
 
-// Rows to show until couchfin-core supplies the library (Stage B of #18).
+// Rows the view tests start from; the app replaces them with core's rows
+// (src/browse) before the screen is shown.
 // The first row keeps the "Title 1" to "Title 10" cards of Phase 2, so the
 // app's end-to-end tests still find them.
 export global Placeholders {

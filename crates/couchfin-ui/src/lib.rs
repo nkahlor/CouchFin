@@ -14,6 +14,10 @@
 //! - [`wording`] is every message the user reads about an error. An error's
 //!   `Display` text is for the log only.
 //!
+//! - [`install`] binds Home, the library grid and the detail pages to a core
+//!   `LibraryState` through a [`Feed`], sends their actions as
+//!   [`Command::Library`], and fills their pictures through an
+//!   [`ImageLoader`] (decision 015).
 //! - [`navigate`] feeds a controller's [`Intent`] (D-pad, A, B) into the
 //!   window as its key, so a controller and the keyboard share one focus
 //!   path. [`Navigator`] wraps it and drops the duplicate key Steam's
@@ -159,9 +163,9 @@ pub use generated::LoginView;
 /// The home screen's data and callbacks.
 ///
 /// Under the header is a vertical stack of carousel rows: Continue Watching
-/// and Next Up (16:9 thumbnails), Recently Added in Movies and in Shows
-/// (2:3 posters) and Libraries (thumbnails), placeholders until Stage B of
-/// #18 fills them from couchfin-core. The first card of the first row has
+/// and Next Up (16:9 thumbnails), Recently Added in each library (2:3
+/// posters) and Libraries (thumbnails), as couchfin-core's `HomeState` has
+/// them ([`install`] binds them). The first card of the first row has
 /// focus on arrival, so an Enter held from signing in can't press Sign out.
 ///
 /// Left and Right step through the focused row and stop at its ends: the
@@ -170,7 +174,8 @@ pub use generated::LoginView;
 /// and Down (Shift+Tab and Tab) move between rows; each row keeps its own
 /// card, and the page scrolls so the focused row always sits at the same
 /// height. Down from the bottom row reaches Sign out and Up returns to the
-/// card you left. A row with no cards is not shown and is stepped over.
+/// card you left. Core never sends an empty row, so every row given is drawn
+/// and focusable.
 ///
 /// - `server-name` (in): the title.
 /// - `server-version` (in): shown as "Jellyfin {version}".
@@ -179,10 +184,19 @@ pub use generated::LoginView;
 ///   empty shows none.
 /// - `rows` (in-out): the [`RowData`] to show, top to bottom. The screen
 ///   writes each row's `current` as the user moves along it.
+/// - `focused-row`, `posters-above`, `thumbs-above` (in-out): which row has
+///   focus and how many rows of each shape are scrolled out above it. Kept
+///   here so Home returns where it was, and set by [`install`] when rows
+///   arrive above the focused one.
+/// - `poster-height` (in-out): the poster height the page laid out, so the
+///   pictures requested are the right size.
+/// - `status` (in): shown instead of the rows while there are none (loading,
+///   why it failed, or an empty library).
+/// - `error` (in): a row failed to load; empty shows none.
+/// - `focus-changed(row, index)`: focus moved to this card of this row.
 /// - `card-activated(row, index)`: Enter on a card, with its row and its
 ///   place in the row (0 is the first of each). The page also shows
-///   "Selected: {title}". [`bind`] only logs it, since there is no detail
-///   page yet.
+///   "Selected: {title}", feedback while the page it opens loads.
 /// - `sign-out()`: the Sign out button.
 /// - `back()`: Escape or Backspace.
 pub use generated::HomeView;

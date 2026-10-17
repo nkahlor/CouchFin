@@ -38,7 +38,7 @@ so the entry point had to be fixed first.
 - **Repeat stays with the caller.** `navigate` presses and releases at
   once. Holding the D-pad repeats by calling it again, as couchfin-gamepad
   does on its own thread (decision 010).
-- **Parity is a test.** `tests/navigate.rs` runs every pair of intents,
+- **Parity is a test.** `tests/navigate.rs` runs a covering set of intent pairs (decision 015),
   then Enter and some typing, on every screen and state (starting,
   restoring, failed restore, address idle, checking and failed, login idle
   and busy, Home), once through `navigate` and once through the keys, and
