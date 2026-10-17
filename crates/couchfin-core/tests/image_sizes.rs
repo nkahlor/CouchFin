@@ -86,8 +86,8 @@ async fn home_cards_carry_a_placeholder_when_the_server_sent_a_hash() {
 }
 
 #[test]
-fn twelve_downloads_run_at_once_by_default() {
-    assert_eq!(ImageCacheConfig::default().max_in_flight, 12);
+fn eight_downloads_run_at_once_by_default() {
+    assert_eq!(ImageCacheConfig::default().max_in_flight, 8);
 }
 
 #[tokio::test]
@@ -110,5 +110,5 @@ async fn no_more_than_the_limit_run_at_once_and_the_rest_wait_in_order() {
         assert!(matches!(task.await.unwrap(), Ok(ImageLoad::Ready(_))));
     }
 
-    assert_eq!(api.peak_in_flight(), 12);
+    assert_eq!(api.peak_in_flight(), 8);
 }

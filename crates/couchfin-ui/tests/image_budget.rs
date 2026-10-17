@@ -28,19 +28,17 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 
 /// What a home network round trip costs.
 const LATENCY: Duration = Duration::from_millis(100);
-/// Every picture on screen has arrived this long after Home appears: one
-/// round trip for the first wave of requests, a second for the few that
-/// don't fit in the connection limit, and the decoding, with a little
-/// slack for a busy CI machine.
 /// The blurred placeholders are in the cards this long after Home appears:
 /// they need no network.
 const PLACEHOLDERS_BY: Duration = Duration::from_millis(50);
-const PICTURES_BY: Duration = Duration::from_millis(350);
-/// The same on CI's shared two-core runners, where the 12 parallel requests
-/// and decodes compete for CPU: it measured 560 ms there against 260 ms on a
-/// desktop, and the old code needs about 520 ms on the desktop (so over 1 s
-/// on CI), which this still catches.
-const PICTURES_BY_ON_CI: Duration = Duration::from_millis(850);
+/// Every picture on screen has arrived this long after Home appears: two
+/// waves of requests (8 in flight, 12 cards), each a 100 ms round trip, and
+/// the decoding. The old code needed about 520 ms.
+const PICTURES_BY: Duration = Duration::from_millis(450);
+/// The same on CI's shared two-core runners, where requests and decodes
+/// compete for CPU (560 ms measured there with 12 in flight, against 260 ms
+/// on a desktop).
+const PICTURES_BY_ON_CI: Duration = Duration::from_millis(1000);
 const ROWS: usize = 6;
 
 struct AbortOnDrop(JoinHandle<()>);

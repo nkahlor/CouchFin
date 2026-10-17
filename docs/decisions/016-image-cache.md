@@ -160,15 +160,20 @@ same server because of how it asks, so Couchfin now does the same.
   reqwest does not add ALPN to a TLS config it is handed (ours, for the
   platform verifier), so `couchfin-api` sets `h2` and `http/1.1` itself;
   `tests/tls_http2.rs` checks a server is offered `h2` first.
-- **In-flight limit 12 (was 6).** The first screen is 12 to 16 pictures.
-  Six at a time made that two or three round trips; twelve is one, and the
-  waiting semaphore is FIFO, so the focused row still goes first. On HTTP/1.1
-  twelve connections to a LAN server is modest, and HTTP/2 multiplexes them
-  over one.
+- **In-flight limit 8 (was 6).** The first screen is 12 to 16 pictures: two
+  short waves instead of three. On HTTP/1.1 every request in flight is a
+  connection, and the semaphore is FIFO, so the focused row still goes first.
+  Twelve was tried and measured faster on a desktop (one wave: 260 ms against
+  about 360 ms), but on CI's two-core runners the app's scroll test
+  (`phase3_browse`: a held D-pad over 2,000 items while posters load)
+  stalled in about half the runs, because twelve parallel requests and
+  decodes starve paging of CPU. A bigger limit would need priorities between
+  page requests and pictures; until then 8 is the safe step up. Over HTTP/2
+  the limit is streams on one connection.
 - **Time budget** (`couchfin-ui/tests/image_budget.rs`): wiremock with 100 ms
   latency per picture, 12 cards in the 2 rows a 1080p window shows. Before:
   first screen complete after about 520 ms (6 in flight, unoptimised
-  decoding). After: about 260 ms; placeholders in the cards after under 5 ms.
-  Budget: pictures within 350 ms (one 100 ms round trip, decoding and
+  decoding). After (limit 8): about 340 ms; placeholders in the cards after under 5 ms.
+  Budget: pictures within 450 ms locally and 1 s on CI (two 100 ms waves, decoding and
   connection set-up, with slack for a busy CI machine) and placeholders
   within 50 ms.
