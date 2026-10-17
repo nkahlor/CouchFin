@@ -18,7 +18,7 @@
 //! - The library calls ([`JellyfinApi::libraries`], [`JellyfinApi::items`],
 //!   [`JellyfinApi::resume`], [`JellyfinApi::image`] and the rest) return one
 //!   [`Item`] type, [`Library`] views and [`Page`]s, and need a [`Session`]
-//!   and the [`UserId`] from login.
+//!   (they act for the user the token belongs to).
 //!
 //! The design is recorded in `docs/decisions/006-api-client-design.md`.
 //!

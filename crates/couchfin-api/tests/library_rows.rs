@@ -3,8 +3,8 @@
 
 mod common;
 
-use common::library::{self, LIBRARY_ID, SEASON_ID, SERIES_ID, id, query_result, user};
-use common::{TOKEN, USER_ID, authorization, client, session};
+use common::library::{self, LIBRARY_ID, SEASON_ID, SERIES_ID, id, query_result};
+use common::{TOKEN, authorization, client, session};
 use couchfin_api::{ApiError, ItemKind, JellyfinApi};
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param, query_param_is_missing};
@@ -15,7 +15,7 @@ async fn resume_asks_for_the_users_unfinished_video() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/UserItems/Resume"))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(query_param("limit", "12"))
         .and(query_param("mediaTypes", "Video"))
         .and(authorization(Some(TOKEN)))
@@ -28,10 +28,7 @@ async fn resume_asks_for_the_users_unfinished_video() {
         .mount(&server)
         .await;
 
-    let items = client()
-        .resume(&session(&server, TOKEN), &user(), 12)
-        .await
-        .unwrap();
+    let items = client().resume(&session(&server, TOKEN), 12).await.unwrap();
 
     assert_eq!(items.len(), 2);
     assert_eq!(items[0].kind, ItemKind::Movie);
@@ -43,7 +40,7 @@ async fn next_up_asks_for_the_next_episode_of_each_series() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/Shows/NextUp"))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(query_param("limit", "20"))
         .and(authorization(Some(TOKEN)))
         .respond_with(ResponseTemplate::new(200).set_body_json(query_result(
@@ -56,7 +53,7 @@ async fn next_up_asks_for_the_next_episode_of_each_series() {
         .await;
 
     let items = client()
-        .next_up(&session(&server, TOKEN), &user(), 20)
+        .next_up(&session(&server, TOKEN), 20)
         .await
         .unwrap();
 
@@ -69,7 +66,7 @@ async fn latest_reads_a_bare_array_for_one_library() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/Items/Latest"))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(query_param("parentId", LIBRARY_ID))
         .and(query_param("limit", "16"))
         .and(authorization(Some(TOKEN)))
@@ -83,7 +80,7 @@ async fn latest_reads_a_bare_array_for_one_library() {
         .await;
 
     let items = client()
-        .latest(&session(&server, TOKEN), &user(), &id(LIBRARY_ID), 16)
+        .latest(&session(&server, TOKEN), &id(LIBRARY_ID), 16)
         .await
         .unwrap();
 
@@ -96,7 +93,7 @@ async fn seasons_lists_a_seriess_seasons() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(format!("/Shows/{SERIES_ID}/Seasons")))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(authorization(Some(TOKEN)))
         .respond_with(ResponseTemplate::new(200).set_body_json(query_result(
             &[library::season_json()],
@@ -108,7 +105,7 @@ async fn seasons_lists_a_seriess_seasons() {
         .await;
 
     let seasons = client()
-        .seasons(&session(&server, TOKEN), &user(), &id(SERIES_ID))
+        .seasons(&session(&server, TOKEN), &id(SERIES_ID))
         .await
         .unwrap();
 
@@ -122,7 +119,7 @@ async fn episodes_asks_for_one_season_with_overviews() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(format!("/Shows/{SERIES_ID}/Episodes")))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(query_param("seasonId", SEASON_ID))
         .and(query_param("fields", "Overview"))
         .and(query_param_is_missing("season"))
@@ -137,12 +134,7 @@ async fn episodes_asks_for_one_season_with_overviews() {
         .await;
 
     let episodes = client()
-        .episodes(
-            &session(&server, TOKEN),
-            &user(),
-            &id(SERIES_ID),
-            &id(SEASON_ID),
-        )
+        .episodes(&session(&server, TOKEN), &id(SERIES_ID), &id(SEASON_ID))
         .await
         .unwrap();
 
@@ -163,10 +155,8 @@ async fn an_unknown_series_is_item_not_found() {
     let api = client();
     let session = session(&server, TOKEN);
 
-    let seasons = api.seasons(&session, &user(), &id(SERIES_ID)).await;
-    let episodes = api
-        .episodes(&session, &user(), &id(SERIES_ID), &id(SEASON_ID))
-        .await;
+    let seasons = api.seasons(&session, &id(SERIES_ID)).await;
+    let episodes = api.episodes(&session, &id(SERIES_ID), &id(SEASON_ID)).await;
 
     assert_eq!(seasons.unwrap_err(), ApiError::ItemNotFound);
     assert_eq!(episodes.unwrap_err(), ApiError::ItemNotFound);
@@ -181,17 +171,14 @@ async fn every_row_maps_401_to_token_rejected() {
         .await;
     let api = client();
     let session = session(&server, TOKEN);
-    let user = user();
     let parent = id(LIBRARY_ID);
 
     let errors = [
-        api.resume(&session, &user, 1).await.unwrap_err(),
-        api.next_up(&session, &user, 1).await.unwrap_err(),
-        api.latest(&session, &user, &parent, 1).await.unwrap_err(),
-        api.seasons(&session, &user, &parent).await.unwrap_err(),
-        api.episodes(&session, &user, &parent, &parent)
-            .await
-            .unwrap_err(),
+        api.resume(&session, 1).await.unwrap_err(),
+        api.next_up(&session, 1).await.unwrap_err(),
+        api.latest(&session, &parent, 1).await.unwrap_err(),
+        api.seasons(&session, &parent).await.unwrap_err(),
+        api.episodes(&session, &parent, &parent).await.unwrap_err(),
     ];
 
     assert!(
@@ -209,7 +196,7 @@ async fn a_server_error_is_a_status_error() {
         .await;
 
     let error = client()
-        .resume(&session(&server, TOKEN), &user(), 5)
+        .resume(&session(&server, TOKEN), 5)
         .await
         .unwrap_err();
 

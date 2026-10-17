@@ -5,32 +5,28 @@ use std::time::Duration;
 use reqwest::header::AUTHORIZATION;
 use reqwest::{RequestBuilder, Response, Url};
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 
 use crate::api::{JellyfinApi, Session};
 use crate::auth_header::authorization;
 use crate::builder::{BuildError, JellyfinClientBuilder};
 use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
-use crate::http::{check_item_status, check_status, read_image, read_json};
-use crate::ids::{DeviceId, ItemId, UserId};
+use crate::http::{check_status, read_json};
+use crate::ids::{DeviceId, ItemId};
 use crate::image::{Image, ImageRequest};
 use crate::item::Item;
 use crate::library::{Library, Page};
-use crate::library_query::{self as params, Params};
 use crate::query::ItemsQuery;
 use crate::redirect::{self, MAX_REDIRECTS};
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
 
+mod images;
+mod library;
+
 const PUBLIC_INFO: &str = "System/Info/Public";
 const AUTHENTICATE: &str = "Users/AuthenticateByName";
 const ME: &str = "Users/Me";
-const VIEWS: &str = "UserViews";
-const ITEMS: &str = "Items";
-const RESUME: &str = "UserItems/Resume";
-const NEXT_UP: &str = "Shows/NextUp";
-const LATEST: &str = "Items/Latest";
 
 /// The Jellyfin HTTP client.
 ///
@@ -147,44 +143,6 @@ impl JellyfinClient {
         }
     }
 
-    /// A logged-in GET of a library endpoint. `item_scoped` says a 404 means
-    /// the item doesn't exist (see [`check_item_status`]).
-    async fn get_library(
-        &self,
-        session: &Session,
-        endpoint: &str,
-        params: &Params,
-        item_scoped: bool,
-    ) -> Result<Response, ApiError> {
-        let mut url = session.server().endpoint(endpoint);
-        if !params.is_empty() {
-            url.query_pairs_mut()
-                .extend_pairs(params.iter().map(|(k, v)| (*k, v.as_str())));
-        }
-        let response = self
-            .send_once(self.http.get(url), endpoint, Some(session.token()))
-            .await?;
-        if item_scoped {
-            check_item_status(&response)?;
-        } else {
-            check_status(&response, ApiError::TokenRejected)?;
-        }
-        Ok(response)
-    }
-
-    async fn get_json<T: DeserializeOwned>(
-        &self,
-        session: &Session,
-        endpoint: &str,
-        params: &Params,
-        item_scoped: bool,
-    ) -> Result<T, ApiError> {
-        let response = self
-            .get_library(session, endpoint, params, item_scoped)
-            .await?;
-        read_json(response).await
-    }
-
     /// Follows redirects from `url` (GET, no token) to the final reply.
     async fn get_following(&self, mut url: Url) -> Result<Response, ApiError> {
         for _ in 0..=MAX_REDIRECTS {
@@ -244,98 +202,49 @@ impl JellyfinApi for JellyfinClient {
         read_json(response).await
     }
 
-    async fn libraries(&self, session: &Session, user: &UserId) -> Result<Vec<Library>, ApiError> {
-        let page: Page<Library> = self
-            .get_json(session, VIEWS, &params::libraries(user), false)
-            .await?;
-        Ok(page.items)
+    async fn libraries(&self, session: &Session) -> Result<Vec<Library>, ApiError> {
+        self.list_libraries(session).await
     }
 
-    async fn items(
-        &self,
-        session: &Session,
-        user: &UserId,
-        query: &ItemsQuery,
-    ) -> Result<Page<Item>, ApiError> {
-        self.get_json(session, ITEMS, &params::items(user, query), false)
-            .await
+    async fn items(&self, session: &Session, query: &ItemsQuery) -> Result<Page<Item>, ApiError> {
+        self.list_items(session, query).await
     }
 
-    async fn item(&self, session: &Session, user: &UserId, id: &ItemId) -> Result<Item, ApiError> {
-        let endpoint = format!("{ITEMS}/{id}");
-        self.get_json(session, &endpoint, &params::item(user), true)
-            .await
+    async fn item(&self, session: &Session, id: &ItemId) -> Result<Item, ApiError> {
+        self.fetch_item(session, id).await
     }
 
-    async fn resume(
-        &self,
-        session: &Session,
-        user: &UserId,
-        limit: u32,
-    ) -> Result<Vec<Item>, ApiError> {
-        let page: Page<Item> = self
-            .get_json(session, RESUME, &params::resume(user, limit), false)
-            .await?;
-        Ok(page.items)
+    async fn resume(&self, session: &Session, limit: u32) -> Result<Vec<Item>, ApiError> {
+        self.list_resume(session, limit).await
     }
 
-    async fn next_up(
-        &self,
-        session: &Session,
-        user: &UserId,
-        limit: u32,
-    ) -> Result<Vec<Item>, ApiError> {
-        let page: Page<Item> = self
-            .get_json(session, NEXT_UP, &params::next_up(user, limit), false)
-            .await?;
-        Ok(page.items)
+    async fn next_up(&self, session: &Session, limit: u32) -> Result<Vec<Item>, ApiError> {
+        self.list_next_up(session, limit).await
     }
 
     async fn latest(
         &self,
         session: &Session,
-        user: &UserId,
         parent: &ItemId,
         limit: u32,
     ) -> Result<Vec<Item>, ApiError> {
-        // The one list that is a bare array, not an object with `Items`.
-        self.get_json(session, LATEST, &params::latest(user, parent, limit), false)
-            .await
+        self.list_latest(session, parent, limit).await
     }
 
-    async fn seasons(
-        &self,
-        session: &Session,
-        user: &UserId,
-        series: &ItemId,
-    ) -> Result<Vec<Item>, ApiError> {
-        let endpoint = format!("Shows/{series}/Seasons");
-        let page: Page<Item> = self
-            .get_json(session, &endpoint, &params::seasons(user), true)
-            .await?;
-        Ok(page.items)
+    async fn seasons(&self, session: &Session, series: &ItemId) -> Result<Vec<Item>, ApiError> {
+        self.list_seasons(session, series).await
     }
 
     async fn episodes(
         &self,
         session: &Session,
-        user: &UserId,
         series: &ItemId,
         season: &ItemId,
     ) -> Result<Vec<Item>, ApiError> {
-        let endpoint = format!("Shows/{series}/Episodes");
-        let page: Page<Item> = self
-            .get_json(session, &endpoint, &params::episodes(user, season), true)
-            .await?;
-        Ok(page.items)
+        self.list_episodes(session, series, season).await
     }
 
     async fn image(&self, session: &Session, request: &ImageRequest) -> Result<Image, ApiError> {
-        let endpoint = format!("Items/{}/Images/{}", request.item, request.kind.as_str());
-        let mut query = vec![("maxWidth", request.max_width.to_string())];
-        if let Some(tag) = &request.tag {
-            query.push(("tag", tag.as_str().to_owned()));
-        }
-        read_image(self.get_library(session, &endpoint, &query, true).await?).await
+        self.fetch_image(session, request).await
     }
 }

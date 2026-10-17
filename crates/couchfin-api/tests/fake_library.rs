@@ -6,7 +6,7 @@ use std::time::Duration;
 use couchfin_api::fake::FakeJellyfin;
 use couchfin_api::{
     ApiError, ImageKind, ImageRequest, ItemKind, ItemsQuery, JellyfinApi, LibraryKind, Password,
-    ServerUrl, Session, UserId,
+    ServerUrl, Session,
 };
 
 fn url() -> ServerUrl {
@@ -24,20 +24,20 @@ fn fake() -> FakeJellyfin {
         .with_series("Shows", "Severance", 2, 3)
 }
 
-async fn log_in(fake: &FakeJellyfin) -> (Session, UserId) {
+async fn log_in(fake: &FakeJellyfin) -> Session {
     let result = fake
         .authenticate_by_name(&url(), "alice", &Password::new("hunter2"))
         .await
         .expect("alice can log in");
-    (Session::new(url(), result.access_token), result.user.id)
+    Session::new(url(), result.access_token)
 }
 
 #[tokio::test]
 async fn lists_its_libraries_in_the_order_they_were_added() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
 
-    let libraries = fake.libraries(&session, &user).await.unwrap();
+    let libraries = fake.libraries(&session).await.unwrap();
 
     let names: Vec<_> = libraries.iter().map(|l| l.name.as_str()).collect();
     assert_eq!(names, ["Movies", "Shows"]);
@@ -50,11 +50,11 @@ async fn lists_its_libraries_in_the_order_they_were_added() {
 #[tokio::test]
 async fn pages_sorted_by_name_ignoring_case() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movies = fake.library_named("Movies").expect("library exists");
     let query = ItemsQuery::default().in_parent(movies.id).page(1, 5);
 
-    let page = fake.items(&session, &user, &query).await.unwrap();
+    let page = fake.items(&session, &query).await.unwrap();
 
     let names: Vec<_> = page.items.iter().map(|i| i.name.as_str()).collect();
     assert_eq!(names, ["Brazil", "Casablanca"]);
@@ -65,11 +65,11 @@ async fn pages_sorted_by_name_ignoring_case() {
 #[tokio::test]
 async fn a_page_past_the_end_is_empty_but_keeps_the_total() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movies = fake.library_named("Movies").expect("library exists");
     let query = ItemsQuery::default().in_parent(movies.id).page(10, 5);
 
-    let page = fake.items(&session, &user, &query).await.unwrap();
+    let page = fake.items(&session, &query).await.unwrap();
 
     assert_eq!(page.items, []);
     assert_eq!(page.total, 3);
@@ -78,15 +78,15 @@ async fn a_page_past_the_end_is_empty_but_keeps_the_total() {
 #[tokio::test]
 async fn recursive_and_kind_filters_work_like_the_server() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let shows = fake.library_named("Shows").expect("library exists");
     let direct = ItemsQuery::default().in_parent(shows.id.clone());
     let episodes = direct.clone().of_kinds([ItemKind::Episode]).recursive();
     let everything = direct.clone().recursive();
 
-    let children = fake.items(&session, &user, &direct).await.unwrap();
-    let deep = fake.items(&session, &user, &episodes).await.unwrap();
-    let all = fake.items(&session, &user, &everything).await.unwrap();
+    let children = fake.items(&session, &direct).await.unwrap();
+    let deep = fake.items(&session, &episodes).await.unwrap();
+    let all = fake.items(&session, &everything).await.unwrap();
 
     assert_eq!(children.total, 1);
     assert_eq!(children.items[0].kind, ItemKind::Series);
@@ -100,7 +100,7 @@ async fn generates_a_large_library_with_stable_names() {
     let fake = FakeJellyfin::new(url())
         .with_user("alice", "hunter2")
         .with_generated_library("Big", 2_000);
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let library = fake.library_named("Big").expect("library exists");
     let query = ItemsQuery::default()
         .in_parent(library.id)
@@ -108,13 +108,10 @@ async fn generates_a_large_library_with_stable_names() {
         .recursive();
 
     let first = fake
-        .items(&session, &user, &query.clone().page(0, 50))
+        .items(&session, &query.clone().page(0, 50))
         .await
         .unwrap();
-    let last = fake
-        .items(&session, &user, &query.page(1_990, 50))
-        .await
-        .unwrap();
+    let last = fake.items(&session, &query.page(1_990, 50)).await.unwrap();
 
     assert_eq!(first.total, 2_000);
     assert_eq!(first.items.len(), 50);
@@ -131,12 +128,12 @@ async fn generates_a_large_library_with_stable_names() {
 #[tokio::test]
 async fn item_returns_details_and_not_found_for_unknown_ids() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movie = fake.item_named("Brazil").expect("movie exists");
 
-    let item = fake.item(&session, &user, &movie.id).await.unwrap();
+    let item = fake.item(&session, &movie.id).await.unwrap();
     let missing = "nope".parse().expect("valid ID");
-    let error = fake.item(&session, &user, &missing).await;
+    let error = fake.item(&session, &missing).await;
 
     assert_eq!(item, movie);
     assert_eq!(item.kind, ItemKind::Movie);
@@ -146,13 +143,13 @@ async fn item_returns_details_and_not_found_for_unknown_ids() {
 #[tokio::test]
 async fn series_have_seasons_and_episodes() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let series = fake.item_named("Severance").expect("series exists");
 
-    let seasons = fake.seasons(&session, &user, &series.id).await.unwrap();
+    let seasons = fake.seasons(&session, &series.id).await.unwrap();
     let second = &seasons[1];
     let episodes = fake
-        .episodes(&session, &user, &series.id, &second.id)
+        .episodes(&session, &series.id, &second.id)
         .await
         .unwrap();
 
@@ -168,10 +165,10 @@ async fn series_have_seasons_and_episodes() {
 #[tokio::test]
 async fn seasons_of_an_unknown_series_are_not_found() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movie = fake.item_named("Brazil").expect("movie exists");
 
-    let error = fake.seasons(&session, &user, &movie.id).await;
+    let error = fake.seasons(&session, &movie.id).await;
 
     assert_eq!(error, Err(ApiError::ItemNotFound));
 }
@@ -181,10 +178,10 @@ async fn resume_and_next_up_return_what_was_scripted() {
     let fake = fake()
         .with_resume("Brazil", Duration::from_secs(600))
         .with_next_up("Severance S1E2");
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
 
-    let resume = fake.resume(&session, &user, 10).await.unwrap();
-    let next_up = fake.next_up(&session, &user, 10).await.unwrap();
+    let resume = fake.resume(&session, 10).await.unwrap();
+    let next_up = fake.next_up(&session, 10).await.unwrap();
 
     assert_eq!(resume.len(), 1);
     assert_eq!(resume[0].name, "Brazil");
@@ -193,18 +190,18 @@ async fn resume_and_next_up_return_what_was_scripted() {
     assert!(data.played_percentage.is_some_and(|p| p > 0.0));
     assert_eq!(next_up.len(), 1);
     assert_eq!(next_up[0].kind, ItemKind::Episode);
-    assert_eq!(fake.resume(&session, &user, 0).await.unwrap().len(), 0);
+    assert_eq!(fake.resume(&session, 0).await.unwrap().len(), 0);
 }
 
 #[tokio::test]
 async fn latest_returns_the_newest_movies_and_series_first() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movies = fake.library_named("Movies").expect("library exists");
     let shows = fake.library_named("Shows").expect("library exists");
 
-    let latest = fake.latest(&session, &user, &movies.id, 2).await.unwrap();
-    let shows_latest = fake.latest(&session, &user, &shows.id, 16).await.unwrap();
+    let latest = fake.latest(&session, &movies.id, 2).await.unwrap();
+    let shows_latest = fake.latest(&session, &shows.id, 16).await.unwrap();
 
     let names: Vec<_> = latest.iter().map(|i| i.name.as_str()).collect();
     assert_eq!(names, ["Casablanca", "arrival"]);
@@ -215,7 +212,7 @@ async fn latest_returns_the_newest_movies_and_series_first() {
 #[tokio::test]
 async fn serves_placeholder_image_bytes_with_a_content_type() {
     let fake = fake();
-    let (session, _) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let movie = fake.item_named("Brazil").expect("movie exists");
     let tag = movie.image_tags.primary.clone();
 
@@ -232,7 +229,7 @@ async fn serves_placeholder_image_bytes_with_a_content_type() {
 #[tokio::test]
 async fn an_image_the_item_lacks_is_not_found() {
     let fake = fake();
-    let (session, _) = log_in(&fake).await;
+    let session = log_in(&fake).await;
     let season = fake.item_named("Severance S1").expect("season exists");
     let unknown = "nope".parse().expect("valid ID");
 
@@ -252,27 +249,18 @@ async fn an_image_the_item_lacks_is_not_found() {
 #[tokio::test]
 async fn revoked_tokens_and_scripted_failures_apply_to_library_calls() {
     let fake = fake();
-    let (session, user) = log_in(&fake).await;
+    let session = log_in(&fake).await;
 
     fake.fail_with(ApiError::Timeout);
-    assert_eq!(
-        fake.libraries(&session, &user).await,
-        Err(ApiError::Timeout)
-    );
+    assert_eq!(fake.libraries(&session).await, Err(ApiError::Timeout));
     fake.clear_failure();
     fake.revoke_tokens();
 
     let query = ItemsQuery::default();
+    assert_eq!(fake.libraries(&session).await, Err(ApiError::TokenRejected));
     assert_eq!(
-        fake.libraries(&session, &user).await,
+        fake.items(&session, &query).await,
         Err(ApiError::TokenRejected)
     );
-    assert_eq!(
-        fake.items(&session, &user, &query).await,
-        Err(ApiError::TokenRejected)
-    );
-    assert_eq!(
-        fake.resume(&session, &user, 5).await,
-        Err(ApiError::TokenRejected)
-    );
+    assert_eq!(fake.resume(&session, 5).await, Err(ApiError::TokenRejected));
 }

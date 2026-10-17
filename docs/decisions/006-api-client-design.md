@@ -158,16 +158,29 @@ answered 401, which became "wrong username or password".
 
 Added for decision 014's Home, library grid and detail pages. Paths come from
 Jellyfin's OpenAPI spec (checked against 12.2.0, which still serves them):
-the 10.9+ forms without `/Users/{id}`, with `userId` as a query parameter.
+the 10.9+ forms without `/Users/{id}`.
 
-- **Calls.** Every call takes a `Session` and the `UserId` from login, because
-  `Session` stays server plus token. `libraries` (`/UserViews`), `items`
+- **Calls.** Every call takes a `Session` and nothing else about the user.
+  `libraries` (`/UserViews`), `items`
   (`/Items`), `item` (`/Items/{id}`), `resume` (`/UserItems/Resume`, video
   only), `next_up` (`/Shows/NextUp`), `latest` (`/Items/Latest`), `seasons`
   and `episodes` (`/Shows/{id}/Seasons`, `/Episodes?seasonId=`) and `image`
   (`/Items/{id}/Images/{Primary|Backdrop|Thumb}?maxWidth=&tag=`). They go
   through the same `send_once` as `current_user`: redirects are never
   followed, a 401 is `TokenRejected`.
+- **No `userId` is sent.** Every one of these endpoints takes `userId` as an
+  optional query parameter and passes it through
+  `RequestHelpers.GetUserId(User, userId)` (jellyfin 10.11,
+  `Jellyfin.Api`), which returns the authenticated user when it is omitted
+  (and refuses another user unless the caller is an administrator). That
+  covers `UserViewsController.GetUserViews` (`/UserViews`),
+  `ItemsController.GetItems` (`/Items`) and `GetResumeItems`
+  (`/UserItems/Resume`), `UserLibraryController.GetItem` (`/Items/{id}`) and
+  `GetLatestMedia` (`/Items/Latest`), and `TvShowsController.GetNextUp`,
+  `GetSeasons` and `GetEpisodes`. The resolved ID is also the one used to
+  build the DTOs, so user data (played, position, percentage) belongs to the
+  token's user. So `Session` stays server plus token, and core needs no
+  `UserId` next to it.
 - **Wire shapes.** Lists are `{Items, TotalRecordCount, StartIndex}`, except
   `/Items/Latest`, which is a bare array. `Page::total` falls back to the
   item count if the total is missing. `items` always sends
@@ -194,5 +207,5 @@ the 10.9+ forms without `/Users/{id}`, with `userId` as a query parameter.
   `with_generated_library(name, 2_000)` (movies named `"{name} 00000"` and up,
   all with a 1x1 PNG). It pages like the server: names sorted ignoring case,
   `total` counting all matches, a page past the end empty. It needs an issued
-  token and ignores `userId`. Anything implementing `JellyfinApi` outside this
+  token. Anything implementing `JellyfinApi` outside this
   crate (core's `Gated` test wrapper) must delegate the new methods.

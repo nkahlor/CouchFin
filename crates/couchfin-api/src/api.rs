@@ -6,7 +6,7 @@ use std::future::Future;
 
 use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
-use crate::ids::{ItemId, UserId};
+use crate::ids::ItemId;
 use crate::image::{Image, ImageRequest};
 use crate::item::Item;
 use crate::library::{Library, Page};
@@ -166,10 +166,11 @@ pub trait JellyfinApi: Send + Sync {
 
     /// `GET /UserViews`: the user's libraries, in the server's order.
     ///
-    /// Every library call below takes the [`UserId`] from login and sends it
-    /// as `userId`, and fails with [`ApiError::TokenRejected`] on a 401 and
-    /// [`ApiError::Redirected`] on a redirect, like
-    /// [`JellyfinApi::current_user`]. Replies that aren't Jellyfin's are
+    /// Every library call below acts for the user the session's token
+    /// belongs to (no `userId` is sent: Jellyfin falls back to the
+    /// authenticated user, user data included). It fails with
+    /// [`ApiError::TokenRejected`] on a 401 and [`ApiError::Redirected`] on a
+    /// redirect, like [`JellyfinApi::current_user`]. Replies that aren't Jellyfin's are
     /// [`ApiError::NotJellyfin`].
     ///
     /// # Errors
@@ -179,7 +180,6 @@ pub trait JellyfinApi: Send + Sync {
     fn libraries(
         &self,
         session: &Session,
-        user: &UserId,
     ) -> impl Future<Output = Result<Vec<Library>, ApiError>> + Send;
 
     /// `GET /Items`: one page of items sorted by name (`sortBy=SortName`),
@@ -204,7 +204,7 @@ pub trait JellyfinApi: Send + Sync {
     /// let library = api.library_named("Movies").ok_or("no such library")?;
     ///
     /// let query = ItemsQuery::default().in_parent(library.id).recursive().page(100, 50);
-    /// let page = api.items(&session, &login.user.id, &query).await?;
+    /// let page = api.items(&session, &query).await?;
     /// assert_eq!((page.items.len(), page.total, page.start_index), (50, 2_000, 100));
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// # })?;
@@ -213,7 +213,6 @@ pub trait JellyfinApi: Send + Sync {
     fn items(
         &self,
         session: &Session,
-        user: &UserId,
         query: &ItemsQuery,
     ) -> impl Future<Output = Result<Page<Item>, ApiError>> + Send;
 
@@ -226,7 +225,6 @@ pub trait JellyfinApi: Send + Sync {
     fn item(
         &self,
         session: &Session,
-        user: &UserId,
         id: &ItemId,
     ) -> impl Future<Output = Result<Item, ApiError>> + Send;
 
@@ -239,7 +237,6 @@ pub trait JellyfinApi: Send + Sync {
     fn resume(
         &self,
         session: &Session,
-        user: &UserId,
         limit: u32,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
 
@@ -252,7 +249,6 @@ pub trait JellyfinApi: Send + Sync {
     fn next_up(
         &self,
         session: &Session,
-        user: &UserId,
         limit: u32,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
 
@@ -266,7 +262,6 @@ pub trait JellyfinApi: Send + Sync {
     fn latest(
         &self,
         session: &Session,
-        user: &UserId,
         parent: &ItemId,
         limit: u32,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
@@ -280,7 +275,6 @@ pub trait JellyfinApi: Send + Sync {
     fn seasons(
         &self,
         session: &Session,
-        user: &UserId,
         series: &ItemId,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
 
@@ -294,7 +288,6 @@ pub trait JellyfinApi: Send + Sync {
     fn episodes(
         &self,
         session: &Session,
-        user: &UserId,
         series: &ItemId,
         season: &ItemId,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;

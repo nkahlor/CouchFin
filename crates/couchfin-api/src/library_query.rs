@@ -1,26 +1,24 @@
-//! The paths and query strings of the library endpoints, kept apart from
-//! sending them so the client stays small.
+//! The query strings of the library endpoints, kept apart from sending them
+//! so the client stays small. None carries `userId`: Jellyfin then uses the
+//! user the token belongs to (decision 006).
 
-use crate::ids::{ItemId, UserId};
+use crate::ids::ItemId;
 use crate::item::ItemKind;
 use crate::query::ItemsQuery;
 
 /// Query parameters, in the order they are sent.
 pub(crate) type Params = Vec<(&'static str, String)>;
 
-fn for_user(user: &UserId) -> Params {
-    vec![("userId", user.as_str().to_owned())]
+pub(crate) fn none() -> Params {
+    Vec::new()
 }
 
-pub(crate) fn libraries(user: &UserId) -> Params {
-    for_user(user)
-}
-
-pub(crate) fn items(user: &UserId, query: &ItemsQuery) -> Params {
-    let mut params = for_user(user);
-    params.push(("sortBy", "SortName".to_owned()));
-    params.push(("recursive", query.recursive.to_string()));
-    params.push(("startIndex", query.start_index.to_string()));
+pub(crate) fn items(query: &ItemsQuery) -> Params {
+    let mut params = vec![
+        ("sortBy", "SortName".to_owned()),
+        ("recursive", query.recursive.to_string()),
+        ("startIndex", query.start_index.to_string()),
+    ];
     if let Some(parent) = &query.parent {
         params.push(("parentId", parent.as_str().to_owned()));
     }
@@ -34,39 +32,29 @@ pub(crate) fn items(user: &UserId, query: &ItemsQuery) -> Params {
     params
 }
 
-pub(crate) fn item(user: &UserId) -> Params {
-    for_user(user)
+pub(crate) fn limit(limit: u32) -> Params {
+    vec![("limit", limit.to_string())]
 }
 
-pub(crate) fn resume(user: &UserId, limit: u32) -> Params {
-    let mut params = for_user(user);
-    params.push(("limit", limit.to_string()));
+pub(crate) fn resume(limit: u32) -> Params {
     // Resumable audio books and music aren't shown.
-    params.push(("mediaTypes", "Video".to_owned()));
-    params
+    vec![
+        ("limit", limit.to_string()),
+        ("mediaTypes", "Video".to_owned()),
+    ]
 }
 
-pub(crate) fn next_up(user: &UserId, limit: u32) -> Params {
-    let mut params = for_user(user);
-    params.push(("limit", limit.to_string()));
-    params
+pub(crate) fn latest(parent: &ItemId, limit: u32) -> Params {
+    vec![
+        ("parentId", parent.as_str().to_owned()),
+        ("limit", limit.to_string()),
+    ]
 }
 
-pub(crate) fn latest(user: &UserId, parent: &ItemId, limit: u32) -> Params {
-    let mut params = for_user(user);
-    params.push(("parentId", parent.as_str().to_owned()));
-    params.push(("limit", limit.to_string()));
-    params
-}
-
-pub(crate) fn seasons(user: &UserId) -> Params {
-    for_user(user)
-}
-
-pub(crate) fn episodes(user: &UserId, season: &ItemId) -> Params {
-    let mut params = for_user(user);
-    params.push(("seasonId", season.as_str().to_owned()));
-    // Episode lists show the synopsis, which Jellyfin only sends on request.
-    params.push(("fields", "Overview".to_owned()));
-    params
+pub(crate) fn episodes(season: &ItemId) -> Params {
+    vec![
+        ("seasonId", season.as_str().to_owned()),
+        // Episode lists show the synopsis, which Jellyfin only sends on request.
+        ("fields", "Overview".to_owned()),
+    ]
 }

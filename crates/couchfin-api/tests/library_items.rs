@@ -5,8 +5,8 @@ mod common;
 
 use std::time::Duration;
 
-use common::library::{self, MOVIE_ID, PRIMARY_TAG, SERIES_ID, id, query_result, user};
-use common::{TOKEN, USER_ID, authorization, client, session};
+use common::library::{self, MOVIE_ID, PRIMARY_TAG, SERIES_ID, id, query_result};
+use common::{TOKEN, authorization, client, session};
 use couchfin_api::{ItemId, ItemKind, ItemsQuery, JellyfinApi, LibraryKind};
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param, query_param_is_missing};
@@ -18,7 +18,7 @@ async fn libraries_lists_the_users_views() {
     let mixed = json!({ "Name": "Home videos", "Id": "dddddddddddddddddddddddddddddddd" });
     Mock::given(method("GET"))
         .and(path("/UserViews"))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(authorization(Some(TOKEN)))
         .respond_with(ResponseTemplate::new(200).set_body_json(query_result(
             &[library::view_json(), mixed],
@@ -29,10 +29,7 @@ async fn libraries_lists_the_users_views() {
         .mount(&server)
         .await;
 
-    let libraries = client()
-        .libraries(&session(&server, TOKEN), &user())
-        .await
-        .unwrap();
+    let libraries = client().libraries(&session(&server, TOKEN)).await.unwrap();
 
     assert_eq!(libraries.len(), 2);
     assert_eq!(libraries[0].id.as_str(), library::LIBRARY_ID);
@@ -54,10 +51,7 @@ async fn an_unknown_collection_type_is_kept() {
         .mount(&server)
         .await;
 
-    let libraries = client()
-        .libraries(&session(&server, TOKEN), &user())
-        .await
-        .unwrap();
+    let libraries = client().libraries(&session(&server, TOKEN)).await.unwrap();
 
     assert_eq!(libraries[0].kind, LibraryKind::Other("music".to_owned()));
 }
@@ -67,7 +61,7 @@ async fn items_sends_the_paging_and_sort_query() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/Items"))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(query_param("parentId", library::LIBRARY_ID))
         .and(query_param("sortBy", "SortName"))
         .and(query_param("recursive", "true"))
@@ -90,7 +84,7 @@ async fn items_sends_the_paging_and_sort_query() {
         .page(50, 25);
 
     let page = client()
-        .items(&session(&server, TOKEN), &user(), &query)
+        .items(&session(&server, TOKEN), &query)
         .await
         .unwrap();
 
@@ -117,7 +111,7 @@ async fn items_without_filters_sends_only_what_was_asked() {
         .await;
 
     let page = client()
-        .items(&session(&server, TOKEN), &user(), &ItemsQuery::default())
+        .items(&session(&server, TOKEN), &ItemsQuery::default())
         .await
         .unwrap();
 
@@ -137,7 +131,7 @@ async fn a_page_without_a_total_counts_the_items() {
         .await;
 
     let page = client()
-        .items(&session(&server, TOKEN), &user(), &ItemsQuery::default())
+        .items(&session(&server, TOKEN), &ItemsQuery::default())
         .await
         .unwrap();
 
@@ -150,7 +144,7 @@ async fn item_parses_a_realistic_movie() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(format!("/Items/{MOVIE_ID}")))
-        .and(query_param("userId", USER_ID))
+        .and(query_param_is_missing("userId"))
         .and(authorization(Some(TOKEN)))
         .respond_with(ResponseTemplate::new(200).set_body_json(library::movie_json()))
         .expect(1)
@@ -158,7 +152,7 @@ async fn item_parses_a_realistic_movie() {
         .await;
 
     let item = client()
-        .item(&session(&server, TOKEN), &user(), &id(MOVIE_ID))
+        .item(&session(&server, TOKEN), &id(MOVIE_ID))
         .await
         .unwrap();
 
@@ -197,7 +191,7 @@ async fn item_parses_a_series_with_missing_optional_fields() {
         .await;
 
     let item = client()
-        .item(&session(&server, TOKEN), &user(), &id(SERIES_ID))
+        .item(&session(&server, TOKEN), &id(SERIES_ID))
         .await
         .unwrap();
 
@@ -221,7 +215,7 @@ async fn item_parses_season_and_episode_numbers() {
         .await;
 
     let item = client()
-        .item(&session(&server, TOKEN), &user(), &id(library::EPISODE_ID))
+        .item(&session(&server, TOKEN), &id(library::EPISODE_ID))
         .await
         .unwrap();
 
@@ -243,7 +237,7 @@ async fn a_season_reports_its_own_number_as_the_season_number() {
         .await;
 
     let item = client()
-        .item(&session(&server, TOKEN), &user(), &id(library::SEASON_ID))
+        .item(&session(&server, TOKEN), &id(library::SEASON_ID))
         .await
         .unwrap();
 
@@ -266,7 +260,7 @@ async fn an_unknown_item_type_is_kept_instead_of_failing() {
         .await;
 
     let page = client()
-        .items(&session(&server, TOKEN), &user(), &ItemsQuery::default())
+        .items(&session(&server, TOKEN), &ItemsQuery::default())
         .await
         .unwrap();
 

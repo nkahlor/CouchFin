@@ -3,20 +3,19 @@
 //! dependencies of its own, and couchfin-core, couchfin-ui and the app's
 //! tests can all use it without feature plumbing.
 
+mod api;
 mod builders;
 mod catalog;
 
-use std::future::{Future, ready};
+use std::future::ready;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::api::{JellyfinApi, Session};
+#[cfg(doc)]
+use crate::api::JellyfinApi;
+use crate::api::Session;
 use crate::dto::{AuthenticationResult, PublicSystemInfo, ServerCheck, User};
 use crate::error::ApiError;
-use crate::ids::{InvalidValueError, ItemId, UserId};
-use crate::image::{Image, ImageRequest};
-use crate::item::Item;
-use crate::library::{Library, Page};
-use crate::query::ItemsQuery;
+use crate::ids::{InvalidValueError, UserId};
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
 
@@ -42,7 +41,7 @@ use catalog::Catalog;
 ///   `with_*` builders, need an issued token like
 ///   [`JellyfinApi::current_user`], and page like the server: sorted by
 ///   name ignoring case, `total` counting all matches, and a page past the
-///   end empty. The `userId` is not checked. Every item has Primary and Thumb
+///   end empty. Every item has Primary and Thumb
 ///   images (movies and series also a Backdrop), all the same 1x1 PNG.
 ///
 /// Clones share the same state, so a test can keep a handle to script the
@@ -275,111 +274,5 @@ impl FakeJellyfin {
             .find(|u| u.id == user_id)
             .cloned()
             .ok_or(ApiError::TokenRejected)
-    }
-}
-
-impl JellyfinApi for FakeJellyfin {
-    fn check_server(
-        &self,
-        address: &ServerUrl,
-    ) -> impl Future<Output = Result<ServerCheck, ApiError>> + Send {
-        ready(self.check(address))
-    }
-
-    fn authenticate_by_name(
-        &self,
-        server: &ServerUrl,
-        username: &str,
-        password: &Password,
-    ) -> impl Future<Output = Result<AuthenticationResult, ApiError>> + Send {
-        ready(self.log_in(server, username, password))
-    }
-
-    fn current_user(
-        &self,
-        session: &Session,
-    ) -> impl Future<Output = Result<User, ApiError>> + Send {
-        ready(self.user(session))
-    }
-
-    fn libraries(
-        &self,
-        session: &Session,
-        _user: &UserId,
-    ) -> impl Future<Output = Result<Vec<Library>, ApiError>> + Send {
-        self.read(session, |c| Ok(c.libraries()))
-    }
-
-    fn items(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        query: &ItemsQuery,
-    ) -> impl Future<Output = Result<Page<Item>, ApiError>> + Send {
-        self.read(session, |c| Ok(c.page(query)))
-    }
-
-    fn item(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        id: &ItemId,
-    ) -> impl Future<Output = Result<Item, ApiError>> + Send {
-        self.read(session, |c| c.item(id))
-    }
-
-    fn resume(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        limit: u32,
-    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
-        self.read(session, |c| Ok(c.resume(limit)))
-    }
-
-    fn next_up(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        limit: u32,
-    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
-        self.read(session, |c| Ok(c.next_up(limit)))
-    }
-
-    fn latest(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        parent: &ItemId,
-        limit: u32,
-    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
-        self.read(session, |c| Ok(c.latest(parent, limit)))
-    }
-
-    fn seasons(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        series: &ItemId,
-    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
-        self.read(session, |c| c.seasons(series))
-    }
-
-    fn episodes(
-        &self,
-        session: &Session,
-        _user: &UserId,
-        series: &ItemId,
-        season: &ItemId,
-    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
-        self.read(session, |c| c.episodes(series, season))
-    }
-
-    fn image(
-        &self,
-        session: &Session,
-        request: &ImageRequest,
-    ) -> impl Future<Output = Result<Image, ApiError>> + Send {
-        self.read(session, |c| c.image(request))
     }
 }
