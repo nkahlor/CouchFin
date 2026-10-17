@@ -846,6 +846,7 @@ version = "0.1.0"
 dependencies = [
  "couchfin-api",
  "directories",
+ "futures-util",
  "image",
  "keyring-core",
  "serde",

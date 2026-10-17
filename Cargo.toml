@@ -55,6 +55,8 @@ rustls = { version = "0.23.4", default-features = false, features = [
   "std",
   "tls12",
 ] }
+# Joining the home rows' requests; no executor, so core stays runtime-free.
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
 # The same verifier reqwest uses: the system trust store, plus extra roots.
 rustls-platform-verifier = "0.7"
 # Game controllers only (decision 010). Pinned exactly: a new release is a
