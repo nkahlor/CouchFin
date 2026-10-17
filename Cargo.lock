@@ -887,7 +887,6 @@ name = "couchfin-ui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "couchfin-api",
  "couchfin-core",
  "i-slint-backend-testing",
  "image",

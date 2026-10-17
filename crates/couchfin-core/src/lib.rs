@@ -78,6 +78,6 @@ pub use tokens::{
 };
 
 pub use couchfin_api::{
-    AccessToken, ApiError, DeviceId, JellyfinApi, Password, PublicSystemInfo, ServerUrl,
-    ServerUrlError, User, UserId,
+    AccessToken, ApiError, DeviceId, JellyfinApi, JellyfinClient, Password, PublicSystemInfo,
+    ServerUrl, ServerUrlError, Session, User, UserId,
 };

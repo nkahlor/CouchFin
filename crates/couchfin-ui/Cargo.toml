@@ -21,7 +21,6 @@ slint = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
-couchfin-api.workspace = true
 i-slint-backend-testing.workspace = true
 # The screenshots example (docs/decisions/018-visual-review.md): Slint's
 # software renderer draws into a buffer with no GPU or display, and `image`

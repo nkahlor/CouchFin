@@ -13,10 +13,10 @@ use std::time::{Duration, Instant};
 
 use common::home::row_cards;
 use common::library::{FakeLoader, Shell, World};
-use couchfin_api::{AccessToken, JellyfinClient};
+
 use couchfin_core::{
-    CacheDir, ImageCache, ImageCacheConfig, ImageLoad, ImageRef, ImageSize, LibraryState, RowKind,
-    ScreenState,
+    AccessToken, CacheDir, ImageCache, ImageCacheConfig, ImageLoad, ImageRef, ImageSize,
+    JellyfinClient, LibraryState, RowKind, ScreenState,
 };
 use couchfin_ui::{Guard, HomeView, ImageLoader, ImageState};
 use image::{ImageFormat, Rgb, RgbImage};
@@ -49,7 +49,7 @@ impl Drop for AbortOnDrop {
 /// The app's loader over a real cache and client.
 struct WireLoader {
     cache: Arc<ImageCache<JellyfinClient>>,
-    session: couchfin_api::Session,
+    session: couchfin_core::Session,
     runtime: Handle,
 }
 
@@ -160,7 +160,7 @@ fn the_first_screenful_of_home_fills_within_the_budget() {
             .expect("device id"),
     )
     .expect("client builds");
-    let session = couchfin_api::Session::new(
+    let session = couchfin_core::Session::new(
         server.uri().parse().expect("URL"),
         AccessToken::new("0123456789abcdef0123456789abcdef").expect("token"),
     );
