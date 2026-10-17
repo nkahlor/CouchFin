@@ -32,6 +32,8 @@ anyhow = "1"
 # Config paths under $XDG_CONFIG_HOME. Brings in option-ext (MPL-2.0); see
 # docs/decisions/007-session-persistence.md.
 directories = "6"
+# Joining the home rows' requests; no executor, so core stays runtime-free.
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
 # The keyring ecosystem's core API, with its pure-Rust (zbus) Secret Service
 # store below, rather than the `keyring` wrapper crate: see decision 007.
 # Decoding and blurring posters (decision 016): only the formats Jellyfin
@@ -55,8 +57,6 @@ rustls = { version = "0.23.4", default-features = false, features = [
   "std",
   "tls12",
 ] }
-# Joining the home rows' requests; no executor, so core stays runtime-free.
-futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
 # The same verifier reqwest uses: the system trust store, plus extra roots.
 rustls-platform-verifier = "0.7"
 # Game controllers only (decision 010). Pinned exactly: a new release is a
