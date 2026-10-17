@@ -2,4 +2,4 @@
 allow-unwrap-in-tests = true
 
 # Proper nouns in docs that are not code.
-doc-valid-idents = ["BlurHash", "BlurHashes", "..",]
+doc-valid-idents = ["BlurHash", "BlurHashes", ".."]
