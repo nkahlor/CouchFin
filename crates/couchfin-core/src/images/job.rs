@@ -13,13 +13,15 @@ use super::pixels::{Pixels, decode, into_pixels};
 pub(super) struct Job {
     disk: Arc<Disk>,
     original: String,
+    max_width: u32,
 }
 
 impl Job {
-    pub(super) fn new(disk: Arc<Disk>, key: &Key) -> Self {
+    pub(super) fn new(disk: Arc<Disk>, key: &Key, max_width: u32) -> Self {
         Self {
             disk,
             original: key.original_file(),
+            max_width,
         }
     }
 
@@ -27,10 +29,10 @@ impl Job {
     /// that won't decode is deleted, so the next step fetches it afresh.
     pub(super) fn cached(&self) -> Option<Pixels> {
         let bytes = self.disk.read(&self.original)?;
-        match decode(&bytes) {
+        match decode(&bytes, self.max_width) {
             Ok(image) => Some(into_pixels(image)),
             Err(error) => {
-                tracing::warn!(%error, "deleting a corrupt cached image");
+                tracing::debug!(target: "couchfin::images", %error, file = %self.original, "deleting a corrupt cached image");
                 self.disk.remove(&self.original);
                 None
             }
@@ -40,7 +42,12 @@ impl Job {
     /// Decodes what the server sent and caches it. Bytes that don't decode
     /// are an error and are not cached.
     pub(super) fn downloaded(&self, bytes: &[u8]) -> Result<Pixels, ImageError> {
-        let image = decode(bytes)?;
+        let image = decode(bytes, self.max_width).inspect_err(|error| {
+            tracing::debug!(
+                target: "couchfin::images", %error, file = %self.original, received = bytes.len(),
+                "rejected a download, to be retried on the next request"
+            );
+        })?;
         self.disk.write(&self.original, bytes);
         Ok(into_pixels(image))
     }

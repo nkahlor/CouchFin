@@ -52,7 +52,7 @@ Each key has one file in one flat directory, written atomically
   read or write the cache is logged and treated as a miss. The cache never
   fails a load.
 - Bytes from the server that don't decode give `ImageError::Decode` and are
-  not stored.
+  not stored. That includes partial files, see "Partial files" below.
 
 ### Concurrency
 
@@ -97,3 +97,26 @@ They are not deleted on open; they count towards the disk cap and the
 least-recently-used eviction removes them, oldest first, as new posters
 arrive (or "clear cache" removes them at once). `tests/image_cache.rs` checks
 that a leftover blurred file changes nothing.
+
+## Update, 2026-10-17: partial files are errors (#50)
+
+A poster appeared half grey. zune-jpeg, the `image` crate's JPEG decoder,
+fills the blocks missing from a truncated file with grey and reports success,
+so a cut-off download decoded "fine", was shown, and was written to the disk
+cache (where it would have come back on every launch). PNG and WebP decoders
+do report truncation.
+
+- `images/complete.rs` checks a file before decoding: a JPEG must end with its
+  end marker (`FF D9`, ignoring zero padding), a WebP must be as long as its
+  RIFF header says. Failing files are `ImageError::Decode`.
+- A decoded image wider than the request's `max_width` is also a `Decode`
+  error: the server scales down, never up, so it is not the image we asked for.
+- The same checks run on files read back from disk, so a partial file left by
+  an older version is deleted and fetched again.
+- A body shorter than its `Content-Length` and a load cancelled mid-download
+  were already safe: hyper reports the first as a body error, and dropping the
+  `load` future drops the request before anything is written. Tests now pin
+  both.
+- Nothing partial is cached, so the next request retries. Causes are logged
+  at debug level under the target `couchfin::images`
+  (`RUST_LOG=couchfin::images=debug`).

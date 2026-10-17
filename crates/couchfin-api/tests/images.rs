@@ -113,3 +113,18 @@ async fn a_reply_without_a_content_type_is_not_jellyfin() {
 
     assert!(matches!(error, ApiError::NotJellyfin { .. }), "{error:?}");
 }
+
+/// Headers promising 1000 bytes of image, followed by only a few.
+const CUT_OFF_IMAGE: &str =
+    "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: 1000\r\n\r\npartial";
+
+#[tokio::test]
+async fn a_body_shorter_than_its_content_length_is_an_error_not_a_short_image() {
+    let url = common::raw_http::start(CUT_OFF_IMAGE, std::time::Duration::ZERO);
+    let session = couchfin_api::Session::new(url, couchfin_api::AccessToken::new(TOKEN).unwrap());
+    let request = ImageRequest::new(id(MOVIE_ID), ImageKind::Primary, 300);
+
+    let error = client().image(&session, &request).await.unwrap_err();
+
+    assert!(matches!(error, ApiError::NotJellyfin { .. }), "{error:?}");
+}
