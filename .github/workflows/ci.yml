@@ -159,7 +159,7 @@ jobs:
       # The software renderer draws text with system fonts; without any, the
       # pictures would have no words.
       - name: Check that fonts are installed
-        run: fc-list : family | grep -q .
+        run: "fc-list : family | grep -q ."
       - name: Render screenshots
         run: cargo run -p couchfin-ui --example screenshots --locked -- target/screenshots
       - uses: actions/upload-artifact@v7
