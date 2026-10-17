@@ -6,14 +6,19 @@
 //!
 //! - [`JellyfinApi`] is the trait callers depend on. [`JellyfinClient`]
 //!   implements it over HTTP, and [`fake::FakeJellyfin`] in memory for tests.
-//! - [`ServerUrl`], [`DeviceId`], [`UserId`], [`ServerId`], [`AccessToken`]
-//!   and [`Password`] are validated newtypes; the two secrets never show in
+//! - [`ServerUrl`], [`DeviceId`], [`UserId`], [`ServerId`], [`ItemId`],
+//!   [`ImageTag`], [`AccessToken`] and [`Password`] are validated newtypes; the two secrets never show in
 //!   `Debug` output.
 //! - [`ApiError`] tells apart an unreachable server, a timeout, a server that
 //!   isn't Jellyfin, a wrong password, a rejected token and a redirect.
 //! - [`JellyfinApi::check_server`] is the only call that follows redirects,
 //!   and it returns the server's canonical address ([`ServerCheck::server`])
 //!   for every later call.
+//!
+//! - The library calls ([`JellyfinApi::libraries`], [`JellyfinApi::items`],
+//!   [`JellyfinApi::resume`], [`JellyfinApi::image`] and the rest) return one
+//!   [`Item`] type, [`Library`] views and [`Page`]s, and need a [`Session`]
+//!   and the [`UserId`] from login.
 //!
 //! The design is recorded in `docs/decisions/006-api-client-design.md`.
 //!
@@ -53,7 +58,13 @@ mod client;
 mod dto;
 mod error;
 pub mod fake;
+mod http;
 mod ids;
+mod image;
+mod item;
+mod library;
+mod library_query;
+mod query;
 mod redirect;
 mod secret;
 mod server_url;
@@ -64,6 +75,10 @@ pub use builder::{BuildError, JellyfinClientBuilder};
 pub use client::JellyfinClient;
 pub use dto::{AuthenticationResult, PublicSystemInfo, ServerCheck, User};
 pub use error::ApiError;
-pub use ids::{DeviceId, InvalidValueError, ServerId, UserId};
+pub use ids::{DeviceId, ImageTag, InvalidValueError, ItemId, ServerId, UserId};
+pub use image::{Image, ImageKind, ImageRequest};
+pub use item::{ImageTags, Item, ItemKind, UserData};
+pub use library::{Library, LibraryKind, Page};
+pub use query::ItemsQuery;
 pub use secret::{AccessToken, Password};
 pub use server_url::{ServerUrl, ServerUrlError};

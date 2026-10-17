@@ -153,3 +153,46 @@ answered 401, which became "wrong username or password".
 - The redirect tests generate a throwaway CA with `rcgen` (a dev-dependency,
   MIT OR Apache-2.0, using ring) and serve HTTPS from a small rustls server
   in `tests/common/tls.rs`, since wiremock only speaks plain HTTP.
+
+## Library endpoints
+
+Added for decision 014's Home, library grid and detail pages. Paths come from
+Jellyfin's OpenAPI spec (checked against 12.2.0, which still serves them):
+the 10.9+ forms without `/Users/{id}`, with `userId` as a query parameter.
+
+- **Calls.** Every call takes a `Session` and the `UserId` from login, because
+  `Session` stays server plus token. `libraries` (`/UserViews`), `items`
+  (`/Items`), `item` (`/Items/{id}`), `resume` (`/UserItems/Resume`, video
+  only), `next_up` (`/Shows/NextUp`), `latest` (`/Items/Latest`), `seasons`
+  and `episodes` (`/Shows/{id}/Seasons`, `/Episodes?seasonId=`) and `image`
+  (`/Items/{id}/Images/{Primary|Backdrop|Thumb}?maxWidth=&tag=`). They go
+  through the same `send_once` as `current_user`: redirects are never
+  followed, a 401 is `TokenRejected`.
+- **Wire shapes.** Lists are `{Items, TotalRecordCount, StartIndex}`, except
+  `/Items/Latest`, which is a bare array. `Page::total` falls back to the
+  item count if the total is missing. `items` always sends
+  `sortBy=SortName`; the grid has no other sort (decision 014).
+- **One `Item` type.** Movie, series, season and episode share one struct;
+  `ItemKind::Other(String)` keeps any other type. Jellyfin's `IndexNumber` and
+  `ParentIndexNumber` become `season_number` and `episode_number` by kind, so
+  callers don't need to know that. Ticks become `Duration`. Oddities (negative
+  numbers, an image tag with unsafe characters) become `None` rather than
+  failing the page, since one bad item in 2,000 must not blank a grid.
+  `overview` is only sent by `item` and `episodes` (`fields=Overview`).
+- **`ApiError::ItemNotFound`.** On item-scoped calls (`item`, `seasons`,
+  `episodes`, `image`) a 404 means the item or image is gone, not that the
+  address isn't Jellyfin (the rule for the other endpoints). The variant is
+  new, so exhaustive matches on `ApiError` need an arm.
+- **Images** return the bytes and `Content-Type` as `Image`; a reply without
+  a content type is `NotJellyfin`, since the cache could not decode it.
+  `ImageRequest` carries the image tag, so a cache keyed on
+  `(item, kind, max_width, tag)` never serves a stale image. `ItemId` and
+  `ImageTag` use the same validation as the other IDs, so they are safe in
+  the URL path.
+- **The fake** serves the same calls from a catalog built with `with_library`,
+  `with_movie`, `with_series`, `with_resume`, `with_next_up` and
+  `with_generated_library(name, 2_000)` (movies named `"{name} 00000"` and up,
+  all with a 1x1 PNG). It pages like the server: names sorted ignoring case,
+  `total` counting all matches, a page past the end empty. It needs an issued
+  token and ignores `userId`. Anything implementing `JellyfinApi` outside this
+  crate (core's `Gated` test wrapper) must delegate the new methods.

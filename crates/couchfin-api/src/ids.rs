@@ -139,6 +139,43 @@ id_type!(
     "Server ID"
 );
 
+id_type!(
+    /// A Jellyfin item's ID: a movie, series, season, episode or library. The
+    /// server sends 32 hex digits, but any value that is safe in a URL path is
+    /// accepted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use couchfin_api::ItemId;
+    ///
+    /// let id: ItemId = "a1b2c3d4e5f60718293a4b5c6d7e8f90".parse()?;
+    /// assert_eq!(id.as_str(), "a1b2c3d4e5f60718293a4b5c6d7e8f90");
+    /// assert!("../Users".parse::<ItemId>().is_err());
+    /// # Ok::<(), couchfin_api::InvalidValueError>(())
+    /// ```
+    ItemId,
+    "Item ID"
+);
+
+id_type!(
+    /// An image's tag, which changes whenever the image does. Jellyfin lists
+    /// it in an item's image tags; passing it back with the image request
+    /// lets the image be cached forever under that tag.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use couchfin_api::ImageTag;
+    ///
+    /// let tag: ImageTag = "b1c2d3e4f5061728394a5b6c7d8e9f01".parse()?;
+    /// assert_eq!(tag.to_string(), "b1c2d3e4f5061728394a5b6c7d8e9f01");
+    /// # Ok::<(), couchfin_api::InvalidValueError>(())
+    /// ```
+    ImageTag,
+    "Image tag"
+);
+
 impl DeviceId {
     /// Creates a new random device ID (a UUID v4), for the first run of an
     /// install.

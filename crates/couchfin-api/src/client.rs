@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use reqwest::header::AUTHORIZATION;
-use reqwest::{RequestBuilder, Response, StatusCode, Url};
+use reqwest::{RequestBuilder, Response, Url};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -12,7 +12,13 @@ use crate::auth_header::authorization;
 use crate::builder::{BuildError, JellyfinClientBuilder};
 use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
-use crate::ids::DeviceId;
+use crate::http::{check_item_status, check_status, read_image, read_json};
+use crate::ids::{DeviceId, ItemId, UserId};
+use crate::image::{Image, ImageRequest};
+use crate::item::Item;
+use crate::library::{Library, Page};
+use crate::library_query::{self as params, Params};
+use crate::query::ItemsQuery;
 use crate::redirect::{self, MAX_REDIRECTS};
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
@@ -20,6 +26,11 @@ use crate::server_url::ServerUrl;
 const PUBLIC_INFO: &str = "System/Info/Public";
 const AUTHENTICATE: &str = "Users/AuthenticateByName";
 const ME: &str = "Users/Me";
+const VIEWS: &str = "UserViews";
+const ITEMS: &str = "Items";
+const RESUME: &str = "UserItems/Resume";
+const NEXT_UP: &str = "Shows/NextUp";
+const LATEST: &str = "Items/Latest";
 
 /// The Jellyfin HTTP client.
 ///
@@ -136,6 +147,44 @@ impl JellyfinClient {
         }
     }
 
+    /// A logged-in GET of a library endpoint. `item_scoped` says a 404 means
+    /// the item doesn't exist (see [`check_item_status`]).
+    async fn get_library(
+        &self,
+        session: &Session,
+        endpoint: &str,
+        params: &Params,
+        item_scoped: bool,
+    ) -> Result<Response, ApiError> {
+        let mut url = session.server().endpoint(endpoint);
+        if !params.is_empty() {
+            url.query_pairs_mut()
+                .extend_pairs(params.iter().map(|(k, v)| (*k, v.as_str())));
+        }
+        let response = self
+            .send_once(self.http.get(url), endpoint, Some(session.token()))
+            .await?;
+        if item_scoped {
+            check_item_status(&response)?;
+        } else {
+            check_status(&response, ApiError::TokenRejected)?;
+        }
+        Ok(response)
+    }
+
+    async fn get_json<T: DeserializeOwned>(
+        &self,
+        session: &Session,
+        endpoint: &str,
+        params: &Params,
+        item_scoped: bool,
+    ) -> Result<T, ApiError> {
+        let response = self
+            .get_library(session, endpoint, params, item_scoped)
+            .await?;
+        read_json(response).await
+    }
+
     /// Follows redirects from `url` (GET, no token) to the final reply.
     async fn get_following(&self, mut url: Url) -> Result<Response, ApiError> {
         for _ in 0..=MAX_REDIRECTS {
@@ -149,35 +198,6 @@ impl JellyfinClient {
             detail: format!("more than {MAX_REDIRECTS} redirects"),
         })
     }
-}
-
-/// Turns an unsuccessful status into an error. `on_unauthorized` is what a
-/// 401 means for this endpoint. Every endpoint used here exists on every
-/// Jellyfin server, so a 404 means the address points at something else.
-fn check_status(response: &Response, on_unauthorized: ApiError) -> Result<(), ApiError> {
-    let status = response.status();
-    if status.is_success() {
-        return Ok(());
-    }
-    Err(match status {
-        StatusCode::UNAUTHORIZED => on_unauthorized,
-        StatusCode::NOT_FOUND => ApiError::NotJellyfin {
-            detail: format!("{} not found", response.url().path()),
-        },
-        other => ApiError::Status {
-            status: other.as_u16(),
-        },
-    })
-}
-
-/// Reads a JSON body. A body that is cut off or isn't the JSON Jellyfin sends
-/// means this isn't (a compatible) Jellyfin; a timeout while reading stays a
-/// timeout.
-async fn read_json<T: DeserializeOwned>(response: Response) -> Result<T, ApiError> {
-    let bytes = response.bytes().await.map_err(|e| ApiError::body(&e))?;
-    serde_json::from_slice(&bytes).map_err(|e| ApiError::NotJellyfin {
-        detail: e.to_string(),
-    })
 }
 
 /// The login request body. Jellyfin calls the password `Pw`.
@@ -222,5 +242,100 @@ impl JellyfinApi for JellyfinClient {
         let response = self.send_once(request, ME, Some(session.token())).await?;
         check_status(&response, ApiError::TokenRejected)?;
         read_json(response).await
+    }
+
+    async fn libraries(&self, session: &Session, user: &UserId) -> Result<Vec<Library>, ApiError> {
+        let page: Page<Library> = self
+            .get_json(session, VIEWS, &params::libraries(user), false)
+            .await?;
+        Ok(page.items)
+    }
+
+    async fn items(
+        &self,
+        session: &Session,
+        user: &UserId,
+        query: &ItemsQuery,
+    ) -> Result<Page<Item>, ApiError> {
+        self.get_json(session, ITEMS, &params::items(user, query), false)
+            .await
+    }
+
+    async fn item(&self, session: &Session, user: &UserId, id: &ItemId) -> Result<Item, ApiError> {
+        let endpoint = format!("{ITEMS}/{id}");
+        self.get_json(session, &endpoint, &params::item(user), true)
+            .await
+    }
+
+    async fn resume(
+        &self,
+        session: &Session,
+        user: &UserId,
+        limit: u32,
+    ) -> Result<Vec<Item>, ApiError> {
+        let page: Page<Item> = self
+            .get_json(session, RESUME, &params::resume(user, limit), false)
+            .await?;
+        Ok(page.items)
+    }
+
+    async fn next_up(
+        &self,
+        session: &Session,
+        user: &UserId,
+        limit: u32,
+    ) -> Result<Vec<Item>, ApiError> {
+        let page: Page<Item> = self
+            .get_json(session, NEXT_UP, &params::next_up(user, limit), false)
+            .await?;
+        Ok(page.items)
+    }
+
+    async fn latest(
+        &self,
+        session: &Session,
+        user: &UserId,
+        parent: &ItemId,
+        limit: u32,
+    ) -> Result<Vec<Item>, ApiError> {
+        // The one list that is a bare array, not an object with `Items`.
+        self.get_json(session, LATEST, &params::latest(user, parent, limit), false)
+            .await
+    }
+
+    async fn seasons(
+        &self,
+        session: &Session,
+        user: &UserId,
+        series: &ItemId,
+    ) -> Result<Vec<Item>, ApiError> {
+        let endpoint = format!("Shows/{series}/Seasons");
+        let page: Page<Item> = self
+            .get_json(session, &endpoint, &params::seasons(user), true)
+            .await?;
+        Ok(page.items)
+    }
+
+    async fn episodes(
+        &self,
+        session: &Session,
+        user: &UserId,
+        series: &ItemId,
+        season: &ItemId,
+    ) -> Result<Vec<Item>, ApiError> {
+        let endpoint = format!("Shows/{series}/Episodes");
+        let page: Page<Item> = self
+            .get_json(session, &endpoint, &params::episodes(user, season), true)
+            .await?;
+        Ok(page.items)
+    }
+
+    async fn image(&self, session: &Session, request: &ImageRequest) -> Result<Image, ApiError> {
+        let endpoint = format!("Items/{}/Images/{}", request.item, request.kind.as_str());
+        let mut query = vec![("maxWidth", request.max_width.to_string())];
+        if let Some(tag) = &request.tag {
+            query.push(("tag", tag.as_str().to_owned()));
+        }
+        read_image(self.get_library(session, &endpoint, &query, true).await?).await
     }
 }
