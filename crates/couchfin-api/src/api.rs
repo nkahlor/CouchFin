@@ -6,6 +6,11 @@ use std::future::Future;
 
 use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
+use crate::ids::ItemId;
+use crate::image::{Image, ImageRequest};
+use crate::item::Item;
+use crate::library::{Library, Page};
+use crate::query::ItemsQuery;
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
 
@@ -158,4 +163,146 @@ pub trait JellyfinApi: Send + Sync {
         &self,
         session: &Session,
     ) -> impl Future<Output = Result<User, ApiError>> + Send;
+
+    /// `GET /UserViews`: the user's libraries, in the server's order.
+    ///
+    /// Every library call below acts for the user the session's token
+    /// belongs to (no `userId` is sent: Jellyfin falls back to the
+    /// authenticated user, user data included). It fails with
+    /// [`ApiError::TokenRejected`] on a 401 and [`ApiError::Redirected`] on a
+    /// redirect, like [`JellyfinApi::current_user`]. Replies that aren't Jellyfin's are
+    /// [`ApiError::NotJellyfin`].
+    ///
+    /// # Errors
+    ///
+    /// As described above, plus the connection errors of
+    /// [`JellyfinApi::check_server`].
+    fn libraries(
+        &self,
+        session: &Session,
+    ) -> impl Future<Output = Result<Vec<Library>, ApiError>> + Send;
+
+    /// `GET /Items`: one page of items sorted by name (`sortBy=SortName`),
+    /// with the size of the whole list. This is what the library grid pages
+    /// through.
+    ///
+    /// # Errors
+    ///
+    /// As for [`JellyfinApi::libraries`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use couchfin_api::fake::FakeJellyfin;
+    /// use couchfin_api::{ItemsQuery, JellyfinApi, Password, Session};
+    ///
+    /// # tokio::runtime::Builder::new_current_thread().build()?.block_on(async {
+    /// let server = "http://jellyfin.lan:8096".parse()?;
+    /// let api = FakeJellyfin::new(server).with_user("alice", "hunter2").with_generated_library("Movies", 2_000);
+    /// let login = api.authenticate_by_name(api.server(), "alice", &Password::new("hunter2")).await?;
+    /// let session = Session::new(api.server().clone(), login.access_token);
+    /// let library = api.library_named("Movies").ok_or("no such library")?;
+    ///
+    /// let query = ItemsQuery::default().in_parent(library.id).recursive().page(100, 50);
+    /// let page = api.items(&session, &query).await?;
+    /// assert_eq!((page.items.len(), page.total, page.start_index), (50, 2_000, 100));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # })?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn items(
+        &self,
+        session: &Session,
+        query: &ItemsQuery,
+    ) -> impl Future<Output = Result<Page<Item>, ApiError>> + Send;
+
+    /// `GET /Items/{id}`: one item's details, including its overview.
+    ///
+    /// # Errors
+    ///
+    /// [`ApiError::ItemNotFound`] if there is no such item; otherwise as for
+    /// [`JellyfinApi::libraries`].
+    fn item(
+        &self,
+        session: &Session,
+        id: &ItemId,
+    ) -> impl Future<Output = Result<Item, ApiError>> + Send;
+
+    /// `GET /UserItems/Resume`: the user's unfinished videos, most recently
+    /// watched first (Continue Watching). At most `limit` items.
+    ///
+    /// # Errors
+    ///
+    /// As for [`JellyfinApi::libraries`].
+    fn resume(
+        &self,
+        session: &Session,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
+
+    /// `GET /Shows/NextUp`: the next unwatched episode of each series the
+    /// user is following. At most `limit` items.
+    ///
+    /// # Errors
+    ///
+    /// As for [`JellyfinApi::libraries`].
+    fn next_up(
+        &self,
+        session: &Session,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
+
+    /// `GET /Items/Latest`: the most recently added movies or series in the
+    /// library `parent` (Recently Added), newest first. At most `limit`
+    /// items.
+    ///
+    /// # Errors
+    ///
+    /// As for [`JellyfinApi::libraries`].
+    fn latest(
+        &self,
+        session: &Session,
+        parent: &ItemId,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
+
+    /// `GET /Shows/{id}/Seasons`: a series' seasons in order.
+    ///
+    /// # Errors
+    ///
+    /// [`ApiError::ItemNotFound`] if there is no such series; otherwise as
+    /// for [`JellyfinApi::libraries`].
+    fn seasons(
+        &self,
+        session: &Session,
+        series: &ItemId,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
+
+    /// `GET /Shows/{id}/Episodes?seasonId=`: the episodes of one season in
+    /// order, with their overviews.
+    ///
+    /// # Errors
+    ///
+    /// [`ApiError::ItemNotFound`] if there is no such series; otherwise as
+    /// for [`JellyfinApi::libraries`].
+    fn episodes(
+        &self,
+        session: &Session,
+        series: &ItemId,
+        season: &ItemId,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
+
+    /// `GET /Items/{id}/Images/{type}`: an item's image scaled to at most
+    /// `max_width`, as the bytes and `Content-Type` the server sent.
+    ///
+    /// # Errors
+    ///
+    /// [`ApiError::ItemNotFound`] if the item has no such image;
+    /// [`ApiError::NotJellyfin`] if the reply has no `Content-Type`;
+    /// otherwise as for [`JellyfinApi::libraries`].
+    fn image(
+        &self,
+        session: &Session,
+        request: &ImageRequest,
+    ) -> impl Future<Output = Result<Image, ApiError>> + Send;
 }

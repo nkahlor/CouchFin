@@ -31,6 +31,7 @@ use crate::server_url::ServerUrl;
 ///         ApiError::NotJellyfin { .. } => "That address isn't a Jellyfin server".into(),
 ///         ApiError::InvalidCredentials => "Wrong username or password".into(),
 ///         ApiError::TokenRejected => "Please log in again".into(),
+///         ApiError::ItemNotFound => "That is no longer in your library".into(),
 ///         ApiError::Redirected { server: Some(server) } => {
 ///             format!("The server moved to {server}; use that address")
 ///         }
@@ -72,6 +73,10 @@ pub enum ApiError {
     /// revoked or has expired, so the user has to log in again.
     #[error("the server no longer accepts this login")]
     TokenRejected,
+    /// The server has no such item or image (HTTP 404 from an item, series
+    /// or image request): it was deleted, or never had that image.
+    #[error("the server has no such item or image")]
+    ItemNotFound,
     /// A login or logged-in request was answered with a redirect, which
     /// Couchfin never follows: it would resend the password or token to an
     /// address the user didn't choose, and HTTP turns a redirected POST into

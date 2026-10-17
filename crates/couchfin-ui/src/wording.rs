@@ -55,6 +55,7 @@ pub fn api_error(error: &ApiError) -> String {
         ApiError::InsecureRedirect => {
             "The server tried to switch to an unencrypted connection, so Couchfin stopped.".into()
         }
+        ApiError::ItemNotFound => "That's no longer in your library.".into(),
         ApiError::Status { .. } => "The server had a problem. Try again in a moment.".into(),
     }
 }

@@ -3,15 +3,23 @@
 //! dependencies of its own, and couchfin-core, couchfin-ui and the app's
 //! tests can all use it without feature plumbing.
 
-use std::future::{Future, ready};
+mod api;
+mod builders;
+mod catalog;
+
+use std::future::ready;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::api::{JellyfinApi, Session};
+#[cfg(doc)]
+use crate::api::JellyfinApi;
+use crate::api::Session;
 use crate::dto::{AuthenticationResult, PublicSystemInfo, ServerCheck, User};
 use crate::error::ApiError;
 use crate::ids::{InvalidValueError, UserId};
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
+
+use catalog::Catalog;
 
 /// A fake Jellyfin server at one address, with users, issued tokens and
 /// scripted failures.
@@ -27,6 +35,14 @@ use crate::server_url::ServerUrl;
 ///   [`FakeJellyfin::revoke_tokens`] makes them [`ApiError::TokenRejected`].
 /// - [`FakeJellyfin::fail_with`] makes every call return an error, for
 ///   testing timeouts and server errors.
+///
+/// - The library calls (`libraries`, `items`, `item`, `resume`, `next_up`,
+///   `latest`, `seasons`, `episodes`, `image`) serve content added with the
+///   `with_*` builders, need an issued token like
+///   [`JellyfinApi::current_user`], and page like the server: sorted by
+///   name ignoring case, `total` counting all matches, and a page past the
+///   end empty. Every item has Primary and Thumb
+///   images (movies and series also a Backdrop), all the same 1x1 PNG.
 ///
 /// Clones share the same state, so a test can keep a handle to script the
 /// server while the code under test owns another.
@@ -62,6 +78,7 @@ struct State {
     issued: usize,
     failure: Option<ApiError>,
     redirects_from: Vec<ServerUrl>,
+    catalog: Catalog,
 }
 
 #[derive(Debug)]
@@ -87,6 +104,7 @@ impl FakeJellyfin {
             issued: 0,
             failure: None,
             redirects_from: Vec::new(),
+            catalog: Catalog::default(),
         };
         Self {
             server,
@@ -221,45 +239,40 @@ impl FakeJellyfin {
         })
     }
 
-    fn user(&self, session: &Session) -> Result<User, ApiError> {
+    /// Like [`FakeJellyfin::answer`], then requires an issued token and
+    /// returns who it belongs to.
+    fn authorized(&self, session: &Session) -> Result<(MutexGuard<'_, State>, UserId), ApiError> {
         let state = self.answer(session.server())?;
         let user_id = state
             .tokens
             .iter()
             .find(|(token, _)| token == session.token())
-            .map(|(_, id)| id)
+            .map(|(_, id)| id.clone())
             .ok_or(ApiError::TokenRejected)?;
+        Ok((state, user_id))
+    }
+
+    /// Answers a library call: the usual address and token checks, then
+    /// `read` on the catalog.
+    fn read<T>(
+        &self,
+        session: &Session,
+        read: impl FnOnce(&Catalog) -> Result<T, ApiError>,
+    ) -> std::future::Ready<Result<T, ApiError>> {
+        ready(
+            self.authorized(session)
+                .and_then(|(state, _)| read(&state.catalog)),
+        )
+    }
+
+    fn user(&self, session: &Session) -> Result<User, ApiError> {
+        let (state, user_id) = self.authorized(session)?;
         state
             .users
             .iter()
             .map(|u| &u.user)
-            .find(|u| u.id == *user_id)
+            .find(|u| u.id == user_id)
             .cloned()
             .ok_or(ApiError::TokenRejected)
-    }
-}
-
-impl JellyfinApi for FakeJellyfin {
-    fn check_server(
-        &self,
-        address: &ServerUrl,
-    ) -> impl Future<Output = Result<ServerCheck, ApiError>> + Send {
-        ready(self.check(address))
-    }
-
-    fn authenticate_by_name(
-        &self,
-        server: &ServerUrl,
-        username: &str,
-        password: &Password,
-    ) -> impl Future<Output = Result<AuthenticationResult, ApiError>> + Send {
-        ready(self.log_in(server, username, password))
-    }
-
-    fn current_user(
-        &self,
-        session: &Session,
-    ) -> impl Future<Output = Result<User, ApiError>> + Send {
-        ready(self.user(session))
     }
 }

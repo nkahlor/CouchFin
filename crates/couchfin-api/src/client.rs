@@ -3,19 +3,26 @@
 use std::time::Duration;
 
 use reqwest::header::AUTHORIZATION;
-use reqwest::{RequestBuilder, Response, StatusCode, Url};
+use reqwest::{RequestBuilder, Response, Url};
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 
 use crate::api::{JellyfinApi, Session};
 use crate::auth_header::authorization;
 use crate::builder::{BuildError, JellyfinClientBuilder};
 use crate::dto::{AuthenticationResult, ServerCheck, User};
 use crate::error::ApiError;
-use crate::ids::DeviceId;
+use crate::http::{check_status, read_json};
+use crate::ids::{DeviceId, ItemId};
+use crate::image::{Image, ImageRequest};
+use crate::item::Item;
+use crate::library::{Library, Page};
+use crate::query::ItemsQuery;
 use crate::redirect::{self, MAX_REDIRECTS};
 use crate::secret::{AccessToken, Password};
 use crate::server_url::ServerUrl;
+
+mod images;
+mod library;
 
 const PUBLIC_INFO: &str = "System/Info/Public";
 const AUTHENTICATE: &str = "Users/AuthenticateByName";
@@ -151,35 +158,6 @@ impl JellyfinClient {
     }
 }
 
-/// Turns an unsuccessful status into an error. `on_unauthorized` is what a
-/// 401 means for this endpoint. Every endpoint used here exists on every
-/// Jellyfin server, so a 404 means the address points at something else.
-fn check_status(response: &Response, on_unauthorized: ApiError) -> Result<(), ApiError> {
-    let status = response.status();
-    if status.is_success() {
-        return Ok(());
-    }
-    Err(match status {
-        StatusCode::UNAUTHORIZED => on_unauthorized,
-        StatusCode::NOT_FOUND => ApiError::NotJellyfin {
-            detail: format!("{} not found", response.url().path()),
-        },
-        other => ApiError::Status {
-            status: other.as_u16(),
-        },
-    })
-}
-
-/// Reads a JSON body. A body that is cut off or isn't the JSON Jellyfin sends
-/// means this isn't (a compatible) Jellyfin; a timeout while reading stays a
-/// timeout.
-async fn read_json<T: DeserializeOwned>(response: Response) -> Result<T, ApiError> {
-    let bytes = response.bytes().await.map_err(|e| ApiError::body(&e))?;
-    serde_json::from_slice(&bytes).map_err(|e| ApiError::NotJellyfin {
-        detail: e.to_string(),
-    })
-}
-
 /// The login request body. Jellyfin calls the password `Pw`.
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
@@ -222,5 +200,51 @@ impl JellyfinApi for JellyfinClient {
         let response = self.send_once(request, ME, Some(session.token())).await?;
         check_status(&response, ApiError::TokenRejected)?;
         read_json(response).await
+    }
+
+    async fn libraries(&self, session: &Session) -> Result<Vec<Library>, ApiError> {
+        self.list_libraries(session).await
+    }
+
+    async fn items(&self, session: &Session, query: &ItemsQuery) -> Result<Page<Item>, ApiError> {
+        self.list_items(session, query).await
+    }
+
+    async fn item(&self, session: &Session, id: &ItemId) -> Result<Item, ApiError> {
+        self.fetch_item(session, id).await
+    }
+
+    async fn resume(&self, session: &Session, limit: u32) -> Result<Vec<Item>, ApiError> {
+        self.list_resume(session, limit).await
+    }
+
+    async fn next_up(&self, session: &Session, limit: u32) -> Result<Vec<Item>, ApiError> {
+        self.list_next_up(session, limit).await
+    }
+
+    async fn latest(
+        &self,
+        session: &Session,
+        parent: &ItemId,
+        limit: u32,
+    ) -> Result<Vec<Item>, ApiError> {
+        self.list_latest(session, parent, limit).await
+    }
+
+    async fn seasons(&self, session: &Session, series: &ItemId) -> Result<Vec<Item>, ApiError> {
+        self.list_seasons(session, series).await
+    }
+
+    async fn episodes(
+        &self,
+        session: &Session,
+        series: &ItemId,
+        season: &ItemId,
+    ) -> Result<Vec<Item>, ApiError> {
+        self.list_episodes(session, series, season).await
+    }
+
+    async fn image(&self, session: &Session, request: &ImageRequest) -> Result<Image, ApiError> {
+        self.fetch_image(session, request).await
     }
 }

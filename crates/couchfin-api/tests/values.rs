@@ -168,3 +168,16 @@ fn session_debug_hides_the_token_but_shows_the_server() {
     assert_eq!(session.server().as_str(), "http://jellyfin.lan:8096/");
     assert_eq!(session.token().expose_secret(), "0123456789abcdef");
 }
+
+#[test]
+fn item_ids_and_image_tags_cannot_escape_a_url_path() {
+    use couchfin_api::{ImageTag, ItemId};
+
+    for bad in ["", "a/b", "..%2F", "a b", "a?x=1", "a#b"] {
+        assert!(bad.parse::<ItemId>().is_err(), "{bad:?}");
+        assert!(bad.parse::<ImageTag>().is_err(), "{bad:?}");
+    }
+    let id: ItemId = "a1b2c3d4-e5f6".parse().unwrap();
+    assert_eq!(id.to_string(), "a1b2c3d4-e5f6");
+    assert!(serde_json::from_str::<ItemId>("\"../x\"").is_err());
+}

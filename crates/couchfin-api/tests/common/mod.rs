@@ -2,6 +2,7 @@
 //! subset, so unused ones are allowed.
 #![allow(dead_code)]
 
+pub mod library;
 pub mod raw_http;
 pub mod tls;
 

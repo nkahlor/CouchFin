@@ -4,7 +4,10 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use couchfin_api::{AuthenticationResult, ServerCheck, Session};
+use couchfin_api::{
+    AuthenticationResult, Image, ImageRequest, Item, ItemId, ItemsQuery, Library, Page,
+    ServerCheck, Session,
+};
 use couchfin_core::fake::{FakeJellyfin, MemorySettings, MemoryTokens};
 use couchfin_core::{
     ApiError, EnterAddress, JellyfinApi, LoginAction, LoginFlow, LoginScreen, Password, Request,
@@ -45,6 +48,79 @@ impl JellyfinApi for Gated {
         session: &Session,
     ) -> impl Future<Output = Result<User, ApiError>> + Send {
         self.inner.current_user(session)
+    }
+
+    fn libraries(
+        &self,
+        session: &Session,
+    ) -> impl Future<Output = Result<Vec<Library>, ApiError>> + Send {
+        self.inner.libraries(session)
+    }
+
+    fn items(
+        &self,
+        session: &Session,
+        query: &ItemsQuery,
+    ) -> impl Future<Output = Result<Page<Item>, ApiError>> + Send {
+        self.inner.items(session, query)
+    }
+
+    fn item(
+        &self,
+        session: &Session,
+        id: &ItemId,
+    ) -> impl Future<Output = Result<Item, ApiError>> + Send {
+        self.inner.item(session, id)
+    }
+
+    fn resume(
+        &self,
+        session: &Session,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
+        self.inner.resume(session, limit)
+    }
+
+    fn next_up(
+        &self,
+        session: &Session,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
+        self.inner.next_up(session, limit)
+    }
+
+    fn latest(
+        &self,
+        session: &Session,
+        parent: &ItemId,
+        limit: u32,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
+        self.inner.latest(session, parent, limit)
+    }
+
+    fn seasons(
+        &self,
+        session: &Session,
+        series: &ItemId,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
+        self.inner.seasons(session, series)
+    }
+
+    fn episodes(
+        &self,
+        session: &Session,
+        series: &ItemId,
+        season: &ItemId,
+    ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send {
+        self.inner.episodes(session, series, season)
+    }
+
+    fn image(
+        &self,
+        session: &Session,
+        request: &ImageRequest,
+    ) -> impl Future<Output = Result<Image, ApiError>> + Send {
+        self.inner.image(session, request)
     }
 }
 
