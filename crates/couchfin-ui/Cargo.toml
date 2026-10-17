@@ -32,6 +32,9 @@ slint = { workspace = true, features = [
   "software-renderer-systemfonts",
 ] }
 tokio.workspace = true
+# The image time-budget test serves posters from a slow fake server.
+tempfile.workspace = true
+wiremock.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true

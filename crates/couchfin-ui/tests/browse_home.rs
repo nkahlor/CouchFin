@@ -7,7 +7,7 @@ use common::home::presses;
 use common::library::{Shell, World, picture};
 use common::press;
 use couchfin_core::{ApiError, ImageLoad, LibraryState, ScreenState};
-use couchfin_ui::{HomeView, Screen};
+use couchfin_ui::{HomeView, ImageState, Screen};
 use slint::platform::Key;
 use slint::{ComponentHandle, Model};
 
@@ -121,9 +121,14 @@ fn a_card_without_a_picture_says_so_and_one_still_loading_does_not() {
         .to_string();
     shell.show(state);
     let cards = cards_of(&shell, 1);
-    assert!(cards[2].image_missing, "no image ref: nothing will come");
-    assert!(
-        !cards[0].image_missing,
+    assert_eq!(
+        cards[2].image_state,
+        ImageState::Missing,
+        "no image ref: nothing will come"
+    );
+    assert_eq!(
+        cards[0].image_state,
+        ImageState::Loading,
         "a picture still loading is not missing"
     );
 
@@ -131,8 +136,12 @@ fn a_card_without_a_picture_says_so_and_one_still_loading_does_not() {
     shell.loader.finish(&first, ImageLoad::NoImage);
     shell.feed.pump();
     let cards = cards_of(&shell, 1);
-    assert!(cards[0].image_missing, "NoImage means missing");
-    assert!(!cards[1].image_missing);
+    assert_eq!(
+        cards[0].image_state,
+        ImageState::Missing,
+        "NoImage means missing"
+    );
+    assert_eq!(cards[1].image_state, ImageState::Loading);
 }
 
 #[test]
@@ -271,8 +280,9 @@ fn only_cards_near_the_focus_get_pictures() {
         .iter()
         .filter_map(|(item, ..)| item.chars().nth(1))
         .collect();
-    // The focused row and the two below it; nothing further down.
-    assert_eq!(rows_asked, ['0', '1', '2'].into());
+    // The three rows on screen under the details strip and one more below
+    // the fold; nothing further down.
+    assert_eq!(rows_asked, ['0', '1', '2', '3'].into());
     let first_row: Vec<_> = started
         .iter()
         .filter(|(item, ..)| item.starts_with("r0c"))

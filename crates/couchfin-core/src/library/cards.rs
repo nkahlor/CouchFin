@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use couchfin_api::{ImageKind, Item, ItemKind, Library};
 
+use crate::images::{ImageShape, Pixels, placeholder};
+
 use super::state::{Card, CardShape, Episode, Header, ImageRef, Season, Target};
 
 /// Where selecting `item` goes; `None` for kinds with no screen.
@@ -50,6 +52,20 @@ fn image(item: &Item, shape: CardShape) -> Option<ImageRef> {
     })
 }
 
+/// The tiny blurred picture to show while `image` loads, decoded here so the
+/// UI thread never does it (the library flow runs on the async runtime).
+fn blurred(item: &Item, image: Option<&ImageRef>, shape: CardShape) -> Option<Pixels> {
+    let image = image?;
+    let hash = item.blur_hashes.get(image.kind, &image.tag)?;
+    placeholder(
+        hash,
+        match shape {
+            CardShape::Poster => ImageShape::Poster,
+            CardShape::Thumb => ImageShape::Thumb,
+        },
+    )
+}
+
 /// How far through `item` the user is, 0 to 1, if they started it.
 fn progress(item: &Item) -> Option<f32> {
     let data = item.user_data.as_ref()?;
@@ -78,6 +94,7 @@ fn episode_label(item: &Item) -> Option<String> {
 /// Progress is shown only when `with_progress` (Continue Watching).
 pub(super) fn card(item: &Item, shape: CardShape, with_progress: bool) -> Option<Card> {
     let is_episode = item.kind == ItemKind::Episode;
+    let image = image(item, shape);
     Some(Card {
         target: target(item)?,
         title: if is_episode {
@@ -93,7 +110,8 @@ pub(super) fn card(item: &Item, shape: CardShape, with_progress: bool) -> Option
             None
         },
         progress: if with_progress { progress(item) } else { None },
-        image: image(item, shape),
+        placeholder: blurred(item, image.as_ref(), shape),
+        image,
         year: item.production_year,
         runtime: item.runtime,
     })
@@ -114,6 +132,10 @@ pub(super) fn library_card(library: &Library) -> Card {
             kind: ImageKind::Primary,
             tag: tag.clone(),
         }),
+        placeholder: library
+            .primary_blur_hash
+            .as_ref()
+            .and_then(|hash| placeholder(hash, ImageShape::Thumb)),
         year: None,
         runtime: None,
     }

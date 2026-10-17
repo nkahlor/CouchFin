@@ -25,29 +25,7 @@ pub struct TlsServer {
 /// (the server adds `Content-Length: 0` and `Connection: close` when the
 /// response has no blank line yet).
 pub fn start(respond: impl Fn(&str, &str) -> String + Send + 'static) -> TlsServer {
-    let ca_key = KeyPair::generate().expect("CA key");
-    let mut ca_params = CertificateParams::new(Vec::<String>::new()).expect("CA params");
-    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-    let ca = CertifiedIssuer::self_signed(ca_params, ca_key).expect("CA certificate");
-
-    let leaf_key = KeyPair::generate().expect("server key");
-    let leaf = CertificateParams::new(vec!["127.0.0.1".to_owned()])
-        .expect("server params")
-        .signed_by(&leaf_key, &ca)
-        .expect("server certificate");
-
-    let provider = Arc::new(rustls::crypto::ring::default_provider());
-    let config = ServerConfig::builder_with_provider(provider)
-        .with_safe_default_protocol_versions()
-        .expect("TLS versions")
-        .with_no_client_auth()
-        .with_single_cert(
-            vec![leaf.der().clone()],
-            PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(leaf_key.serialize_der())),
-        )
-        .expect("server TLS config");
-    let config = Arc::new(config);
-
+    let (config, ca_pem) = identity(Vec::new());
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let port = listener.local_addr().expect("address").port();
     thread::spawn(move || {
@@ -64,8 +42,60 @@ pub fn start(respond: impl Fn(&str, &str) -> String + Send + 'static) -> TlsServ
         url: format!("https://127.0.0.1:{port}")
             .parse()
             .expect("HTTPS URL"),
-        ca_pem: ca.pem(),
+        ca_pem,
     }
+}
+
+/// A server certificate for 127.0.0.1 from a throwaway CA, offering the ALPN
+/// protocols `alpn`; the CA's PEM comes with it.
+fn identity(alpn: Vec<Vec<u8>>) -> (Arc<ServerConfig>, String) {
+    let ca_key = KeyPair::generate().expect("CA key");
+    let mut ca_params = CertificateParams::new(Vec::<String>::new()).expect("CA params");
+    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    let ca = CertifiedIssuer::self_signed(ca_params, ca_key).expect("CA certificate");
+
+    let leaf_key = KeyPair::generate().expect("server key");
+    let leaf = CertificateParams::new(vec!["127.0.0.1".to_owned()])
+        .expect("server params")
+        .signed_by(&leaf_key, &ca)
+        .expect("server certificate");
+
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let mut config = ServerConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .expect("TLS versions")
+        .with_no_client_auth()
+        .with_single_cert(
+            vec![leaf.der().clone()],
+            PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(leaf_key.serialize_der())),
+        )
+        .expect("server TLS config");
+    config.alpn_protocols = alpn;
+    (Arc::new(config), ca.pem())
+}
+
+/// A server that offers HTTP/2 and HTTP/1.1 by ALPN and reports which one
+/// each client chose, then hangs up: for checking that the client asks for h2.
+pub fn start_alpn_probe() -> (TlsServer, std::sync::mpsc::Receiver<Option<Vec<u8>>>) {
+    let (config, ca_pem) = identity(vec![b"h2".to_vec(), b"http/1.1".to_vec()]);
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("address").port();
+    let (sender, receiver) = std::sync::mpsc::channel();
+    thread::spawn(move || {
+        for mut stream in listener.incoming().flatten() {
+            let mut connection = ServerConnection::new(Arc::clone(&config)).expect("connection");
+            while connection.is_handshaking() {
+                if connection.complete_io(&mut stream).is_err() {
+                    break;
+                }
+            }
+            let _ = sender.send(connection.alpn_protocol().map(<[u8]>::to_vec));
+        }
+    });
+    let url = format!("https://127.0.0.1:{port}")
+        .parse()
+        .expect("HTTPS URL");
+    (TlsServer { url, ca_pem }, receiver)
 }
 
 fn serve(

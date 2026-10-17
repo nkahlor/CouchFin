@@ -3,6 +3,7 @@
 
 use std::time::Duration;
 
+use crate::blur_hash::{BlurHash, ImageBlurHashes};
 use crate::ids::{ImageTag, ItemId};
 use crate::image::ImageKind;
 use crate::item::{ImageTags, Item, ItemKind, UserData};
@@ -39,6 +40,19 @@ struct Entry {
     parent: ItemId,
 }
 
+/// A valid BlurHash every fake image has, so placeholders can be tested.
+pub(crate) const FAKE_BLUR_HASH: &str = "LEHV6nWB2yk8pyo0adR*.7kCMdnj";
+
+fn fake_blur_hashes(id: &ItemId, wide: bool) -> ImageBlurHashes {
+    let hash = || FAKE_BLUR_HASH.parse::<BlurHash>().expect("a valid hash");
+    let kinds = [ImageKind::Primary, ImageKind::Thumb]
+        .into_iter()
+        .chain(wide.then_some(ImageKind::Backdrop));
+    kinds.fold(ImageBlurHashes::default(), |hashes, kind| {
+        hashes.with(kind, tag(id, kind), hash())
+    })
+}
+
 fn tag(id: &ItemId, kind: ImageKind) -> ImageTag {
     ImageTag::try_from(format!("fake-{}-{id}", kind.as_str().to_lowercase()))
         .expect("letters, digits and '-' are always a valid tag")
@@ -55,6 +69,7 @@ impl Catalog {
         let id = self.new_id();
         self.libraries.push(Library {
             primary_image: Some(tag(&id, ImageKind::Primary)),
+            primary_blur_hash: FAKE_BLUR_HASH.parse().ok(),
             id: id.clone(),
             name: name.to_owned(),
             kind,
@@ -92,6 +107,7 @@ impl Catalog {
                 thumb: Some(tag(&id, ImageKind::Thumb)),
                 backdrop: wide.then(|| tag(&id, ImageKind::Backdrop)),
             },
+            blur_hashes: fake_blur_hashes(&id, wide),
             user_data: Some(UserData {
                 played: false,
                 position: Duration::ZERO,

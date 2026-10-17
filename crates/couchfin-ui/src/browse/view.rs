@@ -12,7 +12,7 @@ use super::feed::Feed;
 use super::geometry::Geometry;
 use super::grid::{self, GridModel};
 use super::home::HomeModels;
-use super::loader::{ImageLoader, Loads, Slot, Wish, to_image};
+use super::loader::{ImageLoader, Loads, Picture, Slot, Wish, to_image};
 use crate::generated::{HomeView, LibraryView, MainWindow, MovieView, Screen, SeriesView};
 use crate::wording;
 
@@ -246,7 +246,7 @@ impl Browser {
                         Slot::Backdrop,
                         Wish {
                             image: image.clone(),
-                            width: geometry.backdrop_width(),
+                            size: geometry.backdrop_size(),
                         },
                     )
                 })
@@ -259,7 +259,7 @@ impl Browser {
             Slot::Backdrop => false,
         });
         for slot in cleared {
-            self.put(window, &slot, None);
+            self.put(window, &slot, &Picture::Loading);
         }
     }
 
@@ -274,28 +274,27 @@ impl Browser {
         if !self.loads.finish(slot, ticket) {
             return;
         }
-        match loaded {
-            ImageLoad::Ready(pixels) => self.put(window, slot, Some(to_image(pixels))),
-            // The placeholder gives way to the title inside the card.
-            ImageLoad::NoImage => {
-                if let Slot::Card(key, index) = slot {
-                    self.home.set_missing(key, *index);
-                }
-            }
-        }
+        let picture = match loaded {
+            ImageLoad::Ready(pixels) => Picture::Ready(to_image(pixels)),
+            ImageLoad::NoImage => Picture::Missing,
+        };
+        self.put(window, slot, &picture);
     }
 
-    /// Shows `image` in `slot`, or the placeholder for `None`.
-    fn put(&self, window: &MainWindow, slot: &Slot, image: Option<Image>) {
+    /// Shows `picture` in `slot`.
+    fn put(&self, window: &MainWindow, slot: &Slot, picture: &Picture) {
         match slot {
-            Slot::Card(key, index) => self.home.set_image(key, *index, image),
+            Slot::Card(key, index) => self.home.set_picture(key, *index, picture),
             Slot::Grid(place) => {
                 if let Some((_, model)) = &self.grid {
-                    model.set_image(*place, image);
+                    model.set_picture(*place, picture.clone());
                 }
             }
             Slot::Backdrop => {
-                let image = image.unwrap_or_default();
+                let image = match picture {
+                    Picture::Ready(image) => image.clone(),
+                    Picture::Loading | Picture::Missing => Image::default(),
+                };
                 window.global::<MovieView>().set_backdrop(image.clone());
                 window.global::<SeriesView>().set_backdrop(image);
             }

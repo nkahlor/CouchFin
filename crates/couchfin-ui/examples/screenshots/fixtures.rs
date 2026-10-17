@@ -4,7 +4,7 @@
 
 use slint::{Image, ModelRc, VecModel};
 
-use couchfin_ui::{CardData, CardShape, EpisodeData, RowData};
+use couchfin_ui::{CardData, CardShape, EpisodeData, ImageState, RowData};
 
 use crate::art;
 
@@ -69,10 +69,22 @@ fn pictures(shape: CardShape, n: usize, mode: Pictures) -> Image {
 }
 
 fn card(shape: CardShape, n: usize, mode: Pictures) -> CardData {
+    let image = pictures(shape, n, mode);
+    let image_state = match mode {
+        Pictures::NoneLoaded => ImageState::Loading,
+        Pictures::SomeMissing if missing(n, mode) => ImageState::Missing,
+        _ => ImageState::Ready,
+    };
+    // Stands in for the BlurHash: a tiny picture shown stretched.
+    let (width, height) = match shape {
+        CardShape::Poster => (24, 36),
+        CardShape::Thumb => (32, 18),
+    };
     CardData {
         title: title(n).into(),
-        image: pictures(shape, n, mode),
-        image_missing: missing(n, mode),
+        image,
+        placeholder: art::picture(seed(n * 5 + 1), width, height),
+        image_state,
         meta: format!("{} · {} min", 1990 + n * 3, 82 + n * 7).into(),
         ..CardData::default()
     }

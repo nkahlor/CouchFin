@@ -11,6 +11,16 @@ export enum CardShape {
     thumb,
 }
 
+// Where a card's picture is. `loading` shows the blurred placeholder (or
+// nothing, if the server sent no hash); `missing` means the item has no
+// picture at all, so the card shows its title instead; `ready` fades the
+// picture in over the placeholder.
+export enum ImageState {
+    loading,
+    ready,
+    missing,
+}
+
 // One card in a row or a grid.
 export struct CardData {
     title: string,
@@ -19,11 +29,12 @@ export struct CardData {
     // Resume progress from 0 to 1, drawn along a thumbnail's bottom edge.
     // 0 (or less) shows no bar.
     progress: float,
-    // The picture; empty draws the placeholder.
+    // The picture; empty until `image-state` is `ready`.
     image: image,
-    // The picture will never come, so the card draws its title inside it
-    // instead of the placeholder; a picture still loading shows plain.
-    image-missing: bool,
+    // A tiny blurred picture shown scaled up, at once, while the real one
+    // loads; empty if the server has no BlurHash for it.
+    placeholder: image,
+    image-state: ImageState,
     // The details strip's line under the title: "2016 · 1 h 56 min" for a
     // movie, "S2 · E4" for an episode, "Library" for a library tile.
     meta: string,

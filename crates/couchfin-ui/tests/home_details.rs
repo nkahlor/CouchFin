@@ -11,7 +11,7 @@ mod common;
 #[allow(dead_code)]
 mod fixtures;
 
-use couchfin_ui::{CardData, CardShape, HomeView, MainWindow, RowData};
+use couchfin_ui::{CardData, CardShape, HomeView, ImageState, MainWindow, RowData};
 use fixtures::Pictures;
 use i_slint_backend_testing::{ElementHandle, ElementQuery};
 use slint::platform::Key;
@@ -151,11 +151,15 @@ fn a_card_without_a_picture_shows_its_title_inside_at_most_three_lines() {
     let home = home_at(1920.0, 1080.0);
     let long = "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb";
     let mut missing = card(long, "1964");
-    missing.image_missing = true;
+    missing.image_state = ImageState::Missing;
+    let mut loading = card("Loading", "");
+    loading.image_state = ImageState::Loading;
+    let mut ready = card("Ready", "");
+    ready.image_state = ImageState::Ready;
     home.window.global::<HomeView>().set_rows(rows(vec![row(
         "Movies",
         CardShape::Poster,
-        vec![missing, card("Loading", "")],
+        vec![missing, loading, ready],
     )]));
     settle();
     let cards = all_cards(&home.window);
@@ -173,18 +177,21 @@ fn a_card_without_a_picture_shows_its_title_inside_at_most_three_lines() {
         text.0 >= own.0 && text.2 <= own.2 && text.1 >= own.1 && text.3 <= own.3,
         "{text:?} inside {own:?}"
     );
-    // A card whose picture is only loading shows no text.
-    let loading = cards
-        .iter()
-        .find(|c| c.accessible_label().as_deref() == Some("Loading"))
-        .expect("the card");
-    assert!(
-        loading
-            .query_descendants()
-            .match_type_name("Text")
-            .find_all()
-            .is_empty()
-    );
+    // Loading shows the placeholder and ready the picture, neither a text.
+    for name in ["Loading", "Ready"] {
+        let other = cards
+            .iter()
+            .find(|c| c.accessible_label().as_deref() == Some(name))
+            .expect("the card");
+        assert!(
+            other
+                .query_descendants()
+                .match_type_name("Text")
+                .find_all()
+                .is_empty(),
+            "{name} draws no title inside"
+        );
+    }
 }
 
 #[test]
