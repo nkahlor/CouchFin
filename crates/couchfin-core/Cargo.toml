@@ -12,6 +12,7 @@ repository.workspace = true
 couchfin-api.workspace = true
 directories.workspace = true
 image.workspace = true
+futures-util.workspace = true
 keyring-core.workspace = true
 serde.workspace = true
 thiserror.workspace = true

@@ -7,6 +7,10 @@
 //! - [`LoginFlow`] runs Phase 1's login: it restores a stored session at
 //!   startup, checks the server address, logs in, and persists the session.
 //!   Its state is a [`LoginScreen`]; the UI sends [`LoginAction`]s.
+//! - [`LibraryFlow`] runs the screens after login: a navigation stack of
+//!   Home (rows), a paged library grid and movie and series details. Its
+//!   state is a [`LibraryState`]; the UI sends [`LibraryAction`]s, and the
+//!   app watches [`LibraryState::session_expired`] to return to sign-in.
 //! - [`Settings`] (device ID, server, last username) live in a
 //!   [`SettingsStore`]: [`FileSettings`] writes `settings.toml` in a
 //!   [`ConfigDir`].
@@ -17,7 +21,8 @@
 //!   cache, plus a blurred copy for the carousel (decision 016).
 //! - [`fake`] has in-memory stores and the fake Jellyfin server, for tests.
 //!
-//! The design is recorded in `docs/decisions/007-session-persistence.md`.
+//! The designs are recorded in `docs/decisions/007-session-persistence.md`
+//! and `docs/decisions/017-library-state.md`.
 //!
 //! # Examples
 //!
@@ -49,12 +54,17 @@ mod config_dir;
 pub mod fake;
 mod fs_util;
 mod images;
+mod library;
 mod login;
 mod settings;
 mod tokens;
 
 pub use config_dir::ConfigDir;
 pub use images::{CacheDir, ImageCache, ImageCacheConfig, ImageError, ImageLoad, Pixels, Variant};
+pub use library::{
+    Card, CardShape, Episode, GridState, Header, HomeState, ImageRef, LibraryAction, LibraryFlow,
+    LibraryState, MovieState, Row, RowKind, ScreenState, Season, SeriesState, Target,
+};
 pub use login::{
     EnterAddress, Home, LogIn, LoginAction, LoginError, LoginFlow, LoginScreen, Request,
     RestoreStatus, Restoring,

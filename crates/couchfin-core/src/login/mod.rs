@@ -11,7 +11,7 @@ pub use screen::{
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use couchfin_api::{AccessToken, JellyfinApi, ServerUrl};
+use couchfin_api::{AccessToken, ApiError, JellyfinApi, ServerUrl, Session};
 
 use crate::settings::{Settings, SettingsStore};
 use crate::tokens::{TokenStore, TokenStoreError};
@@ -83,6 +83,9 @@ pub struct LoginFlow<A, S, T> {
 struct State {
     screen: LoginScreen,
     settings: Settings,
+    /// The session behind `LoginScreen::Home`; kept out of the screen, which
+    /// the UI renders.
+    session: Option<Session>,
     /// Bumped on every new screen started by an action, so a request can
     /// tell whether its result is still wanted.
     generation: u64,
@@ -106,6 +109,7 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
             state: Mutex::new(State {
                 screen: LoginScreen::Starting,
                 settings,
+                session: None,
                 generation: 0,
             }),
             observer: None,
@@ -128,6 +132,54 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
         self.lock().screen.clone()
     }
 
+    /// The logged-in session while the screen is [`LoginScreen::Home`], else
+    /// `None`. It is how the app builds a
+    /// [`LibraryFlow`](crate::LibraryFlow); the token stays out of
+    /// [`LoginScreen`], which the UI renders.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use couchfin_core::fake::{FakeJellyfin, MemorySettings, MemoryTokens};
+    /// use couchfin_core::{LibraryFlow, LoginAction, LoginFlow, Password, Settings};
+    ///
+    /// let fake = FakeJellyfin::new("http://jellyfin.lan:8096".parse()?)
+    ///     .with_user("alice", "hunter2");
+    /// let (settings, tokens) = (MemorySettings::new(), MemoryTokens::new());
+    /// let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+    /// runtime.block_on(async {
+    ///     let login = LoginFlow::new(
+    ///         fake.clone(),
+    ///         Settings::load_or_create(&settings),
+    ///         settings,
+    ///         tokens,
+    ///     );
+    ///     assert!(login.session().is_none());
+    ///     login.start().await;
+    ///     login.dispatch(LoginAction::SubmitAddress("jellyfin.lan:8096".into())).await;
+    ///     login
+    ///         .dispatch(LoginAction::SubmitLogin {
+    ///             username: "alice".into(),
+    ///             password: Password::new("hunter2"),
+    ///         })
+    ///         .await;
+    ///     let session = login.session().ok_or("not logged in")?;
+    ///     let library = LibraryFlow::new(fake, session);
+    ///     library.start().await;
+    ///     assert!(!library.state().session_expired);
+    ///     Ok::<(), Box<dyn std::error::Error>>(())
+    /// })?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub fn session(&self) -> Option<Session> {
+        let state = self.lock();
+        match state.screen {
+            LoginScreen::Home(_) => state.session.clone(),
+            _ => None,
+        }
+    }
+
     /// Leaves [`LoginScreen::Starting`]. With a stored server and token it
     /// checks the session and goes to Home if the token still works. With
     /// only a server it checks that server and shows its login form.
@@ -148,7 +200,10 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
             }
             LoginAction::Retry => self.restore(steps::restore_failed).await,
             LoginAction::ChangeServer => self.change_server(),
-            LoginAction::LogOut => self.log_out(),
+            LoginAction::LogOut => self.log_out(Request::Idle),
+            LoginAction::SessionExpired => {
+                self.log_out(Request::Failed(ApiError::TokenRejected.into()));
+            }
         }
     }
 
@@ -173,6 +228,7 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
         let mut state = self.lock();
         let (screen, extra) = next(&state.screen)?;
         state.generation += 1;
+        state.session = None;
         state.screen = screen;
         self.publish(&state.screen);
         Some((Ticket(state.generation), extra))
@@ -183,6 +239,16 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
         let mut state = self.lock();
         if state.generation == ticket.0 {
             state.screen = screen;
+            self.publish(&state.screen);
+        }
+    }
+
+    /// Like `finish`, for arriving at Home: also keeps the session.
+    fn finish_home(&self, ticket: Ticket, home: Home, session: Session) {
+        let mut state = self.lock();
+        if state.generation == ticket.0 {
+            state.screen = LoginScreen::Home(home);
+            state.session = Some(session);
             self.publish(&state.screen);
         }
     }

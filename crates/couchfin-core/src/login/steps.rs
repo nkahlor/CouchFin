@@ -101,14 +101,15 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
             return;
         }
         match self.api.current_user(&session).await {
-            Ok(user) => self.finish(
+            Ok(user) => self.finish_home(
                 ticket,
-                LoginScreen::Home(Home {
+                Home {
                     server,
                     info: check.info,
                     user,
                     token_not_saved: None,
-                }),
+                },
+                session,
             ),
             Err(ApiError::TokenRejected) => {
                 self.forget_token(&server);
@@ -192,14 +193,15 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
         let token_not_saved = self.save_token(&server, session.token());
         self.remember(ticket, &server, Some(&username));
         match self.api.current_user(&session).await {
-            Ok(user) => self.finish(
+            Ok(user) => self.finish_home(
                 ticket,
-                LoginScreen::Home(Home {
+                Home {
                     server,
                     info: check.info.clone(),
                     user,
                     token_not_saved,
-                }),
+                },
+                session,
             ),
             Err(error) => self.finish(ticket, form(failed(error))),
         }
@@ -231,14 +233,14 @@ impl<A: JellyfinApi, S: SettingsStore, T: TokenStore> LoginFlow<A, S, T> {
         });
     }
 
-    pub(super) fn log_out(&self) {
+    pub(super) fn log_out(&self, request: Request) {
         let started = self.begin(|screen| match screen {
             LoginScreen::Home(home) => {
                 let check = ServerCheck {
                     server: home.server.clone(),
                     info: home.info.clone(),
                 };
-                let form = login_form(check, home.user.name.clone(), Request::Idle);
+                let form = login_form(check, home.user.name.clone(), request);
                 Some((form, home.server.clone()))
             }
             _ => None,

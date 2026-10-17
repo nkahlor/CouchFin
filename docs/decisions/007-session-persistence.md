@@ -29,7 +29,8 @@ tokio runtime. `JellyfinApi` futures borrow the client and their arguments
   `Request::{Idle, InFlight, Failed(LoginError)}`. Every field is public, so
   UI tests can build any screen.
 - **The UI sends `LoginAction`s**: `SubmitAddress(String)`,
-  `SubmitLogin { username, password }`, `Retry`, `ChangeServer` and `LogOut`.
+  `SubmitLogin { username, password }`, `Retry`, `ChangeServer`, `LogOut` and
+  `SessionExpired`.
   An action that doesn't fit the current screen is ignored, including a second
   submit while one is in flight.
 - **Methods take `&self` and return `Send` futures** (`start()`,
@@ -84,6 +85,13 @@ action and one callback.
   deletes the previous server's token.
 - **`LogOut`** deletes the token and shows the login form with the username
   filled in. It doesn't revoke the token on the server yet (follow-up).
+- **`SessionExpired`** (on Home) is for a token the server rejects while
+  browsing (decision 017). It does what a rejected token at startup does:
+  deletes the token and shows the login form with
+  `Failed(Api(TokenRejected))`.
+- **`LoginFlow::session()`** returns the `Session` while on Home, else
+  `None`, so the app can build a `LibraryFlow`. The token is not part of
+  `LoginScreen`, which the UI renders.
 - **Errors are data.** `LoginError` wraps `ServerUrlError` and `ApiError`;
   their `Display` is for logs. The UI picks the wording by matching. Core
   re-exports the API types the UI needs (`ServerUrl`, `ServerUrlError`,
