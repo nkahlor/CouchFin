@@ -34,6 +34,13 @@ anyhow = "1"
 directories = "6"
 # The keyring ecosystem's core API, with its pure-Rust (zbus) Secret Service
 # store below, rather than the `keyring` wrapper crate: see decision 007.
+# Decoding and blurring posters (decision 016): only the formats Jellyfin
+# serves, none of the default features (no rayon, GIF or AVIF).
+image = { version = "0.25", default-features = false, features = [
+  "jpeg",
+  "png",
+  "webp",
+] }
 keyring-core = "1"
 rcgen = "0.14"
 # Only the features couchfin-api uses. TLS is rustls with ring as its crypto

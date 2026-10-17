@@ -19,6 +19,11 @@ pub(crate) fn read_if_exists(path: &Path) -> io::Result<Option<String>> {
 /// the moment it is created, so a secret is never readable by others, even
 /// briefly. A missing parent directory is created readable by the user only.
 pub(crate) fn write_atomically(path: &Path, contents: &str, mode: u32) -> io::Result<()> {
+    write_bytes_atomically(path, contents.as_bytes(), mode)
+}
+
+/// [`write_atomically`] for contents that aren't text, such as images.
+pub(crate) fn write_bytes_atomically(path: &Path, contents: &[u8], mode: u32) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         DirBuilder::new()
             .recursive(true)
@@ -39,7 +44,7 @@ pub(crate) fn write_atomically(path: &Path, contents: &str, mode: u32) -> io::Re
         .create_new(true)
         .mode(mode)
         .open(temporary)?;
-    file.write_all(contents.as_bytes())?;
+    file.write_all(contents)?;
     file.sync_all()?;
     fs::rename(temporary, path)
 }

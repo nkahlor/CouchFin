@@ -13,6 +13,8 @@
 //! - Access tokens live in a [`TokenStore`]: [`SystemTokens`] uses the
 //!   system keyring ([`KeyringTokens`]) and falls back to a file only the
 //!   user can read ([`FileTokens`], mode 0600).
+//! - [`ImageCache`] loads posters: decoded pixels from a disk and memory
+//!   cache, plus a blurred copy for the carousel (decision 016).
 //! - [`fake`] has in-memory stores and the fake Jellyfin server, for tests.
 //!
 //! The design is recorded in `docs/decisions/007-session-persistence.md`.
@@ -46,11 +48,13 @@
 mod config_dir;
 pub mod fake;
 mod fs_util;
+mod images;
 mod login;
 mod settings;
 mod tokens;
 
 pub use config_dir::ConfigDir;
+pub use images::{CacheDir, ImageCache, ImageCacheConfig, ImageError, ImageLoad, Pixels, Variant};
 pub use login::{
     EnterAddress, Home, LogIn, LoginAction, LoginError, LoginFlow, LoginScreen, Request,
     RestoreStatus, Restoring,
