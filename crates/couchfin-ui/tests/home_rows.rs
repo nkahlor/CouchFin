@@ -1,5 +1,5 @@
 //! Home as a vertical stack of carousel rows, on Slint's testing backend:
-//! the rows come from `HomeView.rows` and an empty one is hidden, Up and
+//! the rows come from `HomeView.rows`, drawn exactly as given, Up and
 //! Down move between rows, each row remembers its own card, and the page
 //! scrolls so the focused row sits at one height (decision 015).
 
@@ -53,24 +53,54 @@ fn the_placeholder_rows_come_in_order() {
 }
 
 #[test]
-fn rows_come_from_the_model_and_an_empty_one_is_hidden_and_stepped_over() {
+fn rows_come_from_the_model_and_are_drawn_exactly_as_given() {
+    // Core drops empty rows, so the page does no stepping over them: a row
+    // it is given is a row it shows and Down lands on.
     let home = home();
     let rows = vec![
         row("First", CardShape::Poster, &["A1", "A2"]),
-        row("Nothing here", CardShape::Poster, &[]),
         row("Third", CardShape::Thumb, &["C1", "C2"]),
+        row("Fourth", CardShape::Poster, &["D1"]),
     ];
     home.window
         .global::<HomeView>()
         .set_rows(ModelRc::new(VecModel::from(rows)));
     assert_eq!(current(&home.window).as_deref(), Some("A1"));
-    assert!(labelled(&home.window, "Nothing here").is_empty());
     press(&home.window, Key::DownArrow);
     assert_eq!(current(&home.window).as_deref(), Some("C1"));
     press(&home.window, Key::Return);
-    assert_eq!(home.activated.taken(), [(2, 0)]);
+    assert_eq!(home.activated.taken(), [(1, 0)]);
+    press(&home.window, Key::DownArrow);
+    assert_eq!(current(&home.window).as_deref(), Some("D1"));
+    press(&home.window, Key::UpArrow);
     press(&home.window, Key::UpArrow);
     assert_eq!(current(&home.window).as_deref(), Some("A1"));
+}
+
+#[test]
+fn an_empty_row_is_not_special_cased_by_the_page() {
+    // Not something core sends; this pins that the page has no second rule.
+    let home = home();
+    let rows = vec![
+        row("First", CardShape::Poster, &["A1"]),
+        row("Nothing here", CardShape::Poster, &[]),
+        row("Third", CardShape::Poster, &["C1"]),
+    ];
+    home.window
+        .global::<HomeView>()
+        .set_rows(ModelRc::new(VecModel::from(rows)));
+    press(&home.window, Key::DownArrow);
+    assert!(
+        !labelled(&home.window, "Nothing here").is_empty(),
+        "it is drawn"
+    );
+    press(&home.window, Key::Return);
+    assert!(
+        home.activated.taken().is_empty(),
+        "there is no card to open"
+    );
+    press(&home.window, Key::DownArrow);
+    assert_eq!(current(&home.window).as_deref(), Some("C1"));
 }
 
 #[test]

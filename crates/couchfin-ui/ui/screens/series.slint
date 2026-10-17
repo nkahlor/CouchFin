@@ -239,8 +239,8 @@ export component SeriesPage inherits Rectangle {
         }
 
         Text {
-            text: root.pressed ? "Playback arrives soon" : "";
-            color: Theme.muted;
+            text: SeriesView.error != "" ? SeriesView.error : root.pressed ? "Playback arrives soon" : "";
+            color: SeriesView.error != "" ? Theme.error : Theme.muted;
             font-size: Theme.label-size;
         }
     }

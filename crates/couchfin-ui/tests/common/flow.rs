@@ -80,6 +80,7 @@ pub fn describe(command: Command) -> String {
         Command::Login(LoginAction::ChangeServer) => "ChangeServer".into(),
         Command::Login(LoginAction::LogOut) => "LogOut".into(),
         Command::Login(LoginAction::SessionExpired) => "SessionExpired".into(),
+        Command::Library(action) => format!("{action:?}"),
     }
 }
 

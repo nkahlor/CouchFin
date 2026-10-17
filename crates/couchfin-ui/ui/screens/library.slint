@@ -54,6 +54,14 @@ export component LibraryPage inherits Rectangle {
             overflow: elide;
         }
 
+        // Always takes its line, so the grid never jumps when it appears.
+        Text {
+            text: LibraryView.error;
+            color: Theme.error;
+            font-size: Theme.label-size;
+            overflow: elide;
+        }
+
         // The grid reaches the screen's edge, so a scrolled row is cut off by
         // it rather than by the page margin.
         list := ListView {

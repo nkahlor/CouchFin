@@ -7,6 +7,7 @@
 pub mod browse;
 pub mod flow;
 pub mod home;
+pub mod library;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

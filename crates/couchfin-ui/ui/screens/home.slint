@@ -17,14 +17,7 @@ import { Keys, KeyIntent } from "../widgets/keys.slint";
 // focused row always sits at Theme.home-row-anchor. Left and Right on Sign
 // out do nothing. Escape or Backspace anywhere asks to go back.
 export component HomePage inherits Rectangle {
-    // The row with focus, and also the row last focused while Sign out has
-    // it. -1 when no row has cards.
-    property <int> focused-row: root.below(-1);
-    // How many rows of each shape are scrolled out above the focused one.
-    // Counted, not measured, so a resize keeps the anchor.
-    property <int> posters-above: 0;
-    property <int> thumbs-above: 0;
-    // The last card selected. Only shown, until there is a detail page.
+    // The last card selected. Only shown, as feedback while a page loads.
     property <string> selected;
 
     // The height a poster has: what the viewport leaves after a poster row's
@@ -33,64 +26,66 @@ export component HomePage inherits Rectangle {
         viewport.height - CarouselMetrics.height(CardShape.poster, 0px),
         Theme.home-poster-min-height,
         Theme.poster-max-height);
-    property <length> scroll: root.posters-above * CarouselMetrics.height(CardShape.poster, root.poster-height) + root.thumbs-above * CarouselMetrics.height(CardShape.thumb, root.poster-height);
+    property <length> scroll: HomeView.posters-above * CarouselMetrics.height(CardShape.poster, root.poster-height) + HomeView.thumbs-above * CarouselMetrics.height(CardShape.thumb, root.poster-height);
 
     init => {
+        HomeView.poster-height = root.poster-height;
         scope.focus();
     }
 
+    changed poster-height => {
+        HomeView.poster-height = root.poster-height;
+    }
+
     function usable(row: int) -> bool {
-        row >= 0 && row < HomeView.rows.length && HomeView.rows[row].cards.length > 0
-    }
-
-    // The next row with cards, stepping over up to two empty ones; -1 if
-    // there is none.
-    function below(from: int) -> int {
-        usable(from + 1) ? from + 1 : usable(from + 2) ? from + 2 : usable(from + 3) ? from + 3 : -1
-    }
-
-    function above(from: int) -> int {
-        usable(from - 1) ? from - 1 : usable(from - 2) ? from - 2 : usable(from - 3) ? from - 3 : -1
+        row >= 0 && row < HomeView.rows.length
     }
 
     function go-down() {
-        let target = root.below(root.focused-row);
-        if target < 0 {
+        if !root.usable(HomeView.focused-row + 1) {
             sign-out.focus();
             return;
         }
-        if HomeView.rows[root.focused-row].shape == CardShape.poster {
-            root.posters-above += 1;
+        if HomeView.rows[HomeView.focused-row].shape == CardShape.poster {
+            HomeView.posters-above += 1;
         } else {
-            root.thumbs-above += 1;
+            HomeView.thumbs-above += 1;
         }
-        root.focused-row = target;
+        HomeView.focused-row += 1;
+        HomeView.focus-changed(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
     }
 
     function go-up() {
-        let target = root.above(root.focused-row);
-        if target < 0 {
+        if !root.usable(HomeView.focused-row - 1) {
             return;
         }
-        if HomeView.rows[target].shape == CardShape.poster {
-            root.posters-above -= 1;
+        if HomeView.rows[HomeView.focused-row - 1].shape == CardShape.poster {
+            HomeView.posters-above -= 1;
         } else {
-            root.thumbs-above -= 1;
+            HomeView.thumbs-above -= 1;
         }
-        root.focused-row = target;
+        HomeView.focused-row -= 1;
+        HomeView.focus-changed(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
     }
 
     function step(delta: int) {
-        if !root.usable(root.focused-row) {
+        if !root.usable(HomeView.focused-row) {
             return;
         }
-        HomeView.rows[root.focused-row].current = clamp(
-            HomeView.rows[root.focused-row].current + delta,
+        let moved = clamp(
+            HomeView.rows[HomeView.focused-row].current + delta,
             0,
-            HomeView.rows[root.focused-row].cards.length - 1);
+            HomeView.rows[HomeView.focused-row].cards.length - 1);
+        if moved != HomeView.rows[HomeView.focused-row].current {
+            HomeView.rows[HomeView.focused-row].current = moved;
+            HomeView.focus-changed(HomeView.focused-row, moved);
+        }
     }
 
     function activate(row: int, index: int) {
+        if index >= HomeView.rows[row].cards.length {
+            return;
+        }
         root.selected = HomeView.rows[row].cards[index].title;
         HomeView.card-activated(row, index);
     }
@@ -173,8 +168,8 @@ export component HomePage inherits Rectangle {
                         return accept;
                     }
                     if Keys.intent(event) == KeyIntent.activate {
-                        if root.usable(root.focused-row) {
-                            root.activate(root.focused-row, HomeView.rows[root.focused-row].current);
+                        if root.usable(HomeView.focused-row) {
+                            root.activate(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
                         }
                         return accept;
                     }
@@ -184,6 +179,18 @@ export component HomePage inherits Rectangle {
                     }
                     return reject;
                 }
+            }
+
+            // In place of the rows while there are none: loading, a failure
+            // or an empty library.
+            if HomeView.rows.length == 0: Text {
+                x: Theme.carousel-inset;
+                y: Theme.home-row-anchor;
+                width: parent.width - Theme.carousel-inset - Theme.page-margin;
+                text: HomeView.status;
+                color: Theme.muted;
+                font-size: Theme.body-size;
+                wrap: word-wrap;
             }
 
             // Moved, not scrolled by a Flickable, so the anchor is exact and
@@ -197,27 +204,20 @@ export component HomePage inherits Rectangle {
                     easing: ease-out;
                 }
 
-                // An empty row is never created and takes no room: its slot is
-                // zero tall.
-                for row[r] in HomeView.rows: Rectangle {
-                    property <length> block: row.cards.length > 0 ? CarouselMetrics.height(row.shape, root.poster-height) : 0px;
-                    min-height: self.block;
-                    max-height: self.block;
-
-                    if row.cards.length > 0: CarouselRow {
-                        title: row.title;
-                        cards: row.cards;
-                        shape: row.shape;
-                        poster-height: root.poster-height;
-                        current: row.current;
-                        focused: scope.has-focus && r == root.focused-row;
-                        chosen: r == root.focused-row;
-                        activated(index) => {
-                            root.focused-row = r;
-                            HomeView.rows[r].current = index;
-                            scope.focus();
-                            root.activate(r, index);
-                        }
+                                for row[r] in HomeView.rows: CarouselRow {
+                    title: row.title;
+                    cards: row.cards;
+                    shape: row.shape;
+                    poster-height: root.poster-height;
+                    current: row.current;
+                    focused: scope.has-focus && r == HomeView.focused-row;
+                    chosen: r == HomeView.focused-row;
+                    activated(index) => {
+                        HomeView.focused-row = r;
+                        HomeView.rows[r].current = index;
+                        scope.focus();
+                        HomeView.focus-changed(r, index);
+                        root.activate(r, index);
                     }
                 }
             }
@@ -240,6 +240,14 @@ export component HomePage inherits Rectangle {
                 back => {
                     HomeView.back();
                 }
+            }
+
+            if HomeView.error != "": Text {
+                text: HomeView.error;
+                color: Theme.error;
+                font-size: Theme.label-size;
+                vertical-alignment: center;
+                wrap: word-wrap;
             }
 
             if HomeView.notice != "": Text {

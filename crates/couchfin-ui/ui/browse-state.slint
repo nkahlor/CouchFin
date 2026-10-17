@@ -52,6 +52,8 @@ export global LibraryView {
     // How many items the whole library has. The grid is this long even
     // while few items are loaded.
     in property <int> item-count;
+    // Why a page of the library couldn't load; empty shows none.
+    in property <string> error;
     // The items by place in the library, 0 to item-count - 1. The grid reads
     // only the places it draws, so this may be a model that loads lazily;
     // a place with no data shows an empty card.
@@ -79,6 +81,8 @@ export global MovieView {
     // True when there is a position to resume: the button says Resume, not
     // Play.
     in property <bool> resumable;
+    // Why the movie couldn't load; empty shows none.
+    in property <string> error;
     // The Play or Resume button. Until playback exists (Phase 4) the page
     // also says "Playback arrives soon".
     callback play();
@@ -102,6 +106,8 @@ export global SeriesView {
     in-out property <int> selected-season;
     // The selected season's episodes.
     in property <[EpisodeData]> episodes;
+    // Why the series couldn't load; empty shows none.
+    in property <string> error;
     // The selected season changed (Left or Right on the seasons), so core
     // loads its episodes.
     callback season-selected(index: int);

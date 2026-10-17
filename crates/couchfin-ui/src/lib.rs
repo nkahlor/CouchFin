@@ -62,6 +62,7 @@
 //! ```
 
 mod bind;
+mod browse;
 mod guard;
 mod navigate;
 mod navigator;
@@ -75,6 +76,7 @@ mod generated {
 }
 
 pub use bind::{Command, bind, render};
+pub use browse::{Feed, Guard, ImageLoader, install};
 pub use guard::{Clock, Dropped, DuplicateGuard, GuardConfig, SystemClock, Verdict};
 pub use navigate::{Intent, navigate};
 pub use navigator::{INPUT_LOG, Navigator, log_stamp};

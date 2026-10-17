@@ -50,8 +50,8 @@ export component MoviePage inherits Rectangle {
             }
 
             Text {
-                text: root.pressed ? "Playback arrives soon" : "";
-                color: Theme.muted;
+                text: MovieView.error != "" ? MovieView.error : root.pressed ? "Playback arrives soon" : "";
+                color: MovieView.error != "" ? Theme.error : Theme.muted;
                 font-size: Theme.label-size;
                 vertical-alignment: center;
             }
