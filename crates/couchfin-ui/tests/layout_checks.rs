@@ -27,6 +27,13 @@ use common::{press, shown};
 
 type Window = couchfin_ui::MainWindow;
 
+/// A line of text is about this many font sizes tall.
+const LINE_HEIGHT: f32 = 1.36;
+/// `Theme.card-inner-title-size`; Theme is not part of the crate's API.
+const INNER_TITLE_SIZE: f32 = 28.0;
+/// `Theme.card-inner-padding`: a small card gives its title what is left.
+const CARD_PADDING: f32 = 12.0;
+
 /// A rectangle in window coordinates: left, top, right, bottom.
 #[derive(Clone, Copy)]
 struct Rect(f32, f32, f32, f32);
@@ -106,7 +113,21 @@ fn problems(window: &Window) -> Vec<String> {
     let cards = ElementQuery::from_root(window)
         .match_accessible_role(AccessibleRole::ListItem)
         .find_all();
-    for card in &cards {
+    found.extend(card_problems(&cards));
+
+    // A button, a poster or a row's list may not lie over any text but
+    // their own (Sign out once covered the row below the focused one, and the
+    // focused poster a row's title).
+    found.extend(over_text_problems(window, &texts));
+    found.extend(edge_problems(window, &texts, screen));
+    found
+}
+
+/// Texts that spill out of their card sideways, or titles inside a card
+/// with too little room.
+fn card_problems(cards: &[ElementHandle]) -> Vec<String> {
+    let mut found = Vec::new();
+    for card in cards {
         let own = rect(card);
         for text in card.query_descendants().match_type_name("Text").find_all() {
             let r = rect(&text);
@@ -124,14 +145,42 @@ fn problems(window: &Window) -> Vec<String> {
         }
     }
 
-    // A button, a poster or a row's list may not lie over any text but
-    // their own (Sign out once covered the row below the focused one, and the
-    // focused poster a row's title).
+    // A title drawn inside a card (no picture) is laid out in a box that must
+    // hold its three lines: centred text taller than its box spills over the
+    // top and the first line is lost, which read as a title clipped at the
+    // start (#66).
+    let three_lines = 3.0 * INNER_TITLE_SIZE * LINE_HEIGHT;
+    for card in cards {
+        let own = rect(card);
+        for text in card
+            .query_descendants()
+            .match_id("Card::inner-title")
+            .find_all()
+        {
+            let r = rect(&text);
+            if text.computed_opacity() > 0.05
+                && r.3 - r.1 < three_lines.min(own.3 - own.1 - 2.0 * CARD_PADDING - 2.0)
+            {
+                let label = card.accessible_label().unwrap_or_default();
+                found.push(format!(
+                    "text box too short for three lines in card {label:?} {}: {} (needs {three_lines:.0})",
+                    own.describe(),
+                    r.describe()
+                ));
+            }
+        }
+    }
+    found
+}
+
+/// Buttons and posters lying over text that is not their own.
+fn over_text_problems(window: &Window, texts: &[(String, Rect)]) -> Vec<String> {
+    let mut found = Vec::new();
     let buttons = ElementQuery::from_root(window)
         .match_accessible_role(AccessibleRole::Button)
         .find_all();
     for button in &buttons {
-        for (name, r) in &texts {
+        for (name, r) in texts {
             let own = rect(button);
             let inside = r.inside(own);
             if own.overlaps(*r) && !inside {
@@ -160,11 +209,25 @@ fn problems(window: &Window) -> Vec<String> {
             }
         }
     }
+    found
+}
 
+/// Texts and buttons outside the window.
+fn edge_problems(window: &Window, texts: &[(String, Rect)], screen: Rect) -> Vec<String> {
+    let mut found = Vec::new();
     // Cards peek in from the edges on purpose, so their texts may cross the
-    // window's edge (a long title is caught by the spill check above).
-    for (name, r) in &texts {
-        if !r.inside(screen) && !name.starts_with("Card::") {
+    // window's edge (a long title is caught by the spill check above). What
+    // Home's rows viewport clips away entirely (Sign out below the last
+    // visible row, say) is not drawn, so it cannot be outside the window.
+    let viewport = ElementQuery::from_root(window)
+        .match_id("HomePage::viewport")
+        .find_all()
+        .first()
+        .map(rect);
+    let clipped_away =
+        |r: Rect| viewport.is_some_and(|v| r.1 >= v.3 || r.3 <= v.1 || r.1 >= v.1 && r.3 > v.3);
+    for (name, r) in texts {
+        if !r.inside(screen) && !name.starts_with("Card::") && !clipped_away(*r) {
             found.push(format!("text outside the window: {name} {}", r.describe()));
         }
     }
@@ -172,7 +235,7 @@ fn problems(window: &Window) -> Vec<String> {
         .match_accessible_role(AccessibleRole::Button)
         .find_all()
     {
-        if !rect(&button).inside(screen) {
+        if !rect(&button).inside(screen) && !clipped_away(rect(&button)) {
             found.push(format!(
                 "button outside the window {}",
                 rect(&button).describe()

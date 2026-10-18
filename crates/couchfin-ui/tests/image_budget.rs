@@ -33,8 +33,8 @@ const LATENCY: Duration = Duration::from_millis(100);
 const PLACEHOLDERS_BY: Duration = Duration::from_millis(50);
 /// Every picture on screen has arrived within this long, per wave of
 /// requests (8 in flight), plus [`SLACK`]: a 100 ms round trip and the
-/// decoding. The screen holds about 30 cards since the Home layout fitted
-/// three rows (#63), so five waves.
+/// decoding. The screen holds about 14 cards (two rows of posters and
+/// thumbnails at 1080p, #65), so two waves.
 const PER_WAVE: Duration = Duration::from_millis(150);
 const SLACK: Duration = Duration::from_millis(250);
 /// CI's shared two-core runners, where requests and decodes compete for CPU,

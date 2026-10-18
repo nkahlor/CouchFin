@@ -63,9 +63,13 @@ This records how the views are built, so Stage B knows what to feed them.
   above the cards at the carousel inset, outside the clipped card area.
   Elements with a size but no x/y are centred by Slint, so these set `y`.
 - **Sizes.** The poster height shares the viewport among
-  `Theme.home-rows-fit` poster rows (2.5; 3 from `home-tall-screen`), less
-  a row's fixed parts, between `Theme.home-poster-min-height` and
-  `poster-max-height`. About 2.5 rows show at 720p and 3 at 1080p. A
+  `Theme.home-rows-fit` poster rows (1.9), less a row's fixed parts,
+  between `Theme.home-poster-min-height` and `poster-max-height` (380 px).
+  About two rows and the next row's title show at both sizes, with posters
+  about 250 px wide at 1080p (#65; they were 140 px with three rows, which
+  read too small from the sofa) and 127 px at 720p. A card with no picture
+  draws its title on the plain card (no placeholder pattern behind it) in a
+  box tall enough for three lines (#66). A
   thumbnail is `Theme.thumb-height-ratio` of that high, so both shapes fit
   the same screen, and the whole focused row fits at 1280x720.
 

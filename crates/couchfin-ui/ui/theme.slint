@@ -52,9 +52,10 @@ export global Theme {
     out property <length> page-margin: 40px;
 
     // Title cards: poster-shaped (2:3), sized to the room the screen leaves
-    // for the row, between these heights.
+    // for the row, between these heights. The maximum keeps the focused card
+    // (1.1x) within the fixed 280x420 poster request of `ImageSize` in core.
     out property <length> poster-min-height: 200px;
-    out property <length> poster-max-height: 320px;
+    out property <length> poster-max-height: 380px;
     out property <float> poster-aspect: 2 / 3;
     out property <length> card-gap: 32px;
     // The title under a poster: one line at label size.
@@ -108,11 +109,9 @@ export global Theme {
     // recognisable.
     out property <length> home-poster-min-height: 100px;
     // How many rows (as tall as a poster row) Home's viewport is sized to
-    // show: a half row peeks in below the last whole one. Three from
-    // `home-tall-screen` up, where there is room.
-    out property <float> home-rows-fit: 2.5;
-    out property <float> home-rows-fit-tall: 3;
-    out property <length> home-tall-screen: 1000px;
+    // show: about two, with the third's title peeking in below them, so a
+    // poster is about 250 px wide at 1080p (decision 015).
+    out property <float> home-rows-fit: 1.9;
     // Home's compact header (server, version, who) and the gaps around it.
     out property <length> home-header-height: 48px;
     out property <length> home-gap: 8px;
@@ -127,9 +126,9 @@ export global Theme {
     out property <length> home-status-height: 96px;
     // A title shown inside a card that has no picture: smaller than a
     // card title, three lines at most, with this much room round it.
-    out property <length> card-inner-title-size: 24px;
-    out property <length> card-inner-title-height: 90px;
-    out property <length> card-inner-padding: 8px;
+    out property <length> card-inner-title-size: 28px;
+    out property <length> card-inner-title-height: 120px;
+    out property <length> card-inner-padding: 12px;
 
     // Library grid: the poster height of a cell, and the room around it
     // (title, focus growth, gaps) that makes up a grid row.
