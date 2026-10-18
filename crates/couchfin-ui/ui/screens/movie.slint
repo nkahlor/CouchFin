@@ -1,0 +1,60 @@
+import { Theme } from "../theme.slint";
+import { MovieView } from "../browse-state.slint";
+import { Button } from "../widgets/button.slint";
+import { Backdrop, DetailHeader } from "../widgets/detail-header.slint";
+
+// A movie: backdrop, title, year, runtime and rating, overview and a Play
+// or Resume button. Playback arrives in Phase 4, so activating the button
+// fires play() and says "Playback arrives soon".
+//
+// Focus map: the button has focus on arrival and is the only control. Enter
+// presses it; Escape or Backspace (B) fires back(). Up, Down, Left and Right
+// do nothing.
+export component MoviePage inherits Rectangle {
+    // Set once the button is pressed, until the page is left.
+    property <bool> pressed;
+
+    Backdrop {
+        source: MovieView.backdrop;
+    }
+
+    VerticalLayout {
+        padding: Theme.page-margin;
+        spacing: Theme.spacing;
+        alignment: end;
+
+        DetailHeader {
+            title: MovieView.title;
+            year: MovieView.year;
+            runtime: MovieView.runtime;
+            rating: MovieView.rating;
+            overview: MovieView.overview;
+        }
+
+        HorizontalLayout {
+            spacing: Theme.spacing;
+
+            play := Button {
+                width: Theme.button-width;
+                text: MovieView.resumable ? "Resume" : "Play";
+                clicked => {
+                    root.pressed = true;
+                    MovieView.play();
+                }
+                back => {
+                    MovieView.back();
+                }
+                init => {
+                    self.focus();
+                }
+            }
+
+            Text {
+                text: MovieView.error != "" ? MovieView.error : root.pressed ? "Playback arrives soon" : "";
+                color: MovieView.error != "" ? Theme.error : Theme.muted;
+                font-size: Theme.label-size;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

@@ -6,17 +6,37 @@ import {
     LoginView,
     HomeView,
 } from "state.slint";
+import {
+    LibraryView,
+    MovieView,
+    SeriesView,
+    CardData,
+    CardShape,
+    RowData,
+    EpisodeData,
+} from "browse-state.slint";
 import { ConnectingPage, ConnectFailedPage } from "screens/connect.slint";
 import { AddressPage } from "screens/address.slint";
 import { HomePage } from "screens/home.slint";
+import { LibraryPage } from "screens/library.slint";
+import { MoviePage } from "screens/movie.slint";
+import { SeriesPage } from "screens/series.slint";
 import { LoginPage } from "screens/login.slint";
 
 export {
+    Theme,
     Screen,
     ConnectView,
     AddressView,
     LoginView,
     HomeView,
+    LibraryView,
+    MovieView,
+    SeriesView,
+    CardData,
+    CardShape,
+    RowData,
+    EpisodeData,
 }
 
 // The one window Couchfin shows. Only the current screen exists: switching
@@ -51,5 +71,8 @@ export component MainWindow inherits Window {
         if root.screen == Screen.address: AddressPage { }
         if root.screen == Screen.login: LoginPage { }
         if root.screen == Screen.home: HomePage { }
+        if root.screen == Screen.library: LibraryPage { }
+        if root.screen == Screen.movie: MoviePage { }
+        if root.screen == Screen.series: SeriesPage { }
     }
 }

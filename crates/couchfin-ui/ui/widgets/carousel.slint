@@ -1,0 +1,117 @@
+import { Theme } from "../theme.slint";
+import { CardData, CardShape } from "../browse-state.slint";
+import { Card } from "card.slint";
+
+// The sizes a row of cards takes, so the page that stacks rows can place
+// them without asking each one.
+export global CarouselMetrics {
+    // A card's picture height. Thumbnails are shorter than posters, so a
+    // row of either fits the same screen.
+    public pure function image-height(shape: CardShape, poster-height: length) -> length {
+        shape == CardShape.poster ? poster-height : poster-height * Theme.thumb-height-ratio
+    }
+
+    // One card and the gap after it: how far a row slides per step.
+    public pure function slot(shape: CardShape, poster-height: length) -> length {
+        image-height(shape, poster-height) * (shape == CardShape.poster ? Theme.poster-aspect : Theme.thumb-aspect) + Theme.card-gap
+    }
+
+    // A whole row: its title, the room a grown card needs, the card (its
+    // title is in the details strip, not under it) and a gap before the next
+    // row.
+    public pure function height(shape: CardShape, poster-height: length) -> length {
+        Theme.row-title-height + Theme.row-title-gap + 2 * Theme.carousel-focus-room + image-height(shape, poster-height) + Theme.row-gap
+    }
+}
+
+// One row of cards under its title, as a carousel anchored on the left
+// (decision 011): the current card sits in one slot `Theme.carousel-inset`
+// from the screen's left edge, the row slides under it, the card before it
+// peeks in, and cards already passed are dimmed. A view only: the page that
+// holds focus says which card is current and what has focus.
+//
+// The row runs the full width of its parent, which should be the screen, so
+// the peek is cut off by the screen's edge.
+export component CarouselRow inherits Rectangle {
+    in property <string> title;
+    in property <[CardData]> cards;
+    in property <CardShape> shape: CardShape.poster;
+    // The height a poster would have in this row; thumbnails follow from it.
+    in property <length> poster-height;
+    // The row's current card. Kept while focus is on another row.
+    in property <int> current;
+    // Keyboard focus is on this row: its current card is highlighted.
+    in property <bool> focused;
+    // This is the page's row, the one last focused (also while Sign out has
+    // focus): its current card is the one screen readers report selected.
+    in property <bool> chosen;
+
+    // A card was clicked or activated by a screen reader, with its place.
+    callback activated(index: int);
+
+    property <length> image-height: CarouselMetrics.image-height(root.shape, root.poster-height);
+    property <length> slot: CarouselMetrics.slot(root.shape, root.poster-height);
+
+    // A fixed height, so a layout stacking rows never squeezes one.
+    min-height: CarouselMetrics.height(root.shape, root.poster-height);
+    max-height: CarouselMetrics.height(root.shape, root.poster-height);
+    accessible-role: list;
+    accessible-label: root.title;
+
+    // Above the cards and level with the anchor slot, outside the Flickable
+    // below, so a grown card never covers it.
+    //
+    // `y` is explicit: an element with a size but no position is centred in
+    // its parent, which is what once put this behind the focused card.
+    heading := Text {
+        x: Theme.carousel-inset;
+        y: 0px;
+        width: parent.width - Theme.carousel-inset - Theme.page-margin;
+        height: Theme.row-title-height;
+        text: root.title;
+        color: Theme.text;
+        font-size: Theme.body-size;
+        font-weight: Theme.strong-weight;
+        vertical-alignment: center;
+        overflow: elide;
+        // The row itself carries the title.
+        accessible-role: none;
+    }
+
+    // A Flickable rather than a clipping Rectangle, so screen readers still
+    // list the cards out of view. `current` changes at once and only the
+    // slide animates, so a held D-pad retargets it mid-way.
+    Flickable {
+        y: Theme.row-title-height + Theme.row-title-gap;
+        height: root.height - self.y;
+        interactive: false;
+        content-width: Theme.carousel-inset + root.cards.length * root.slot + self.width;
+        content-x: -root.current * root.slot;
+        animate content-x {
+            duration: Theme.scroll-duration;
+            easing: ease-out;
+        }
+
+        for card[index] in root.cards: Card {
+            x: Theme.carousel-inset + index * root.slot;
+            y: Theme.carousel-focus-room;
+            title: card.title;
+            subtitle: card.subtitle;
+            titled: false;
+            progress: card.progress;
+            image: card.image;
+            placeholder: card.placeholder;
+            image-state: card.image-state;
+            shape: root.shape;
+            image-height: root.image-height;
+            current: root.chosen && index == root.current;
+            highlighted: root.focused && index == root.current;
+            passed: index < root.current;
+            index: index;
+            count: root.cards.length;
+            activated => {
+                root.activated(index);
+            }
+        }
+    }
+}

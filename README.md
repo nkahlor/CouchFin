@@ -36,13 +36,18 @@ and how to update it.
 
    This opens Couchfin fullscreen. The first time, type your server's
    address (for example `jellyfin.lan:8096`), then sign in. Home shows the
-   server's name and version, who is signed in, and a carousel of
-   placeholder title cards. Next time it skips straight to Home while the
+   server's name and version, who is signed in, and your library as rows
+   of posters (Continue Watching, Next Up, Recently Added in each library,
+   Libraries), with the cards the row has passed dimmed. Enter opens a
+   library's grid, a movie or a series, and Escape goes back one level. Next time it skips straight to Home while the
    sign-in still works.
 
-   Tab or the Up and Down arrows move between controls, Left and Right
-   slide the carousel one card at a time (and move the cursor in a text
-   field), Enter presses or selects, and Escape goes back.
+   Tab or the Up and Down arrows move between controls (on Home, between
+   rows, and Down from the bottom row reaches Sign out), Left and Right
+   slide a row one card at a time (and move the cursor in a text field),
+   Enter presses or selects, and Escape goes back
+   ([decision 015](docs/decisions/015-browse-screens.md)). Playback is not
+   built yet: Play says it is coming.
    Escape on the address screen or on Home quits. A controller works too:
    the D-pad and left stick act as the arrows, A as Enter and B as Escape,
    through the same code ([decision 011](docs/decisions/011-home-row.md)),

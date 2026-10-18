@@ -29,8 +29,7 @@ Top to bottom; a row with no items is hidden:
    Selecting one opens its grid.
 
 Every row is the carousel from decision 011: the focused card is anchored on
-the left, the previous card peeks in, and passed cards are dimmed (blurred
-once posters exist). Up and Down move between rows. The page scrolls so the
+the left, the previous card peeks in, and passed cards are dimmed. Up and Down move between rows. The page scrolls so the
 focused row stays at the same height on screen, the vertical counterpart of
 the horizontal anchor. Each row remembers its own focused card. The row title
 sits above the row. Thumbnail rows and poster rows have different card

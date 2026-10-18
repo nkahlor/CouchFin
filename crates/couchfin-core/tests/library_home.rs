@@ -81,6 +81,19 @@ async fn continue_watching_has_progress_and_episode_subtitles() {
 }
 
 #[tokio::test]
+async fn cards_carry_the_year_and_runtime_for_the_details_strip() {
+    let harness = Harness::started().await;
+    let state = harness.state();
+    let movie = &state.home().rows[0].cards[0];
+    assert_eq!(movie.title, "Arrival");
+    assert_eq!(movie.year, Some(2000));
+    assert_eq!(movie.runtime, Some(Duration::from_mins(100)));
+    // A library tile has neither.
+    let tile = &state.home().rows[4].cards[0];
+    assert_eq!((tile.year, tile.runtime), (None, None));
+}
+
+#[tokio::test]
 async fn next_up_has_subtitles_but_no_progress() {
     let harness = Harness::started().await;
     let state = harness.state();

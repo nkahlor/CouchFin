@@ -10,6 +10,7 @@ use i_slint_backend_testing::ElementHandle;
 use slint::ComponentHandle;
 use slint::platform::{Key, WindowEvent};
 
+pub mod jellyfin;
 pub mod steam;
 
 thread_local! {

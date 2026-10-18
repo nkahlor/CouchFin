@@ -1,0 +1,42 @@
+import { Theme } from "../theme.slint";
+
+// The focused item's title and one line of metadata, in a fixed area above
+// the rows and never over a picture (decision 015). Cards carry no title of
+// their own, so this is where a title is read; it keeps its height when
+// empty, so the rows below never jump.
+export component DetailsStrip inherits Rectangle {
+    in property <string> title;
+    // "2016 · 1 h 56 min", "S2 · E4" or "Library".
+    in property <string> meta;
+    // Left edge of the text, so it lines up with the row titles.
+    in property <length> inset: Theme.carousel-inset;
+
+    height: Theme.home-details-title-height + Theme.home-details-meta-height;
+
+    // Elided at the end rather than wrapped: the area is one line tall, and
+    // a title that runs past it must never reach the line below.
+    heading := Text {
+        x: root.inset;
+        y: 0px;
+        width: parent.width - root.inset - Theme.page-margin;
+        height: Theme.home-details-title-height;
+        text: root.title;
+        color: Theme.text;
+        font-size: Theme.body-size;
+        font-weight: Theme.strong-weight;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    line := Text {
+        x: root.inset;
+        y: Theme.home-details-title-height;
+        width: parent.width - root.inset - Theme.page-margin;
+        height: Theme.home-details-meta-height;
+        text: root.meta;
+        color: Theme.muted;
+        font-size: Theme.label-size;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}

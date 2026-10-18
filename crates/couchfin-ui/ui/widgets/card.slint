@@ -1,22 +1,40 @@
 import { Theme } from "../theme.slint";
+import { CardShape, ImageState } from "../browse-state.slint";
 
-// A poster-shaped title card with its title underneath. It takes no focus
-// itself: the row it sits in holds focus and says which card is current and
-// which it has passed, so moving along a row is one property change, and the
-// row remembers its place while focus is elsewhere.
+// A card: a 2:3 poster or a 16:9 thumbnail (which can also carry a progress
+// bar), with its title underneath in the library grid. Home's cards have no
+// title below them: a details strip above the rows names the focused one
+// (`titled: false`), and a card with no picture to show carries its title
+// inside, on the plain card with no placeholder behind it, so a missing
+// picture reads differently from one still loading.
+// It takes no focus itself:
+// the row or grid it sits in holds focus and says which card is current and
+// which it has passed, so moving is one property change, and the row
+// remembers its place while focus is elsewhere.
 //
-// The card's own size is its slot in the row. The active card's poster grows
-// past the slot, about its centre, so neighbours never move.
+// The card's own size is its slot. The active card's picture grows past the
+// slot, about its centre, so neighbours never move.
 export component Card inherits Rectangle {
     in property <string> title;
-    // The poster's height at rest; the width follows at 2:3.
-    in property <length> poster-height;
-    // The poster, and a blurred copy shown once the row has passed the card.
-    // Both empty for placeholders; couchfin-core's image cache makes them in
-    // Phase 3 (Slint can't blur content itself).
+    // A thumbnail's second line, such as "S2 · E4"; empty shows none.
+    in property <string> subtitle;
+    // Draw the title (and a thumbnail's subtitle) under the picture. Off in
+    // Home's rows, which name the focused card in the details strip.
+    in property <bool> titled: true;
+    in property <CardShape> shape: CardShape.poster;
+    // Resume progress from 0 to 1; 0 or less shows no bar.
+    in property <float> progress;
+    // The picture's height at rest; the width follows from the shape.
+    in property <length> image-height;
+    // The picture; empty until it has loaded.
     in property <image> image;
-    in property <image> blurred-image;
-    // The row's current card, whether or not the row has focus.
+    // The blurred stand-in for it, shown from the start and faded out under
+    // the picture.
+    in property <image> placeholder;
+    // `missing` (the server has none) draws the title inside the card; `loading`
+    // shows the placeholder; `ready` the picture.
+    in property <ImageState> image-state: ImageState.loading;
+    // The card the row or grid last focused, whether or not it has focus.
     in property <bool> current;
     // Current in a focused row: larger, ringed and glowing.
     in property <bool> highlighted;
@@ -29,18 +47,19 @@ export component Card inherits Rectangle {
     // Enter while highlighted, a click, or a screen reader's default action.
     callback activated();
 
-    property <length> poster-width: root.poster-height * Theme.poster-aspect;
+    property <length> image-width: root.image-height * (root.shape == CardShape.poster ? Theme.poster-aspect : Theme.thumb-aspect);
     property <float> grow: root.highlighted ? Theme.card-active-scale : 1;
     animate grow {
         duration: Theme.focus-duration;
         easing: ease-out;
     }
 
-    width: self.poster-width;
-    height: root.poster-height + Theme.card-title-gap + Theme.card-title-height;
+    width: self.image-width;
+    height: root.image-height + (root.titled ? Theme.card-title-gap + Theme.card-title-height + (root.shape == CardShape.thumb ? Theme.card-subtitle-height : 0) : 0);
 
     accessible-role: list-item;
     accessible-label: root.title;
+    accessible-description: root.subtitle;
     accessible-item-index: root.index;
     accessible-item-count: root.count;
     accessible-item-selectable: true;
@@ -50,10 +69,10 @@ export component Card inherits Rectangle {
     }
 
     poster := Rectangle {
-        width: root.poster-width * root.grow;
-        height: root.poster-height * root.grow;
-        x: (root.poster-width - self.width) / 2;
-        y: (root.poster-height - self.height) / 2;
+        width: root.image-width * root.grow;
+        height: root.image-height * root.grow;
+        x: (root.image-width - self.width) / 2;
+        y: (root.image-height - self.height) / 2;
         background: Theme.surface;
         border-radius: Theme.radius;
         drop-shadow-color: root.highlighted ? Theme.card-glow : Theme.card-glow.with-alpha(0);
@@ -64,21 +83,45 @@ export component Card inherits Rectangle {
             border-radius: Theme.radius;
             clip: true;
 
-            Image {
+            // Not drawn for a card with no picture: its title is read on
+            // the plain card, never over a blurred pattern.
+            if root.image-state != ImageState.missing: blurred := Image {
+                width: 100%;
+                height: 100%;
+                source: root.placeholder;
+                image-fit: fill;
+                accessible-role: none;
+            }
+
+            if root.image-state != ImageState.missing: Image {
                 width: 100%;
                 height: 100%;
                 source: root.image;
                 image-fit: cover;
+                opacity: root.image.width > 0 ? 1 : 0;
+                animate opacity { duration: Theme.image-fade-duration; }
                 accessible-role: none;
             }
 
-            Image {
-                width: 100%;
-                height: 100%;
-                source: root.blurred-image;
-                image-fit: cover;
-                opacity: root.passed ? 1 : 0;
-                animate opacity { duration: Theme.focus-duration; }
+            // Wrapped to three lines at most and elided, centred, and kept
+            // inside the card whatever its size.
+            if root.image-state == ImageState.missing: inner-title := Text {
+                x: Theme.card-inner-padding;
+                width: parent.width - 2 * Theme.card-inner-padding;
+                height: min(Theme.card-inner-title-height, parent.height - 2 * Theme.card-inner-padding);
+                // Top-aligned and centred by hand: Slint centres a text
+                // taller than its box about the whole text, which cut the
+                // first lines off a long title (#66).
+                y: (parent.height - min(self.height, self.preferred-height)) / 2;
+                text: root.title;
+                color: Theme.text;
+                font-size: Theme.card-inner-title-size;
+                font-weight: Theme.strong-weight;
+                horizontal-alignment: center;
+                vertical-alignment: top;
+                wrap: word-wrap;
+                overflow: elide;
+                // The card itself carries the title.
                 accessible-role: none;
             }
 
@@ -87,9 +130,20 @@ export component Card inherits Rectangle {
                 opacity: root.passed ? 1 : 0;
                 animate opacity { duration: Theme.focus-duration; }
             }
+
+            if root.progress > 0: progress-bar := Rectangle {
+                y: parent.height - Theme.progress-height;
+                height: Theme.progress-height;
+                background: Theme.progress-track;
+
+                progress-fill := Rectangle {
+                    width: parent.width * clamp(root.progress, 0, 1);
+                    background: Theme.focus;
+                }
+            }
         }
 
-        // Over the poster, so an image never covers it.
+        // Over the picture, so an image never covers it.
         ring := Rectangle {
             border-radius: Theme.radius;
             border-width: Theme.card-active-ring;
@@ -99,7 +153,7 @@ export component Card inherits Rectangle {
         }
     }
 
-    title := Text {
+    if root.titled: title := Text {
         y: poster.y + poster.height + Theme.card-title-gap;
         height: Theme.card-title-height;
         text: root.title;
@@ -111,6 +165,19 @@ export component Card inherits Rectangle {
         vertical-alignment: center;
         overflow: elide;
         // The card itself carries the title.
+        accessible-role: none;
+    }
+
+    if root.titled && root.shape == CardShape.thumb: Text {
+        y: poster.y + poster.height + Theme.card-title-gap + Theme.card-title-height;
+        height: Theme.card-subtitle-height;
+        text: root.subtitle;
+        color: root.passed ? Theme.passed-title : Theme.muted;
+        font-size: Theme.label-size;
+        font-weight: Theme.regular-weight;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
         accessible-role: none;
     }
 

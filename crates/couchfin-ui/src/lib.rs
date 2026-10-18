@@ -6,13 +6,18 @@
 //!
 //! - [`MainWindow`] is the one window Couchfin shows. Its [`Screen`] picks
 //!   the screen, and each screen's data and callbacks sit in a Slint global:
-//!   [`ConnectView`], [`AddressView`], [`LoginView`] and [`HomeView`].
+//!   [`ConnectView`], [`AddressView`], [`LoginView`], [`HomeView`],
+//!   [`LibraryView`], [`MovieView`] and [`SeriesView`].
 //! - [`render`] shows a core [`LoginScreen`](couchfin_core::LoginScreen) in
 //!   the window, and [`bind`] turns its callbacks into [`Command`]s: a
 //!   [`LoginAction`](couchfin_core::LoginAction) for the flow, or quit.
 //! - [`wording`] is every message the user reads about an error. An error's
 //!   `Display` text is for the log only.
 //!
+//! - [`install`] binds Home, the library grid and the detail pages to a core
+//!   `LibraryState` through a [`Feed`], sends their actions as
+//!   [`Command::Library`], and fills their pictures through an
+//!   [`ImageLoader`] (decision 015).
 //! - [`navigate`] feeds a controller's [`Intent`] (D-pad, A, B) into the
 //!   window as its key, so a controller and the keyboard share one focus
 //!   path. [`Navigator`] wraps it and drops the duplicate key Steam's
@@ -61,6 +66,7 @@
 //! ```
 
 mod bind;
+mod browse;
 mod guard;
 mod navigate;
 mod navigator;
@@ -74,6 +80,7 @@ mod generated {
 }
 
 pub use bind::{Command, bind, render};
+pub use browse::{Feed, Guard, ImageLoader, install};
 pub use guard::{Clock, Dropped, DuplicateGuard, GuardConfig, SystemClock, Verdict};
 pub use navigate::{Intent, navigate};
 pub use navigator::{INPUT_LOG, Navigator, log_stamp};
@@ -98,7 +105,10 @@ pub use generated::MainWindow;
 ///   ([`ConnectView`]).
 /// - `Address`: type the server's address ([`AddressView`]).
 /// - `Login`: sign in to the server the address check found ([`LoginView`]).
-/// - `Home`: signed in ([`HomeView`]).
+/// - `Home`: signed in; rows of cards ([`HomeView`]).
+/// - `Library`: a library's poster grid ([`LibraryView`]).
+/// - `Movie`: a movie's detail page ([`MovieView`]).
+/// - `Series`: a series' detail page ([`SeriesView`]).
 pub use generated::Screen;
 
 /// The startup screens' data and callbacks.
@@ -152,22 +162,112 @@ pub use generated::LoginView;
 
 /// The home screen's data and callbacks.
 ///
-/// Under the header is a carousel of ten placeholder title cards ("Title 1"
-/// to "Title 10"), until Phase 3 fills it from the library. The first card
-/// has focus on arrival, so an Enter held from signing in can't press Sign
-/// out. Left and Right step through the cards and stop at the ends: the
+/// Under the header is a vertical stack of carousel rows: Continue Watching
+/// and Next Up (16:9 thumbnails), Recently Added in each library (2:3
+/// posters) and Libraries (thumbnails), as couchfin-core's `HomeState` has
+/// them ([`install`] binds them). The first card of the first row has
+/// focus on arrival, so an Enter held from signing in can't press Sign out.
+///
+/// Left and Right step through the focused row and stop at its ends: the
 /// current card stays in one slot near the left and the row slides under
-/// it, with the card before it peeking in and the cards passed dimmed. Down
-/// or Tab moves to Sign out; Up or Shift+Tab returns to the card you left.
+/// it, with the card before it peeking in and the cards passed dimmed. Up
+/// and Down (Shift+Tab and Tab) move between rows; each row keeps its own
+/// card, and the page scrolls so the focused row always sits at the same
+/// height. Down from the bottom row reaches Sign out and Up returns to the
+/// card you left. Core never sends an empty row, so every row given is drawn
+/// and focusable.
 ///
 /// - `server-name` (in): the title.
 /// - `server-version` (in): shown as "Jellyfin {version}".
 /// - `username` (in): shown as "Signed in as {username}".
 /// - `notice` (in): a quiet note, such as a sign-in that couldn't be saved;
 ///   empty shows none.
-/// - `card-activated(index)`: Enter on a card, with its place in the row
-///   (0 is the first). The page also shows "Selected: {title}". [`bind`]
-///   only logs it, since there is no detail page yet.
+/// - `rows` (in-out): the [`RowData`] to show, top to bottom. The screen
+///   writes each row's `current` as the user moves along it.
+/// - `focused-row`, `posters-above`, `thumbs-above` (in-out): which row has
+///   focus and how many rows of each shape are scrolled out above it. Kept
+///   here so Home returns where it was, and set by [`install`] when rows
+///   arrive above the focused one.
+/// - `poster-height` (in-out): the poster height the page laid out, so the
+///   pictures requested are the right size.
+/// - `status` (in): shown instead of the rows while there are none (loading,
+///   why it failed, or an empty library).
+/// - `error` (in): a row failed to load; empty shows none.
+/// - `focus-changed(row, index)`: focus moved to this card of this row.
+/// - `card-activated(row, index)`: Enter on a card, with its row and its
+///   place in the row (0 is the first of each). The page also shows
+///   "Selected: {title}", feedback while the page it opens loads.
 /// - `sign-out()`: the Sign out button.
 /// - `back()`: Escape or Backspace.
 pub use generated::HomeView;
+
+/// A library's grid of 2:3 posters, built for thousands of items: only the
+/// rows on screen, and the cards in them, exist (decision 015).
+///
+/// One focus target, on the first item on arrival. Left and Right step
+/// through the items, Up and Down move a row, and the grid scrolls to keep
+/// the focused card in view.
+///
+/// - `title` (in): the library's name, shown above the grid.
+/// - `item-count` (in): how many items the library has in all.
+/// - `items` (in): the [`CardData`] by place, 0 to `item-count` - 1. The grid
+///   reads only places it draws, so a lazily loading model works; a place
+///   without data shows an empty card.
+/// - `items-needed(first, last)`: the places now on screen (`last` is
+///   exclusive), whenever that changes, so core can page them in.
+/// - `item-activated(index)`: Enter on a card, with its place in the library.
+/// - `back()`: Escape or Backspace.
+pub use generated::LibraryView;
+
+/// A movie's detail page: backdrop, title, year, runtime, rating, overview
+/// and a Play or Resume button that has focus. Playback arrives in Phase 4,
+/// so pressing it also shows "Playback arrives soon".
+///
+/// - `title`, `year`, `runtime`, `rating`, `overview` (in): shown as given.
+/// - `backdrop` (in): the picture; empty shows the placeholder.
+/// - `resumable` (in): the button says Resume rather than Play.
+/// - `play()`: Enter on the button.
+/// - `back()`: Escape or Backspace.
+pub use generated::MovieView;
+
+/// A series' detail page: the movie page's header, a row of seasons and the
+/// selected season's episodes.
+///
+/// Focus starts on the seasons: Left and Right choose one (firing
+/// `season-selected`), Down or Enter enters the episodes. There Up and Down
+/// step through them (the list scrolls) and Up from the first returns to the
+/// seasons.
+///
+/// - `title`, `year`, `runtime`, `rating`, `overview`, `backdrop` (in): as
+///   on [`MovieView`].
+/// - `seasons` (in): the seasons' names.
+/// - `selected-season` (in-out): which one is selected.
+/// - `episodes` (in): the selected season's [`EpisodeData`].
+/// - `season-selected(index)`: a different season was chosen, so core loads
+///   its episodes.
+/// - `episode-activated(index)`: Enter on an episode; the page also shows
+///   "Playback arrives soon".
+/// - `back()`: Escape or Backspace.
+pub use generated::SeriesView;
+
+/// One card of a row or the library grid: `title`, a thumbnail's `subtitle`
+/// (such as "S2 · E4"), `progress` from 0 to 1 (0 shows no bar), and the
+/// `image`, which is empty until it has loaded. `placeholder` is a tiny
+/// blurred stand-in shown at once, and `image_state` says whether the picture
+/// is loading, ready or missing.
+pub use generated::CardData;
+
+/// Where a card's picture is: `Loading` (the blurred `placeholder` shows),
+/// `Ready` or `Missing` (the item has no picture, so the card shows its title).
+pub use generated::ImageState;
+
+/// The shape of a card's picture: `Poster` is 2:3 and `Thumb` is 16:9.
+pub use generated::CardShape;
+
+/// One row on Home: its `title`, the `shape` of its cards, the `cards`, and
+/// `current`, the row's focused card.
+pub use generated::RowData;
+
+/// One episode on the series page: its `number`, `title`, `runtime` as
+/// shown, and whether it is `watched`.
+pub use generated::EpisodeData;

@@ -1,198 +1,296 @@
 import { Theme } from "../theme.slint";
 import { HomeView } from "../state.slint";
+import { CardShape } from "../browse-state.slint";
 import { Button } from "../widgets/button.slint";
-import { Card } from "../widgets/card.slint";
+import { DetailsStrip } from "../widgets/details.slint";
+import { CarouselRow, CarouselMetrics } from "../widgets/carousel.slint";
 import { Keys, KeyIntent } from "../widgets/keys.slint";
 
-// Home: which server and who is signed in, a carousel of title cards, and
-// Sign out. The row takes focus on arrival, so an Enter still held from
-// signing in selects a card rather than pressing Sign out.
+// Home, top to bottom: a compact header (which server, who is signed in), the
+// details strip naming the focused card, the rows, which scroll in their own
+// clipped area with Sign out after the last of them, and a line each for any
+// notices. Nothing is drawn over anything else. The rows take focus on
+// arrival, on the first card of the first row, so an Enter still held from
+// signing in selects a card rather than signing out (decisions 011 and 015).
 //
-// Focus map: Left and Right step through the row and stop at its ends; the
-// current card stays in one slot and the row slides under it. Down (or Tab)
-// goes to Sign out; Up (or Shift+Tab) comes back to the card you left.
-// Escape or Backspace anywhere asks to go back.
+// Focus map: Left and Right step through the focused row and stop at its
+// ends. Down (or Tab) moves to the row below, which keeps its own card;
+// Down from the bottom row reaches Sign out. Up (or Shift+Tab) goes back the
+// same way, and does nothing on the first row. The page scrolls so the
+// focused row always sits at Theme.home-row-anchor. Left and Right on Sign
+// out do nothing. Escape or Backspace anywhere asks to go back.
 export component HomePage inherits Rectangle {
-    // Placeholders until Phase 3 fills the row from the library.
-    property <[string]> titles: [
-        "Title 1",
-        "Title 2",
-        "Title 3",
-        "Title 4",
-        "Title 5",
-        "Title 6",
-        "Title 7",
-        "Title 8",
-        "Title 9",
-        "Title 10",
-    ];
-    // The last card selected, or -1. Only shown, until there is a detail
-    // page to open.
-    property <int> selected: -1;
+    // The last card selected. Only shown, as feedback while a page loads.
+    property <string> selected;
+
+    // How many poster rows the viewport is sized to show.
+    property <float> rows-fit: Theme.home-rows-fit;
+    // The height a poster has: the viewport shared among the rows it should
+    // show, less a row's fixed parts, between its limits.
+    property <length> poster-height: clamp(
+        viewport.height / root.rows-fit - CarouselMetrics.height(CardShape.poster, 0px),
+        Theme.home-poster-min-height,
+        Theme.poster-max-height);
+    property <length> scroll: HomeView.posters-above * CarouselMetrics.height(CardShape.poster, root.poster-height) + HomeView.thumbs-above * CarouselMetrics.height(CardShape.thumb, root.poster-height);
+
+    // What the details strip shows: the focused card, nothing while Sign out
+    // has focus.
+    property <bool> card-shown: !sign-out.has-focus && HomeView.focused-row >= 0 && HomeView.focused-row < HomeView.rows.length && HomeView.rows[HomeView.focused-row].current >= 0 && HomeView.rows[HomeView.focused-row].current < HomeView.rows[HomeView.focused-row].cards.length;
 
     init => {
-        row.focus();
+        HomeView.poster-height = root.poster-height;
+        scope.focus();
     }
 
-    function activate(index: int) {
-        root.selected = index;
-        HomeView.card-activated(index);
+    changed poster-height => {
+        HomeView.poster-height = root.poster-height;
+    }
+
+    function usable(row: int) -> bool {
+        row >= 0 && row < HomeView.rows.length
+    }
+
+    function go-down() {
+        if !root.usable(HomeView.focused-row + 1) {
+            sign-out.focus();
+            return;
+        }
+        if HomeView.rows[HomeView.focused-row].shape == CardShape.poster {
+            HomeView.posters-above += 1;
+        } else {
+            HomeView.thumbs-above += 1;
+        }
+        HomeView.focused-row += 1;
+        HomeView.focus-changed(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
+    }
+
+    function go-up() {
+        if !root.usable(HomeView.focused-row - 1) {
+            return;
+        }
+        if HomeView.rows[HomeView.focused-row - 1].shape == CardShape.poster {
+            HomeView.posters-above -= 1;
+        } else {
+            HomeView.thumbs-above -= 1;
+        }
+        HomeView.focused-row -= 1;
+        HomeView.focus-changed(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
+    }
+
+    function step(delta: int) {
+        if !root.usable(HomeView.focused-row) {
+            return;
+        }
+        let moved = clamp(
+            HomeView.rows[HomeView.focused-row].current + delta,
+            0,
+            HomeView.rows[HomeView.focused-row].cards.length - 1);
+        if moved != HomeView.rows[HomeView.focused-row].current {
+            HomeView.rows[HomeView.focused-row].current = moved;
+            HomeView.focus-changed(HomeView.focused-row, moved);
+        }
+    }
+
+    function activate(row: int, index: int) {
+        if index >= HomeView.rows[row].cards.length {
+            return;
+        }
+        root.selected = HomeView.rows[row].cards[index].title;
+        HomeView.card-activated(row, index);
     }
 
     VerticalLayout {
-        padding: Theme.page-margin;
-        spacing: Theme.spacing;
-        alignment: center;
+        padding-top: Theme.home-pad;
+        padding-bottom: Theme.home-pad;
+        spacing: Theme.home-gap;
 
+        // One line: the server and version on the left, who is signed in on
+        // the right (with the last selected card while a page loads).
         HorizontalLayout {
+            height: Theme.home-header-height;
+            padding-left: Theme.page-margin;
+            padding-right: Theme.page-margin;
             spacing: Theme.spacing;
 
-            VerticalLayout {
-                alignment: end;
-
-                Text {
-                    text: HomeView.server-name;
-                    color: Theme.text;
-                    font-size: Theme.title-size;
-                    font-weight: Theme.strong-weight;
-                    overflow: elide;
-                }
-
-                Text {
-                    text: "Jellyfin " + HomeView.server-version;
-                    color: Theme.muted;
-                    font-size: Theme.label-size;
-                }
+            Text {
+                text: HomeView.server-name;
+                color: Theme.text;
+                font-size: Theme.body-size;
+                font-weight: Theme.strong-weight;
+                vertical-alignment: center;
+                overflow: elide;
             }
 
-            VerticalLayout {
-                alignment: end;
+            Text {
+                text: "Jellyfin " + HomeView.server-version;
+                color: Theme.muted;
+                font-size: Theme.label-size;
+                vertical-alignment: center;
+                overflow: elide;
+            }
 
-                Text {
-                    text: "Signed in as " + HomeView.username;
-                    color: Theme.text;
-                    font-size: Theme.body-size;
-                    horizontal-alignment: right;
-                }
+            // Takes the slack, so the right-hand texts sit at the edge.
+            Rectangle {
+                horizontal-stretch: 1;
+            }
 
-                // Always takes its line, so the row never jumps when it
-                // appears.
-                Text {
-                    text: root.selected < 0 ? "" : "Selected: " + root.titles[root.selected];
-                    color: Theme.muted;
-                    font-size: Theme.label-size;
-                    horizontal-alignment: right;
-                }
+            Text {
+                text: root.selected == "" ? "" : "Selected: " + root.selected;
+                color: Theme.muted;
+                font-size: Theme.label-size;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            Text {
+                text: "Signed in as " + HomeView.username;
+                color: Theme.text;
+                font-size: Theme.label-size;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                overflow: elide;
             }
         }
 
-        row := FocusScope {
-            property <int> current: 0;
-            property <int> count: root.titles.length;
-            // A card's height beyond its poster, with room for it to grow.
-            property <length> around-poster: 2 * Theme.card-focus-room + Theme.card-title-gap + Theme.card-title-height;
-            // The room the screen leaves decides the poster's size.
-            property <length> poster-height: clamp(
-                self.height - self.around-poster,
-                Theme.poster-min-height,
-                Theme.poster-max-height);
-            // One card and the gap after it: how far the row slides per step.
-            property <length> slot: self.poster-height * Theme.poster-aspect + Theme.card-gap;
+        details := DetailsStrip {
+            title: root.card-shown ? HomeView.rows[HomeView.focused-row].cards[HomeView.rows[HomeView.focused-row].current].title : "";
+            meta: root.card-shown ? HomeView.rows[HomeView.focused-row].cards[HomeView.rows[HomeView.focused-row].current].meta : "";
+        }
 
-            // Set here rather than from the cards, whose size follows the
-            // row's: the row takes what the screen leaves, within these.
-            min-height: Theme.poster-min-height + self.around-poster;
-            preferred-height: Theme.poster-max-height + self.around-poster;
-            max-height: self.preferred-height;
+        // The rows' window onto the page: full width, so a row runs to the
+        // screen's edge, and clipped above and below so scrolled rows vanish
+        // here instead of over the header or the strip.
+        viewport := Rectangle {
             vertical-stretch: 1;
-            accessible-role: list;
+            min-height: CarouselMetrics.height(CardShape.poster, Theme.home-poster-min-height);
+            clip: true;
 
-            key-pressed(event) => {
-                if Keys.intent(event) == KeyIntent.left {
-                    self.current = max(0, self.current - 1);
-                    return accept;
+            scope := FocusScope {
+                accessible-role: list;
+
+                key-pressed(event) => {
+                    if Keys.intent(event) == KeyIntent.left {
+                        root.step(-1);
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.right {
+                        root.step(1);
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.next {
+                        root.go-down();
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.previous {
+                        root.go-up();
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.activate {
+                        if root.usable(HomeView.focused-row) {
+                            root.activate(HomeView.focused-row, HomeView.rows[HomeView.focused-row].current);
+                        }
+                        return accept;
+                    }
+                    if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
+                        HomeView.back();
+                        return accept;
+                    }
+                    return reject;
                 }
-                if Keys.intent(event) == KeyIntent.right {
-                    self.current = min(self.count - 1, self.current + 1);
-                    return accept;
-                }
-                if Keys.intent(event) == KeyIntent.next {
-                    sign-out.focus();
-                    return accept;
-                }
-                if Keys.intent(event) == KeyIntent.activate {
-                    root.activate(self.current);
-                    return accept;
-                }
-                if Keys.intent(event) == KeyIntent.back || Keys.intent(event) == KeyIntent.backspace {
-                    HomeView.back();
-                    return accept;
-                }
-                return reject;
             }
 
-            // The carousel: the current card always sits in the slot at
-            // Theme.carousel-inset, and the row slides under it, one slot per
-            // step, to the very last card. `current` changes at once and only
-            // the slide animates, so a held D-pad retargets it mid-way rather
-            // than waiting. It runs from the screen's left edge, past the page
-            // margin, so the card before the current one is cut off by the
-            // edge of the screen. A Flickable rather than a clipping
-            // Rectangle, so screen readers still list the cards out of view.
-            Flickable {
-                x: -Theme.page-margin;
-                width: parent.width + 2 * Theme.page-margin;
-                interactive: false;
-                content-width: Theme.carousel-inset + row.count * row.slot + self.width;
-                content-x: -row.current * row.slot;
-                animate content-x {
+            // Moved, not scrolled by a Flickable, so the anchor is exact and
+            // a held D-pad retargets the slide mid-way. After the rows, in
+            // the same flow, comes what stands in for them while there are
+            // none, and Sign out.
+            strip := VerticalLayout {
+                y: Theme.home-row-anchor - root.scroll;
+                width: parent.width;
+                alignment: start;
+                animate y {
                     duration: Theme.scroll-duration;
                     easing: ease-out;
                 }
 
-                for title[index] in root.titles: Card {
-                    x: Theme.carousel-inset + index * row.slot;
-                    y: Theme.card-focus-room;
-                    title: title;
-                    poster-height: row.poster-height;
-                    current: index == row.current;
-                    highlighted: row.has-focus && index == row.current;
-                    passed: index < row.current;
-                    index: index;
-                    count: row.count;
-                    activated => {
-                        row.current = index;
-                        row.focus();
-                        root.activate(index);
+                for row[r] in HomeView.rows: CarouselRow {
+                    title: row.title;
+                    cards: row.cards;
+                    shape: row.shape;
+                    poster-height: root.poster-height;
+                    current: row.current;
+                    focused: scope.has-focus && r == HomeView.focused-row;
+                    chosen: r == HomeView.focused-row;
+                    activated(index) => {
+                        HomeView.focused-row = r;
+                        HomeView.rows[r].current = index;
+                        scope.focus();
+                        HomeView.focus-changed(r, index);
+                        root.activate(r, index);
+                    }
+                }
+
+                // Loading, a failure or an empty library.
+                if HomeView.rows.length == 0: Rectangle {
+                    height: Theme.home-status-height;
+
+                    Text {
+                        x: Theme.carousel-inset;
+                        y: 0px;
+                        width: parent.width - Theme.carousel-inset - Theme.page-margin;
+                        height: parent.height;
+                        text: HomeView.status;
+                        color: Theme.muted;
+                        font-size: Theme.body-size;
+                        wrap: word-wrap;
+                        overflow: elide;
+                    }
+                }
+
+                Rectangle {
+                    height: Theme.control-height;
+
+                    sign-out := Button {
+                        x: Theme.carousel-inset;
+                        y: 0px;
+                        width: Theme.button-width;
+                        height: Theme.control-height;
+                        text: "Sign out";
+                        clicked => {
+                            HomeView.sign-out();
+                        }
+                        move-previous => {
+                            scope.focus();
+                        }
+                        back => {
+                            HomeView.back();
+                        }
                     }
                 }
             }
         }
 
-        HorizontalLayout {
-            spacing: Theme.spacing;
+        // Notices get the full width, a line each, under the rows.
+        if HomeView.error != "": Text {
+            height: Theme.home-notice-height;
+            x: Theme.page-margin;
+            width: parent.width - 2 * Theme.page-margin;
+            text: HomeView.error;
+            color: Theme.error;
+            font-size: Theme.label-size;
+            vertical-alignment: center;
+            overflow: elide;
+        }
 
-            sign-out := Button {
-                width: Theme.button-width;
-                text: "Sign out";
-                clicked => {
-                    HomeView.sign-out();
-                }
-                move-previous => {
-                    row.focus();
-                }
-                back => {
-                    HomeView.back();
-                }
-            }
-
-            if HomeView.notice != "": Text {
-                text: HomeView.notice;
-                color: Theme.muted;
-                font-size: Theme.label-size;
-                vertical-alignment: center;
-                wrap: word-wrap;
-            }
+        if HomeView.notice != "": Text {
+            height: Theme.home-notice-height;
+            x: Theme.page-margin;
+            width: parent.width - 2 * Theme.page-margin;
+            text: HomeView.notice;
+            color: Theme.muted;
+            font-size: Theme.label-size;
+            vertical-alignment: center;
+            overflow: elide;
         }
     }
 }

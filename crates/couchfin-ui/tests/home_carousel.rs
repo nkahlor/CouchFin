@@ -8,7 +8,7 @@ mod common;
 
 use std::time::Duration;
 
-use common::home::{SCREENS, cards, current_card, home, home_at, part, presses, settle};
+use common::home::{SCREENS, cards, current_card, home, home_at, part, presses, row_cards, settle};
 use common::press;
 use couchfin_ui::MainWindow;
 use i_slint_backend_testing::{ElementHandle, mock_elapsed_time};
@@ -145,10 +145,12 @@ fn the_active_card_is_larger_and_ringed_and_the_others_are_not() {
 fn moving_to_sign_out_drops_the_highlight_and_up_brings_it_back() {
     let home = home();
     press(&home.window, Key::RightArrow);
-    press(&home.window, Key::DownArrow);
+    presses(&home.window, Key::DownArrow, 5);
     settle();
-    let shown = cards(&home.window);
-    let width = part(&shown[1], "poster").size().width;
+    // The first row has scrolled away; the bottom row is where focus left.
+    let shown = row_cards(&home.window, "Libraries");
+    assert!(!shown.is_empty());
+    let width = part(&shown[0], "poster").size().width;
     for card in &shown {
         assert_eq!(part(card, "ring").computed_opacity(), 0.0);
         assert!((part(card, "poster").size().width - width).abs() < 0.5);
@@ -167,7 +169,7 @@ fn focus_moves_at_once_while_the_row_is_still_sliding() {
         mock_elapsed_time(Duration::from_millis(60));
     }
     press(&home.window, Key::Return);
-    assert_eq!(home.activated.taken(), [3]);
+    assert_eq!(home.activated.taken(), [(0, 3)]);
 
     // Turning back mid-slide retargets the slide rather than finishing first.
     press(&home.window, Key::LeftArrow);

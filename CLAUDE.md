@@ -74,5 +74,17 @@ slint-lsp format <file.slint>
 - [ ] Every change has tests, and the PR description includes the red (failing) test output
 - [ ] You re-read every comment and doc touching the changed code, and listed them in the description (or ticked "no docs affected")
 - [ ] The commit messages and PR title follow Conventional Commits (`feat(api): ...`, `fix(ui): ...`)
-- [ ] The PR is small and covers one task
+- [ ] The PR is small and covers one task. UI tasks cover one screen or one component per PR, so each can really be reviewed
+- [ ] **UI changes only: you looked at it** (see "Looking at the UI" below) and the PR lists what you checked
 - [ ] The PR description states which "Done when" check the human still needs to run on the TV
+
+## Looking at the UI
+
+Passing tests don't mean it looks right (#44 passed every test and shipped overlapping titles). Every PR that changes `crates/couchfin-ui`, `app` or a `.slint` file must be looked at, cheaply, in this order (decision 018):
+
+1. **Layout checks, no images:** `cargo test -p couchfin-ui --test layout_checks`. It renders the screens from the example's fixtures at 1920x1080 and 1280x720 and fails on text overlapping text, text spilling out of its card, and text or buttons off screen. A test marked `#[ignore = "fixed by #N"]` is a known problem: if your PR fixes it, remove the `ignore`.
+2. **Screenshots:** `cargo run -p couchfin-ui --example screenshots -- target/screenshots`. It writes every screen and state as `<screen>-<height>-<state>.png` (full size, uploaded by CI as `screenshots-<sha>`) and four contact sheets, `sheet-login`, `sheet-home`, `sheet-browse` and `sheet-detail` (six screens each, shrunk, about 1920x1630). Add a state for your change to `crates/couchfin-ui/examples/screenshots/` when no shot shows it.
+3. **Look, within a budget.** An image costs about 2k tokens now and again on every later turn. So open **only the contact sheets for the screens your PR touches, once, as the last step before opening the PR**, never one full-size file after another. Open a single full-size PNG only to inspect a specific problem you already know about.
+4. **Check against this list**, and put what you checked in the PR: no overlapping or clipped text; alignment and spacing consistent; focus clearly visible; contrast readable; nothing cut off at 1280x720; images fill their slots (also the wrong-shaped and missing ones).
+
+The screenshots use Slint's software renderer, which draws no shadows, glow or other femtovg-only effects (the focused card's glow, for one), and uses the host's fonts. Anything depending on those still needs the TV: say so in the PR.

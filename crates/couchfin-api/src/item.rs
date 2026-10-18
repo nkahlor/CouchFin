@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
+use crate::blur_hash::{ImageBlurHashes, RawBlurHashes};
 use crate::ids::{ImageTag, ItemId};
 
 /// What an [`Item`] is.
@@ -149,6 +150,8 @@ pub struct Item {
     pub official_rating: Option<String>,
     /// Which images it has.
     pub image_tags: ImageTags,
+    /// Their BlurHashes, for placeholders while the images load.
+    pub blur_hashes: ImageBlurHashes,
     /// The user's progress, when the server sent it.
     pub user_data: Option<UserData>,
     /// For a season or episode, the series' title.
@@ -176,6 +179,8 @@ struct RawItem {
     image_tags: HashMap<String, Option<String>>,
     #[serde(default)]
     backdrop_image_tags: Vec<String>,
+    #[serde(default)]
+    image_blur_hashes: RawBlurHashes,
     user_data: Option<RawUserData>,
     series_name: Option<String>,
     series_id: Option<ItemId>,
@@ -228,6 +233,7 @@ impl From<RawItem> for Item {
             overview: raw.overview,
             official_rating: raw.official_rating,
             image_tags,
+            blur_hashes: ImageBlurHashes::from_raw(&raw.image_blur_hashes),
             user_data: raw.user_data.map(|d| UserData {
                 played: d.played,
                 position: ticks(d.playback_position_ticks).unwrap_or_default(),
