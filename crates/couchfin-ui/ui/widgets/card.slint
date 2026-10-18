@@ -5,7 +5,8 @@ import { CardShape, ImageState } from "../browse-state.slint";
 // bar), with its title underneath in the library grid. Home's cards have no
 // title below them: a details strip above the rows names the focused one
 // (`titled: false`), and a card with no picture to show carries its title
-// inside, so a missing picture reads differently from one still loading.
+// inside, on the plain card with no placeholder behind it, so a missing
+// picture reads differently from one still loading.
 // It takes no focus itself:
 // the row or grid it sits in holds focus and says which card is current and
 // which it has passed, so moving is one property change, and the row
@@ -82,7 +83,9 @@ export component Card inherits Rectangle {
             border-radius: Theme.radius;
             clip: true;
 
-            blurred := Image {
+            // Not drawn for a card with no picture: its title is read on
+            // the plain card, never over a blurred pattern.
+            if root.image-state != ImageState.missing: blurred := Image {
                 width: 100%;
                 height: 100%;
                 source: root.placeholder;
@@ -90,7 +93,7 @@ export component Card inherits Rectangle {
                 accessible-role: none;
             }
 
-            Image {
+            if root.image-state != ImageState.missing: Image {
                 width: 100%;
                 height: 100%;
                 source: root.image;
@@ -106,13 +109,16 @@ export component Card inherits Rectangle {
                 x: Theme.card-inner-padding;
                 width: parent.width - 2 * Theme.card-inner-padding;
                 height: min(Theme.card-inner-title-height, parent.height - 2 * Theme.card-inner-padding);
-                y: (parent.height - self.height) / 2;
+                // Top-aligned and centred by hand: Slint centres a text
+                // taller than its box about the whole text, which cut the
+                // first lines off a long title (#66).
+                y: (parent.height - min(self.height, self.preferred-height)) / 2;
                 text: root.title;
                 color: Theme.text;
                 font-size: Theme.card-inner-title-size;
                 font-weight: Theme.strong-weight;
                 horizontal-alignment: center;
-                vertical-alignment: center;
+                vertical-alignment: top;
                 wrap: word-wrap;
                 overflow: elide;
                 // The card itself carries the title.

@@ -23,9 +23,8 @@ export component HomePage inherits Rectangle {
     // The last card selected. Only shown, as feedback while a page loads.
     property <string> selected;
 
-    // How many poster rows the viewport is sized to show, half of the last
-    // one peeking in.
-    property <float> rows-fit: root.height >= Theme.home-tall-screen ? Theme.home-rows-fit-tall : Theme.home-rows-fit;
+    // How many poster rows the viewport is sized to show.
+    property <float> rows-fit: Theme.home-rows-fit;
     // The height a poster has: the viewport shared among the rows it should
     // show, less a row's fixed parts, between its limits.
     property <length> poster-height: clamp(

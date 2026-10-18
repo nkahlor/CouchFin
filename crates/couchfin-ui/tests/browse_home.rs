@@ -280,9 +280,9 @@ fn only_cards_near_the_focus_get_pictures() {
         .iter()
         .filter_map(|(item, ..)| item.chars().nth(1))
         .collect();
-    // The three rows on screen under the details strip and one more below
+    // The two rows on screen under the details strip and one more below
     // the fold; nothing further down.
-    assert_eq!(rows_asked, ['0', '1', '2', '3'].into());
+    assert_eq!(rows_asked, ['0', '1', '2'].into());
     let first_row: Vec<_> = started
         .iter()
         .filter(|(item, ..)| item.starts_with("r0c"))

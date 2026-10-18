@@ -131,7 +131,11 @@ same server because of how it asks, so Couchfin now does the same.
   times the display scale snapped up to 1.0, 1.5 or 2.0. It is requested as
   `fillWidth`/`fillHeight` with `quality=96` (decision 006). The old size
   followed the live card width rounded to 32 px: many distinct URLs, each a
-  slow server-side resize. Grid and Home posters share one size, so a poster
+  slow server-side resize. The boxes cover the largest card drawn at scale
+  1.0 (#65): Home's posters are at most 380 px high (`Theme.poster-max-height`,
+  253 px wide, 278x417 when focused at 1.1x), within 280x420, and a
+  thumbnail, 0.6 of that high, is at most 404x227 (444x250 focused), within
+  448x252. A test checks the poster. Grid and Home posters share one size, so a poster
   seen on Home is already cached when its grid opens. The cache key changed
   (`{w}x{h}`), so old `.orig` files age out through eviction.
 - **A fill box can exceed one dimension** (cover), so the "wider than

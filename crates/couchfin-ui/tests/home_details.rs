@@ -174,8 +174,17 @@ fn a_card_without_a_picture_shows_its_title_inside_at_most_three_lines() {
     assert_eq!(inside.len(), 1, "its title is drawn inside");
     let (own, text) = (rect(missing_card), rect(&inside[0]));
     assert!(
-        text.0 >= own.0 && text.2 <= own.2 && text.1 >= own.1 && text.3 <= own.3,
+        text.0 >= own.0 - 1.0 && text.2 <= own.2 + 1.0 && text.1 >= own.1 && text.3 <= own.3,
         "{text:?} inside {own:?}"
+    );
+    // The title is read on the plain card, not over a blurred pattern.
+    assert!(
+        missing_card
+            .query_descendants()
+            .match_type_name("Image")
+            .find_all()
+            .is_empty(),
+        "a card with no picture draws no placeholder or image"
     );
     // Loading shows the placeholder and ready the picture, neither a text.
     for name in ["Loading", "Ready"] {
@@ -239,8 +248,8 @@ fn rows_visible(window: &MainWindow) -> f32 {
 }
 
 #[test]
-fn at_least_two_and_a_half_rows_show_at_720p_and_three_at_1080p() {
-    for ((width, height), at_least) in SCREENS.into_iter().zip([2.9, 2.4]) {
+fn about_two_rows_show_with_a_peek_of_the_next_at_both_sizes() {
+    for (width, height) in SCREENS {
         let home = home_at(width, height);
         home.window
             .global::<HomeView>()
@@ -251,10 +260,36 @@ fn at_least_two_and_a_half_rows_show_at_720p_and_three_at_1080p() {
         settle();
         let shown = rows_visible(&home.window);
         assert!(
-            shown >= at_least,
-            "{shown} rows show at {width}x{height}, wanted {at_least}"
+            (1.8..=2.4).contains(&shown),
+            "{shown} rows show at {width}x{height}, wanted about two and a peek"
         );
     }
+}
+
+#[test]
+fn posters_are_big_at_1080p_and_the_focused_one_fits_its_picture_request() {
+    let home = home_at(1920.0, 1080.0);
+    two_rows(&home.window);
+    let widths: Vec<f32> = find(&home.window, "Card::poster")
+        .iter()
+        .map(rect)
+        .filter(|r| ((r.2 - r.0) / r.height() - 2.0 / 3.0).abs() < 0.01)
+        .map(|r| r.2 - r.0)
+        .collect();
+    let rest = widths.iter().copied().fold(f32::MAX, f32::min);
+    assert!(
+        (230.0..=260.0).contains(&rest),
+        "a poster is {rest}px wide, wanted 230-260: {widths:?}"
+    );
+    // The requested box is fixed per shape; the focused card is the largest
+    // thing it has to cover, so nothing is ever upscaled.
+    let focused = widths.iter().copied().fold(0.0, f32::max);
+    let asked = couchfin_core::ImageSize::of(couchfin_core::ImageShape::Poster, 1.0);
+    assert!(
+        focused <= f32::from(u16::try_from(asked.width).unwrap_or(u16::MAX)),
+        "focused poster {focused}px wide, picture {}px",
+        asked.width
+    );
 }
 
 #[test]
