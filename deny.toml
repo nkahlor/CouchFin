@@ -16,6 +16,13 @@ ignore = [
   # (sctk-adwaita), which a fullscreen window doesn't draw. It is unmaintained,
   # not vulnerable, and no upgrade exists yet. Drop this once winit moves on.
   { id = "RUSTSEC-2026-0192", reason = "unmaintained ttf-parser via winit's sctk-adwaita; no fix available" },
+  # zbus 6.0.0 absorbed zbus_names, zvariant and zvariant_derive, so the
+  # standalone crates are marked unmaintained (not vulnerable). They come in
+  # only through zbus-secret-service-keyring-store 1.0.1, which is still on
+  # zbus 5. Drop these once it moves to zbus 6 (issue #67).
+  { id = "RUSTSEC-2026-0370", reason = "zvariant via the keyring store's zbus 5; no zbus 6 release yet (#67)" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names via the keyring store's zbus 5; no zbus 6 release yet (#67)" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive via the keyring store's zbus 5; no zbus 6 release yet (#67)" },
 ]
 
 [licenses]
