@@ -399,7 +399,41 @@ fn series_page_has_no_layout_problems_at_1080p() {
 }
 
 #[test]
-#[ignore = "known: at 720p the episode rows run under the status line and the sixth season is off screen"]
 fn series_page_has_no_layout_problems_at_720p() {
     fail_on(&series_problems(SCREENS[1]));
+}
+
+/// The series page with a long season, scrolled down: the rows then sit
+/// partly outside the list, which the checker shows as text over the
+/// seasons or the header. (Many more seasons than fit are covered in
+/// `detail_pages.rs`: the checker can't see a strip's clipping.)
+fn series_scrolled_problems(size: (f32, f32)) -> Vec<String> {
+    let window = shown(Screen::Series);
+    at_size(&window, size);
+    let view = window.global::<SeriesView>();
+    view.set_title("Severance".into());
+    view.set_overview(fixtures::LONG_OVERVIEW.into());
+    view.set_backdrop(fixtures::backdrop());
+    let seasons: Vec<slint::SharedString> = (1..=6).map(|n| format!("Season {n}").into()).collect();
+    view.set_seasons(ModelRc::new(VecModel::from(seasons)));
+    view.set_episodes(ModelRc::new(VecModel::from(fixtures::episodes(30))));
+    settle();
+    for _ in 0..15 {
+        press(&window, Key::DownArrow);
+    }
+    for _ in 0..11 {
+        press(&window, Key::UpArrow);
+    }
+    settle();
+    check("series scrolled", size, &window)
+}
+
+#[test]
+fn scrolled_series_page_has_no_layout_problems_at_1080p() {
+    fail_on(&series_scrolled_problems(SCREENS[0]));
+}
+
+#[test]
+fn scrolled_series_page_has_no_layout_problems_at_720p() {
+    fail_on(&series_scrolled_problems(SCREENS[1]));
 }

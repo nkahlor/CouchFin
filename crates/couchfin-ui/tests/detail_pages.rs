@@ -6,10 +6,10 @@ mod common;
 use common::browse::{movie, series};
 use common::home::{SCREENS, fully_on_screen};
 use common::{labelled, press, shows, the};
-use couchfin_ui::MovieView;
-use slint::ComponentHandle;
+use couchfin_ui::{EpisodeData, MovieView, SeriesView};
 use slint::LogicalSize;
 use slint::platform::Key;
+use slint::{ComponentHandle, Model};
 
 #[test]
 fn the_movie_page_shows_its_header() {
@@ -137,4 +137,58 @@ fn back_goes_back_from_the_series_page() {
     press(&window, Key::DownArrow);
     press(&window, Key::Backspace);
     assert_eq!(calls.taken(), ["back", "back"]);
+}
+
+#[test]
+fn the_last_of_many_seasons_is_fully_on_screen_when_chosen() {
+    for (width, height) in SCREENS {
+        let (window, _) = series(8);
+        window.window().set_size(LogicalSize::new(width, height));
+        let names: Vec<slint::SharedString> =
+            (1..=12).map(|n| format!("Season {n}").into()).collect();
+        window
+            .global::<SeriesView>()
+            .set_seasons(slint::ModelRc::new(slint::VecModel::from(names)));
+        for _ in 0..11 {
+            press(&window, Key::RightArrow);
+        }
+        common::home::settle();
+        assert!(
+            fully_on_screen(&window, &the(&window, "Season 12")),
+            "{width}x{height}: the chosen season is cut off"
+        );
+    }
+}
+
+#[test]
+fn every_watched_episode_says_so() {
+    let (window, _) = series(6);
+    let view = window.global::<SeriesView>();
+    let all: Vec<_> = view
+        .get_episodes()
+        .iter()
+        .map(|episode| EpisodeData {
+            watched: true,
+            ..episode
+        })
+        .collect();
+    view.set_episodes(slint::ModelRc::new(slint::VecModel::from(all)));
+    common::home::settle();
+    assert_eq!(labelled(&window, "Watched").len(), 6);
+}
+
+#[test]
+fn the_first_seasons_stay_in_view_on_arrival_and_after_a_step() {
+    for (width, height) in SCREENS {
+        let (window, _) = series(8);
+        window.window().set_size(LogicalSize::new(width, height));
+        press(&window, Key::RightArrow);
+        common::home::settle();
+        for name in ["Season 1", "Season 2"] {
+            assert!(
+                fully_on_screen(&window, &the(&window, name)),
+                "{width}x{height}: {name} is cut off"
+            );
+        }
+    }
 }
