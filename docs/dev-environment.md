@@ -17,6 +17,53 @@ The image contains:
   H.264/HEVC support Fedora's own builds leave out (see
   [decision 001](decisions/001-dev-container-image.md))
 
+## Developing natively on Ubuntu or WSL
+
+The dev box can also be a plain Ubuntu 24.04 machine (including WSL2 with
+WSLg), without the container. Day-to-day coding happens here, and so do
+Claude Code agents. The TV PC stays the place for checks that need its GPU,
+controllers or Steam. Install once:
+
+1. System packages:
+
+   ```sh
+   sudo apt install -y build-essential cmake pkg-config git libfontconfig-dev libfreetype-dev libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libdbus-1-dev libssl-dev libudev-dev
+   ```
+
+2. SDL3. Ubuntu 24.04 doesn't package it, so build the same version the dev
+   image uses. Couchfin uses SDL only for game controllers (decision 010), so
+   video, audio and the rest are switched off, and `SDL_UNIX_CONSOLE_BUILD`
+   confirms that a build without windows is intended:
+
+   ```sh
+   git clone --depth 1 --branch release-3.4.18 https://github.com/libsdl-org/SDL.git ~/src/SDL
+   cmake -S ~/src/SDL -B ~/src/SDL/build -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_VIDEO=OFF -DSDL_AUDIO=OFF -DSDL_RENDER=OFF -DSDL_GPU=OFF -DSDL_CAMERA=OFF -DSDL_UNIX_CONSOLE_BUILD=ON
+   cmake --build ~/src/SDL/build -j"$(nproc)"
+   sudo cmake --install ~/src/SDL/build && sudo ldconfig
+   pkg-config --modversion sdl3   # 3.4.18
+   ```
+
+   When the dev image's SDL3 version changes, rebuild with the new
+   `release-x.y.z` tag.
+
+3. Rust comes from `rust-toolchain.toml` through rustup. The other check tools
+   are optional, since CI runs them, but having them saves CI round trips:
+
+   ```sh
+   cargo install --locked cargo-deny@0.20.2 cargo-llvm-cov@0.9.1 taplo-cli@0.10.0
+   ```
+
+Then `cargo run`, `cargo test --workspace` and the screenshot example work as
+they do in the box.
+
+**Differences from the TV:**
+- **Controllers:** WSL sees no USB controllers unless they're passed through
+  with `usbipd-win`, so expect keyboard only.
+- **Keyring:** there's no Secret Service, so Couchfin logs that it is using
+  the token file.
+- **Rendering:** WSLg may render on the GPU or in software, so judge frame
+  rate (`perf_grid`) on the TV.
+
 ## Using the published image
 
 CI pushes the image to `ghcr.io/nkahlor/couchfin-dev` whenever `.devcontainer/`

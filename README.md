@@ -17,7 +17,9 @@ Couchfin dev container, entered through Distrobox. Podman and Distrobox come
 preinstalled on Bazzite. The container shares your home directory, display,
 GPU and controllers, and CI builds and tests in the same image. See
 [docs/dev-environment.md](docs/dev-environment.md) for what the image contains
-and how to update it.
+and how to update it. To develop on a plain Ubuntu 24.04 or WSL2 machine
+instead, without the container, follow
+[Developing natively on Ubuntu or WSL](docs/dev-environment.md#developing-natively-on-ubuntu-or-wsl).
 
 1. Create the box and enter it. The image is public, so no registry login is
    needed:
