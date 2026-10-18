@@ -13,6 +13,9 @@ enum SeriesFocus {
 // A series: the movie page's header, a row of seasons, and the selected
 // season's episodes as a list (number, title, runtime, watched).
 //
+// The seasons slide sideways so the chosen one stays in view; the episodes
+// scroll in their own area below.
+//
 // Focus map: one focus target, on the seasons on arrival. On the seasons,
 // Left and Right choose a season (stopping at the ends) and fire
 // season-selected(index) at once so core loads its episodes; Down (or Tab,
@@ -117,43 +120,82 @@ export component SeriesPage inherits Rectangle {
             overview-height: Theme.series-overview-height;
         }
 
-        HorizontalLayout {
-            spacing: Theme.spacing;
-            alignment: start;
-            accessible-role: list;
-            accessible-label: "Seasons";
+        // A strip of chips that slides sideways like a row of cards, so a
+        // long series never pushes seasons off screen; the chosen one is
+        // always revealed.
+        seasons := Flickable {
+            min-height: Theme.control-height;
+            max-height: Theme.control-height;
+            content-width: strip.preferred-width;
+            interactive: false;
+            animate content-x {
+                duration: Theme.scroll-duration;
+                easing: ease-out;
+            }
 
-            for name[index] in SeriesView.seasons: chip := Rectangle {
-                property <bool> selected: index == SeriesView.selected-season;
-                property <bool> lit: self.selected && scope.has-focus && root.zone == SeriesFocus.seasons;
-                height: Theme.control-height;
-                min-width: label.preferred-width + 2 * Theme.chip-padding;
-                background: self.lit ? Theme.focus : self.selected ? Theme.surface : transparent;
-                border-radius: Theme.radius;
-                border-width: self.selected ? Theme.border : 0px;
-                border-color: self.lit ? Theme.text : Theme.muted;
-                accessible-role: list-item;
-                accessible-label: name;
-                accessible-item-index: index;
-                accessible-item-count: SeriesView.seasons.length;
-                accessible-item-selectable: true;
-                accessible-item-selected: self.selected;
+            strip := HorizontalLayout {
+                spacing: Theme.spacing;
+                alignment: start;
+                accessible-role: list;
+                accessible-label: "Seasons";
 
-                label := Text {
-                    text: name;
-                    color: chip.lit ? Theme.on-focus : Theme.text;
-                    font-size: Theme.body-size;
-                    font-weight: chip.selected ? Theme.strong-weight : Theme.regular-weight;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    accessible-role: none;
-                }
+                for name[index] in SeriesView.seasons: chip := Rectangle {
+                    property <bool> selected: index == SeriesView.selected-season;
+                    property <bool> lit: self.selected && scope.has-focus && root.zone == SeriesFocus.seasons;
+                    height: Theme.control-height;
+                    min-width: label.preferred-width + 2 * Theme.chip-padding;
+                    background: self.lit ? Theme.focus : self.selected ? Theme.surface : transparent;
+                    border-radius: Theme.radius;
+                    border-width: self.selected ? Theme.border : 0px;
+                    border-color: self.lit ? Theme.text : Theme.muted;
+                    accessible-role: list-item;
+                    accessible-label: name;
+                    accessible-item-index: index;
+                    accessible-item-count: SeriesView.seasons.length;
+                    accessible-item-selectable: true;
+                    accessible-item-selected: self.selected;
 
-                TouchArea {
-                    clicked => {
-                        root.zone = SeriesFocus.seasons;
-                        scope.focus();
-                        root.pick-season(index);
+                    // The layout places chips after this runs, so the
+                    // position and width changing re-reveal the chosen one.
+                    function reveal() {
+                        if self.selected && seasons.width > 0 {
+                            seasons.content-x = Scroll.reveal(seasons.content-x, self.x, self.width, seasons.width);
+                        }
+                    }
+                    init => {
+                        self.reveal();
+                    }
+                    changed selected => {
+                        self.reveal();
+                    }
+                    changed x => {
+                        self.reveal();
+                    }
+                    changed width => {
+                        self.reveal();
+                    }
+                    // The strip's window is zero wide until the first layout.
+                    property <length> window: seasons.width;
+                    changed window => {
+                        self.reveal();
+                    }
+
+                    label := Text {
+                        text: name;
+                        color: chip.lit ? Theme.on-focus : Theme.text;
+                        font-size: Theme.body-size;
+                        font-weight: chip.selected ? Theme.strong-weight : Theme.regular-weight;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        accessible-role: none;
+                    }
+
+                    TouchArea {
+                        clicked => {
+                            root.zone = SeriesFocus.seasons;
+                            scope.focus();
+                            root.pick-season(index);
+                        }
                     }
                 }
             }

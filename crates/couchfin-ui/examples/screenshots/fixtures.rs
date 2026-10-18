@@ -200,7 +200,8 @@ pub fn library_items(count: usize, loaded: usize) -> Vec<CardData> {
         .collect()
 }
 
-/// A season's episodes: long and short titles, watched and not.
+/// A season's episodes: long and short titles, most watched and some not
+/// (a watched mark on the first rows only once hid a bug).
 pub fn episodes(count: usize) -> Vec<EpisodeData> {
     let names = [
         "Good News About Hell",
@@ -215,7 +216,7 @@ pub fn episodes(count: usize) -> Vec<EpisodeData> {
             number: i32::try_from(n + 1).unwrap_or(0),
             title: names[n % names.len()].into(),
             runtime: format!("{} min", 38 + n * 3).into(),
-            watched: n < 3,
+            watched: n % 4 != 2,
         })
         .collect()
 }

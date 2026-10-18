@@ -112,7 +112,10 @@ This records how the views are built, so Stage B knows what to feed them.
   its episodes; `selected-season` is in-out. Down (or Enter) enters the
   episodes, where Up and Down step and scroll, Up from the first returns to
   the seasons, and Enter fires `episode-activated(index)` and shows the same
-  note. Left and Right do nothing on the episodes.
+  note. Left and Right do nothing on the episodes. The seasons are a strip
+  that slides sideways (a `Flickable`, no manual drag) so the chosen season
+  is always fully in view, and the episode list scrolls in its own area
+  below it.
 
 ## Consequences
 
