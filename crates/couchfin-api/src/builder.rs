@@ -110,7 +110,7 @@ fn tls_config(roots: Vec<CertificateDer<'static>>) -> Result<ClientConfig, Build
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let verifier = Verifier::new_with_extra_roots(roots, Arc::clone(&provider))
         .map_err(|e| BuildError(format!("couldn't load trusted certificates: {e}")))?;
-    let config = ClientConfig::builder_with_provider(provider)
+    let mut config = ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
         .map_err(|e| BuildError(e.to_string()))?
         // "dangerous" only because it takes a custom verifier; this one does
@@ -118,5 +118,8 @@ fn tls_config(roots: Vec<CertificateDer<'static>>) -> Result<ClientConfig, Build
         .dangerous()
         .with_custom_certificate_verifier(Arc::new(verifier))
         .with_no_client_auth();
+    // reqwest does not add ALPN to a config it is handed, and without it a
+    // server never offers HTTP/2: posters would queue on HTTP/1.1.
+    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(config)
 }

@@ -38,6 +38,8 @@ futures-util = { version = "0.3", default-features = false, features = [
 ] }
 # The keyring ecosystem's core API, with its pure-Rust (zbus) Secret Service
 # store below, rather than the `keyring` wrapper crate: see decision 007.
+# BlurHash placeholders (decision 016); no default features, so no `image`.
+blurhash = { version = "0.2", default-features = false }
 # Decoding posters (decision 016): only the formats Jellyfin
 # serves, none of the default features (no rayon, GIF or AVIF).
 image = { version = "0.25", default-features = false, features = [
@@ -50,6 +52,7 @@ rcgen = "0.14"
 # Only the features couchfin-api uses. TLS is rustls with ring as its crypto
 # provider, not OpenSSL or aws-lc-rs: see docs/decisions/006-api-client-design.md.
 reqwest = { version = "0.13.5", default-features = false, features = [
+  "http2",
   "json",
   "rustls-no-provider",
 ] }
@@ -92,3 +95,10 @@ zbus-secret-service-keyring-store = { version = "1", features = [
 i-slint-backend-testing = "=1.18.1"
 slint = { version = "=1.18.1", default-features = false }
 slint-build = "=1.18.1"
+
+# Dependencies are optimised even in `cargo run`: image decoding is about 20x
+# slower unoptimised, which made posters look slow on the TV (decision 016).
+# Our own crates stay at opt-level 0 so edits rebuild quickly. Cost: the
+# dependencies compile slower once (cached until Cargo.lock or the profile changes).
+[profile.dev.package."*"]
+opt-level = 2

@@ -156,7 +156,11 @@ impl<A: JellyfinApi> ImageCache<A> {
         request: &ImageRequest,
         key: &Key,
     ) -> Result<Pixels, ImageError> {
-        let job = Job::new(Arc::clone(&self.disk), key, request.max_width);
+        let job = Job::new(
+            Arc::clone(&self.disk),
+            key,
+            request.fill_height.is_none().then_some(request.max_width),
+        );
         let cached = job.clone();
         if let Some(pixels) = blocking(move || cached.cached()).await? {
             return Ok(pixels);

@@ -5,10 +5,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use couchfin_core::{Card, GridState};
-use slint::{Image, Model, ModelNotify, ModelTracker};
+use slint::{Model, ModelNotify, ModelTracker};
 
 use super::geometry::Geometry;
-use super::loader::{Slot, Wish};
+use super::loader::{Picture, Slot, Wish, placeholder_image};
 use crate::generated::CardData;
 
 /// How many items past the visible ones to fetch pictures for, as a share of
@@ -22,7 +22,7 @@ const KEEP_MARGINS: usize = 3;
 /// demand from core's grid. Slint reads only the places it draws.
 pub(crate) struct GridModel {
     items: RefCell<Vec<Option<Card>>>,
-    images: RefCell<HashMap<usize, Image>>,
+    pictures: RefCell<HashMap<usize, Picture>>,
     notify: ModelNotify,
 }
 
@@ -30,7 +30,7 @@ impl GridModel {
     pub(crate) fn new() -> Self {
         Self {
             items: RefCell::new(Vec::new()),
-            images: RefCell::new(HashMap::new()),
+            pictures: RefCell::new(HashMap::new()),
             notify: ModelNotify::default(),
         }
     }
@@ -57,14 +57,14 @@ impl GridModel {
         }
     }
 
-    /// The picture for a place, or the placeholder for `None`.
-    pub(crate) fn set_image(&self, place: usize, image: Option<Image>) {
-        let changed = match image {
-            Some(image) => {
-                self.images.borrow_mut().insert(place, image);
+    /// What a place shows of its picture; `Loading` forgets what it had.
+    pub(crate) fn set_picture(&self, place: usize, picture: Picture) {
+        let changed = match picture {
+            Picture::Loading => self.pictures.borrow_mut().remove(&place).is_some(),
+            other => {
+                self.pictures.borrow_mut().insert(place, other);
                 true
             }
-            None => self.images.borrow_mut().remove(&place).is_some(),
         };
         if changed && place < self.items.borrow().len() {
             self.notify.row_changed(place);
@@ -81,11 +81,11 @@ impl GridModel {
         let order = (first..last)
             .chain(last..last + margin)
             .chain((first.saturating_sub(margin)..first).rev());
-        let width = geometry.grid_width();
+        let size = geometry.grid_size();
         order
             .filter_map(|place| {
                 let image = items.get(place)?.as_ref()?.image.clone()?;
-                Some((Slot::Grid(place), Wish { image, width }))
+                Some((Slot::Grid(place), Wish { image, size }))
             })
             .collect()
     }
@@ -116,18 +116,19 @@ impl Model for GridModel {
             // Not loaded yet: the empty placeholder card.
             return Some(CardData::default());
         };
-        Some(CardData {
+        let mut data = CardData {
             title: card.title.as_str().into(),
             subtitle: card.subtitle.clone().unwrap_or_default().into(),
             progress: card.progress.unwrap_or(0.0),
-            image: self
-                .images
-                .borrow()
-                .get(&place)
-                .cloned()
-                .unwrap_or_default(),
+            placeholder: placeholder_image(card),
             ..CardData::default()
-        })
+        };
+        self.pictures
+            .borrow()
+            .get(&place)
+            .unwrap_or(&Picture::Loading)
+            .fill(&mut data, card.image.is_some());
+        Some(data)
     }
 
     fn model_tracker(&self) -> &dyn ModelTracker {

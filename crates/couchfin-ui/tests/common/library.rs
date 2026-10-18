@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use couchfin_core::fake::{FakeJellyfin, MemorySettings, MemoryTokens};
 use couchfin_core::{
-    ImageLoad, ImageRef, LibraryAction, LibraryFlow, LibraryState, LoginAction, LoginFlow,
-    Password, Pixels, Settings,
+    ImageLoad, ImageRef, ImageSize, LibraryAction, LibraryFlow, LibraryState, LoginAction,
+    LoginFlow, Password, Pixels, Settings,
 };
 use couchfin_ui::{Feed, Guard, ImageLoader, MainWindow, bind, install, render};
 use slint::ComponentHandle;
@@ -87,7 +87,7 @@ impl World {
 /// One image load as the loader saw it.
 pub struct Load {
     pub image: ImageRef,
-    pub width: u32,
+    pub size: ImageSize,
     alive: Arc<AtomicBool>,
     done: Option<Box<dyn FnOnce(ImageLoad) + Send>>,
 }
@@ -118,13 +118,13 @@ impl ImageLoader for FakeLoader {
     fn load(
         &self,
         image: &ImageRef,
-        max_width: u32,
+        size: ImageSize,
         done: Box<dyn FnOnce(ImageLoad) + Send>,
     ) -> Guard {
         let alive = Arc::new(AtomicBool::new(true));
         self.lock().push(Load {
             image: image.clone(),
-            width: max_width,
+            size,
             alive: Arc::clone(&alive),
             done: Some(done),
         });
@@ -141,7 +141,7 @@ impl FakeLoader {
     pub fn started(&self) -> Vec<(String, u32, bool)> {
         self.lock()
             .iter()
-            .map(|l| (l.image.item.as_str().to_owned(), l.width, l.wanted()))
+            .map(|l| (l.image.item.as_str().to_owned(), l.size.width, l.wanted()))
             .collect()
     }
 
@@ -207,14 +207,20 @@ pub struct Shell {
 
 impl Shell {
     pub fn new() -> Self {
+        let loader = FakeLoader::default();
+        Self::with_loader(loader.clone(), Arc::new(loader))
+    }
+
+    /// A shell whose pictures come from `real` instead; `loader` stays the
+    /// (idle) fake.
+    pub fn with_loader(loader: FakeLoader, real: Arc<dyn ImageLoader>) -> Self {
         init();
         let window = MainWindow::new().expect("window is created");
         let commands = Calls::new();
-        let loader = FakeLoader::default();
         let recorder = commands.clone();
         bind(&window, move |command| recorder.record(describe(command)));
         let recorder = commands.clone();
-        let feed = install(&window, Arc::new(loader.clone()), move |command| {
+        let feed = install(&window, real, move |command| {
             recorder.record(describe(command));
         });
         render(&window, &home(None));

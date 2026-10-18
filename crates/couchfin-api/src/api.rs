@@ -292,8 +292,9 @@ pub trait JellyfinApi: Send + Sync {
         season: &ItemId,
     ) -> impl Future<Output = Result<Vec<Item>, ApiError>> + Send;
 
-    /// `GET /Items/{id}/Images/{type}`: an item's image scaled to at most
-    /// `max_width`, as the bytes and `Content-Type` the server sent.
+    /// `GET /Items/{id}/Images/{type}`: an item's image, scaled to at most
+    /// `max_width`, or to fill the `max_width` by `fill_height` box if the
+    /// request has one, at quality 96, as the bytes and `Content-Type` the server sent.
     ///
     /// # Errors
     ///

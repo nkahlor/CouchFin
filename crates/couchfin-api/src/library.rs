@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
+use crate::blur_hash::{BlurHash, ImageBlurHashes, RawBlurHashes};
 use crate::ids::{ImageTag, ItemId};
+use crate::image::ImageKind;
 use crate::item::image_tag;
 
 /// What a library holds, from Jellyfin's `CollectionType`.
@@ -65,6 +67,8 @@ pub struct Library {
     pub kind: LibraryKind,
     /// The tag of its cover image, if it has one.
     pub primary_image: Option<ImageTag>,
+    /// The BlurHash of that cover.
+    pub primary_blur_hash: Option<BlurHash>,
 }
 
 #[derive(Deserialize)]
@@ -75,15 +79,24 @@ struct RawLibrary {
     collection_type: Option<String>,
     #[serde(default)]
     image_tags: HashMap<String, Option<String>>,
+    #[serde(default)]
+    image_blur_hashes: RawBlurHashes,
 }
 
 impl From<RawLibrary> for Library {
     fn from(raw: RawLibrary) -> Self {
+        let primary_image = image_tag(&raw.image_tags, "Primary");
+        let primary_blur_hash = primary_image.as_ref().and_then(|tag| {
+            ImageBlurHashes::from_raw(&raw.image_blur_hashes)
+                .get(ImageKind::Primary, tag)
+                .cloned()
+        });
         Self {
             id: raw.id,
             name: raw.name,
             kind: LibraryKind::from(raw.collection_type.as_deref()),
-            primary_image: image_tag(&raw.image_tags, "Primary"),
+            primary_image,
+            primary_blur_hash,
         }
     }
 }

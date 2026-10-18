@@ -1,5 +1,5 @@
 import { Theme } from "../theme.slint";
-import { CardShape } from "../browse-state.slint";
+import { CardShape, ImageState } from "../browse-state.slint";
 
 // A card: a 2:3 poster or a 16:9 thumbnail (which can also carry a progress
 // bar), with its title underneath in the library grid. Home's cards have no
@@ -20,16 +20,19 @@ export component Card inherits Rectangle {
     // Draw the title (and a thumbnail's subtitle) under the picture. Off in
     // Home's rows, which name the focused card in the details strip.
     in property <bool> titled: true;
-    // The picture will never come (the server has none): the title is drawn
-    // inside the card instead. A picture still loading shows plain.
-    in property <bool> image-missing: false;
     in property <CardShape> shape: CardShape.poster;
     // Resume progress from 0 to 1; 0 or less shows no bar.
     in property <float> progress;
     // The picture's height at rest; the width follows from the shape.
     in property <length> image-height;
-    // The picture; empty for the placeholder look.
+    // The picture; empty until it has loaded.
     in property <image> image;
+    // The blurred stand-in for it, shown from the start and faded out under
+    // the picture.
+    in property <image> placeholder;
+    // `missing` (the server has none) draws the title inside the card; `loading`
+    // shows the placeholder; `ready` the picture.
+    in property <ImageState> image-state: ImageState.loading;
     // The card the row or grid last focused, whether or not it has focus.
     in property <bool> current;
     // Current in a focused row: larger, ringed and glowing.
@@ -79,17 +82,27 @@ export component Card inherits Rectangle {
             border-radius: Theme.radius;
             clip: true;
 
+            blurred := Image {
+                width: 100%;
+                height: 100%;
+                source: root.placeholder;
+                image-fit: fill;
+                accessible-role: none;
+            }
+
             Image {
                 width: 100%;
                 height: 100%;
                 source: root.image;
                 image-fit: cover;
+                opacity: root.image.width > 0 ? 1 : 0;
+                animate opacity { duration: Theme.image-fade-duration; }
                 accessible-role: none;
             }
 
             // Wrapped to three lines at most and elided, centred, and kept
             // inside the card whatever its size.
-            if root.image-missing: inner-title := Text {
+            if root.image-state == ImageState.missing: inner-title := Text {
                 x: Theme.card-inner-padding;
                 width: parent.width - 2 * Theme.card-inner-padding;
                 height: min(Theme.card-inner-title-height, parent.height - 2 * Theme.card-inner-padding);

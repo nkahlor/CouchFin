@@ -19,7 +19,8 @@ pub struct ImageCacheConfig {
     pub disk_limit_bytes: u64,
     /// The most bytes of decoded pixels kept in memory. Default 256 MB.
     pub memory_limit_bytes: usize,
-    /// The most image downloads at once. Default 6.
+    /// The most image downloads at once. Default 8: the first screen's 12 to 16
+    /// pictures arrive in two short waves (decision 016).
     pub max_in_flight: usize,
 }
 
@@ -28,7 +29,7 @@ impl Default for ImageCacheConfig {
         Self {
             disk_limit_bytes: 500 * 1024 * 1024,
             memory_limit_bytes: 256 * 1024 * 1024,
-            max_in_flight: 6,
+            max_in_flight: 8,
         }
     }
 }

@@ -4,17 +4,17 @@
 use std::rc::Rc;
 
 use couchfin_core::{Card, CardShape as CoreShape, HomeState};
-use slint::{Image, Model, ModelRc, VecModel};
+use slint::{Model, ModelRc, VecModel};
 
 use super::format;
 use super::geometry::Geometry;
-use super::loader::{Slot, Wish, row_key};
+use super::loader::{Picture, Slot, Wish, placeholder_image, row_key};
 use crate::generated::{CardData, CardShape, RowData};
 
-/// Rows kept loaded behind the focused one, and ahead of it. The next row
-/// peeks in below the focused one, and the one after is just off-screen.
+/// Rows kept loaded behind the focused one, and, past the last one on
+/// screen, ahead of it: one more row is just below the fold, ready for Down.
 const ROWS_BEHIND: usize = 1;
-const ROWS_AHEAD: usize = 2;
+const ROWS_BEYOND: usize = 1;
 /// Cards loaded behind the current one (the passed card that peeks in, and
 /// one more) and past the last one that fits.
 const CARDS_BEHIND: usize = 2;
@@ -41,16 +41,23 @@ fn shape(shape: CoreShape) -> CardShape {
 }
 
 fn card_data(card: &Card, keep: Option<&CardData>) -> CardData {
-    CardData {
+    let mut data = CardData {
         title: card.title.as_str().into(),
         subtitle: card.subtitle.clone().unwrap_or_default().into(),
         progress: card.progress.unwrap_or(0.0),
-        image: keep.map(|kept| kept.image.clone()).unwrap_or_default(),
-        // No image to ask for is missing at once; a server that has none
-        // says so later (set_missing), and that survives a refresh.
-        image_missing: card.image.is_none() || keep.is_some_and(|kept| kept.image_missing),
+        placeholder: placeholder_image(card),
         meta: format::card_meta(card).into(),
+        ..CardData::default()
+    };
+    match keep {
+        // The same picture stays on screen while the text changes.
+        Some(kept) => {
+            data.image = kept.image.clone();
+            data.image_state = kept.image_state;
+        }
+        None => Picture::Loading.fill(&mut data, card.image.is_some()),
     }
+    data
 }
 
 impl HomeModels {
@@ -167,32 +174,26 @@ impl HomeModels {
             .unwrap_or(0)
     }
 
-    /// Shows `image` on a card, or clears it.
-    pub(crate) fn set_image(&self, key: &str, index: usize, image: Option<Image>) {
+    /// Shows `picture` on a card.
+    pub(crate) fn set_picture(&self, key: &str, index: usize, picture: &Picture) {
         let Some(slot) = self.slots.iter().find(|slot| slot.key == key) else {
             return;
         };
         let Some(mut data) = slot.cards.row_data(index) else {
             return;
         };
-        data.image = image.unwrap_or_default();
-        slot.cards.set_row_data(index, data);
-    }
-
-    /// The server has no picture for this card: it shows its title instead.
-    pub(crate) fn set_missing(&self, key: &str, index: usize) {
-        let Some(slot) = self.slots.iter().find(|slot| slot.key == key) else {
-            return;
-        };
-        let Some(mut data) = slot.cards.row_data(index) else {
-            return;
-        };
-        data.image_missing = true;
+        let has_image = slot
+            .source
+            .get(index)
+            .is_some_and(|card| card.image.is_some());
+        picture.fill(&mut data, has_image);
         slot.cards.set_row_data(index, data);
     }
 
     /// The pictures worth fetching, most important first: the focused row's
-    /// cards from the current one outward, then the nearby rows.
+    /// cards from the current one outward, then the other rows on screen
+    /// from the top down, then a margin of one row, so everything visible
+    /// (and the next Down) has its picture requested at once.
     pub(crate) fn wanted(
         &self,
         home: &HomeState,
@@ -200,7 +201,8 @@ impl HomeModels {
         geometry: &Geometry,
     ) -> Vec<(Slot, Wish)> {
         let first_row = focused.saturating_sub(ROWS_BEHIND);
-        let last_row = focused + ROWS_AHEAD;
+        let visible = geometry.rows_on_screen(home.rows.iter().skip(focused).map(|row| row.shape));
+        let last_row = focused + visible + ROWS_BEYOND - 1;
         let mut order: Vec<usize> = (first_row..=last_row).collect();
         order.sort_by_key(|row| row.abs_diff(focused));
         let mut wanted = Vec::new();
@@ -212,7 +214,7 @@ impl HomeModels {
             let fits = geometry.cards_across(row.shape);
             let from = current.saturating_sub(CARDS_BEHIND);
             let to = (current + fits + CARDS_BEYOND).min(row.cards.len());
-            let width = geometry.card_width(row.shape);
+            let size = geometry.card_size(row.shape);
             let key = row_key(&row.kind);
             let mut places: Vec<usize> = (from..to).collect();
             places.sort_by_key(|place| (place.abs_diff(current), *place));
@@ -220,7 +222,7 @@ impl HomeModels {
                 let Some(image) = row.cards[place].image.clone() else {
                     continue;
                 };
-                wanted.push((Slot::Card(key.clone(), place), Wish { image, width }));
+                wanted.push((Slot::Card(key.clone(), place), Wish { image, size }));
             }
         }
         wanted

@@ -14,9 +14,11 @@ mod job;
 mod key;
 mod memory;
 mod pixels;
+mod size;
 
 pub use cache::{ImageCache, ImageLoad};
 pub use cache_dir::CacheDir;
 pub use config::ImageCacheConfig;
 pub use error::ImageError;
 pub use pixels::Pixels;
+pub use size::{ImageShape, ImageSize, placeholder};

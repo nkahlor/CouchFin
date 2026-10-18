@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+blurhash.workspace = true
 couchfin-api.workspace = true
 directories.workspace = true
 image.workspace = true

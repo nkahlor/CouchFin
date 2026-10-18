@@ -90,6 +90,8 @@ export component LibraryPage inherits Rectangle {
                     y: Theme.card-focus-room;
                     title: LibraryView.items[self.place].title;
                     image: LibraryView.items[self.place].image;
+                    placeholder: LibraryView.items[self.place].placeholder;
+                    image-state: LibraryView.items[self.place].image-state;
                     image-height: Theme.grid-poster-height;
                     current: self.place == root.current;
                     highlighted: self.place == root.current && scope.has-focus;

@@ -153,14 +153,14 @@ screens and returns a `Feed`; `app` owns the `LibraryFlow` and `ImageCache`
   on tokio) starts a load per wanted card and returns a `Guard`; dropping it
   aborts the load. After every state, focus move or scroll the UI recomputes
   the wanted set and cancels the rest. Wanted: on Home the focused row,
-  one behind and two ahead, from two cards behind the current one to the
-  last that fits plus two; in the grid the visible places plus half a screen
+  one behind, every row that starts on screen and one more, from two cards
+  behind the current one to the last that fits plus two; in the grid the visible places plus half a screen
   each side, nearest first, with finished pictures kept three margins out
   and let go beyond that (2,000 posters would otherwise hold about a
   gigabyte); on a detail page its backdrop (`ImageKind::Backdrop`, chosen by
-  core). Widths are the on-screen size times the scale factor, rounded up to
-  32 px. `NoImage` keeps the
-  placeholder. Pixels become a `slint::Image` on the UI thread (one copy).
+  core). Sizes are fixed per card shape times the scale factor, snapped to 1.0, 1.5 or 2.0
+  (decision 016). A card shows its BlurHash placeholder until its picture
+  fades in; `NoImage` makes the card `ImageState::Missing`. Pixels become a `slint::Image` on the UI thread (one copy).
 - **Session.** `app` drops the `LibraryFlow` when `session_expired` is set
   and sends `LoginAction::SessionExpired`; leaving Home does the same
   without that action.
