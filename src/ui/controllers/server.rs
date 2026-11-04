@@ -29,8 +29,9 @@ pub fn bind(window: &MainWindow, app: Arc<App>) {
                     match result {
                         Ok(info) => {
                             view.set_error("".into());
-                            window.global::<LoginView>().set_server_url(info.url.into());
-                            // TODO: show info.name / info.version on the login screen.
+                            let login = window.global::<LoginView>();
+                            login.set_server_url(info.url.into());
+                            login.set_server_name(info.name.into());
                             window.set_screen(Screen::Login);
                         }
                         Err(err) => {

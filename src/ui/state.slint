@@ -10,6 +10,7 @@ export global ServerSelectionView {
 export global LoginView {
     in-out property <string> username;
     in property <string> server-url;
+    in property <string> server-name;
 
     callback submit(username: string, password: string);
     callback back();

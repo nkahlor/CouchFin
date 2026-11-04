@@ -13,7 +13,8 @@ export component LoginScreen inherits Rectangle {
         spacing: Theme.spacing;
 
         Text {
-            text: "Please sign in";
+            text: "Sign in to " + LoginView.server-name;
+            color: Theme.text;
             font-size: Theme.title-size;
         }
 
