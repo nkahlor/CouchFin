@@ -1,24 +1,19 @@
-slint::include_modules!();
-
 mod api;
-mod login;
+mod app;
+mod ui;
 
 use std::sync::Arc;
 
-use api::JellyfinClient;
+use slint::ComponentHandle;
 
-// TODO: replace with a server selection screen.
-const SERVER_URL: &str = "https://jellyfin.stablesnake.box.ca";
-
-// The UI runs on the main thread; tokio's worker threads run the network calls.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = Arc::new(JellyfinClient::new(SERVER_URL)?);
+    let app = Arc::new(app::App::default());
 
-    let main_window = MainWindow::new()?;
-    login::install(&main_window, client, SERVER_URL);
+    let window = ui::MainWindow::new()?;
+    ui::bind(&window, app);
 
-    main_window.window().set_fullscreen(true);
-    main_window.run()?;
+    window.window().set_fullscreen(true);
+    window.run()?;
     Ok(())
 }
