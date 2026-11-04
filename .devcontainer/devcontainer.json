@@ -20,7 +20,9 @@
 				"github.vscode-pull-request-github",
 				"emmanuelbeziat.vscode-great-icons",
 				"redhat.vscode-yaml",
-				"slint.slint"
+				"slint.slint",
+				"swellaby.vscode-rust-test-adapter",
+				"anthropic.claude-code"
 			],
 			"settings": {
 				"files.eol": "\n",

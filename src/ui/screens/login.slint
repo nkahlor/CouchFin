@@ -1,0 +1,50 @@
+import { Theme } from "../theme.slint";
+import { LoginView } from "../state.slint";
+import { TextField } from "../widgets/text-field.slint";
+import { Button } from "std-widgets.slint";
+
+export component LoginScreen inherits Rectangle {
+
+    VerticalLayout {
+        width: Theme.form-width;
+        x: (parent.width - self.width) / 2;
+        height: parent.height;
+        alignment: center;
+        spacing: Theme.spacing;
+
+        Text {
+            text: "Please sign in";
+            font-size: Theme.title-size;
+        }
+
+        TextField {
+            label: "Username";
+            text <=> LoginView.username;
+        }
+
+        TextField {
+            label: "Password";
+            password: true;
+        }
+
+        Button {
+            text: "Sign In";
+            width: Theme.form-width;
+            height: Theme.form-height;
+            primary: true;
+        }
+
+        Button {
+            text: "Quick Connect";
+
+            width: Theme.form-width;
+            height: Theme.form-height;
+        }
+
+        Button {
+            text: "Forgot Password";
+            width: Theme.form-width;
+            height: Theme.form-height;
+        }
+    }
+}

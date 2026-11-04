@@ -1,0 +1,33 @@
+import { Theme } from "../theme.slint";
+
+export component TextField {
+    in property <string> label;
+    in-out property <string> text <=> input.text;
+    in property <bool> password: false;
+
+    VerticalLayout {
+        spacing: Theme.spacing / 2;
+
+        Text {
+            text: root.label;
+            color: Theme.text;
+            font-size: Theme.label-size;
+        }
+
+        Rectangle {
+            background: Theme.surface;
+            border-radius: Theme.radius;
+            height: Theme.form-height;
+
+            HorizontalLayout {
+                padding: Theme.padding;
+
+                input := TextInput {
+                    color: Theme.text;
+                    font-size: Theme.body-size;
+                    input-type: root.password ? InputType.password : InputType.text;
+                }
+            }
+        }
+    }
+}

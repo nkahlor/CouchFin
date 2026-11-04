@@ -1,0 +1,18 @@
+import { Theme } from "theme.slint";
+import { Screen, LoginView, HomeView } from "state.slint";
+import { LoginScreen } from "screens/login.slint";
+import { HomeScreen } from "screens/home.slint";
+
+export { Screen, LoginView, HomeView }
+export component MainWindow inherits Window {
+    in property <Screen> screen: Screen.login;
+
+    title: "CouchFin";
+    background: Theme.background;
+    FocusScope {
+        width: parent.width;
+        height: parent.height;
+
+        if root.screen == Screen.login: LoginScreen { }
+    }
+}

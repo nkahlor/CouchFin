@@ -10,4 +10,5 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
     libgl1-mesa-dev \
     dbus-x11 \
+    libinput10 \
     && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,17 @@
+export enum Screen { login, home }
+
+export global LoginView {
+    in property <string> server-name;
+    in property <string> server-address;
+    in-out property <string> username;
+    in property <bool> busy;
+    in property <string> error;
+    in property <int> password-resets;
+
+    callback submit(username: string, password: string);
+    callback back();
+}
+
+export global HomeView {
+    in property <string> user-name;
+}

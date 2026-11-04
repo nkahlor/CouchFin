@@ -1,0 +1,10 @@
+import { Theme } from "../theme.slint";
+import { HomeView } from "../state.slint";
+
+export component HomeScreen inherits Rectangle {
+    Text {
+        text: "Signed in as " + HomeView.user-name;
+        color: Theme.text;
+        font-size: Theme.title-size;
+    }
+}
