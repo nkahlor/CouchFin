@@ -1,12 +1,15 @@
-export enum Screen { login, home }
+export enum Screen { login, home, server-selection }
+
+export global ServerSelectionView {
+    in-out property <string> server-url;
+    in-out property <string> error;
+
+    callback submit(server-url: string);
+}
 
 export global LoginView {
-    in property <string> server-name;
-    in property <string> server-address;
     in-out property <string> username;
-    in property <bool> busy;
-    in property <string> error;
-    in property <int> password-resets;
+    in property <string> server-url;
 
     callback submit(username: string, password: string);
     callback back();

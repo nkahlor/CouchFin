@@ -1,0 +1,41 @@
+import { Theme } from "../theme.slint";
+import { ServerSelectionView } from "../state.slint";
+import { TextField } from "../widgets/text-field.slint";
+import { Button } from "std-widgets.slint";
+
+export component ServerSelectionScreen inherits Rectangle {
+    VerticalLayout {
+        width: Theme.form-width;
+        x: (parent.width - self.width) / 2;
+        height: parent.height;
+        alignment: center;
+        spacing: Theme.spacing;
+
+        Text {
+            text: "Connect to a Jellyfin server";
+            font-size: Theme.title-size;
+            color: Theme.text;
+        }
+
+        TextField {
+            label: "Server Address";
+            text <=> ServerSelectionView.server-url;
+        }
+
+        if ServerSelectionView.error != "": Text {
+            text: ServerSelectionView.error;
+            color: Theme.error;
+            font-size: Theme.label-size;
+        }
+
+        Button {
+            text: "Continue";
+            width: Theme.form-width;
+            height: Theme.form-height;
+            primary: true;
+            clicked => {
+                ServerSelectionView.submit(ServerSelectionView.server-url);
+            }
+        }
+    }
+}

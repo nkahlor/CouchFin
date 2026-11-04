@@ -1,11 +1,12 @@
 import { Theme } from "theme.slint";
-import { Screen, LoginView, HomeView } from "state.slint";
+import { Screen, LoginView, HomeView, ServerSelectionView } from "state.slint";
 import { LoginScreen } from "screens/login.slint";
 import { HomeScreen } from "screens/home.slint";
+import { ServerSelectionScreen } from "screens/server.slint";
 
-export { Screen, LoginView, HomeView }
+export { Screen, LoginView, HomeView, ServerSelectionView }
 export component MainWindow inherits Window {
-    in property <Screen> screen: Screen.login;
+    in property <Screen> screen: Screen.server-selection;
 
     title: "CouchFin";
     background: Theme.background;
@@ -13,6 +14,7 @@ export component MainWindow inherits Window {
         width: parent.width;
         height: parent.height;
 
+        if root.screen == Screen.server-selection: ServerSelectionScreen { }
         if root.screen == Screen.login: LoginScreen { }
     }
 }
