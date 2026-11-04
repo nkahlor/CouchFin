@@ -1,0 +1,55 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/rust
+{
+	"name": "Rust",
+	"image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+	"workspaceFolder": "/workspaces/CouchFin2",
+	"postCreateCommand": "rustup component add clippy rustfmt",
+	"containerEnv": {
+		"WAYLAND_DISPLAY": ""
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"rust-lang.rust-analyzer",
+				"tamasfe.even-better-toml",
+				"vadimcn.vscode-lldb",
+				"ms-azuretools.vscode-docker",
+				"github.vscode-pull-request-github",
+				"emmanuelbeziat.vscode-great-icons",
+				"redhat.vscode-yaml",
+				"slint.slint"
+			],
+			"settings": {
+				"files.eol": "\n",
+				"editor.formatOnSave": true,
+				"[rust]": {
+					"editor.defaultFormatter": "rust-lang.rust-analyzer"
+				},
+				"rust-analyzer.check.command": "clippy",
+				"workbench.iconTheme": "vscode-great-icons"
+			}
+		}
+	},
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:4": {
+			"moby": false
+		},
+		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+			"packages": "libfontconfig1-dev"
+		}
+	},
+	"forwardPorts": [
+		8000,
+		6080
+	],
+	"portsAttributes": {
+		"6080": {
+			"label": "Slint desktop"
+		}
+	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
